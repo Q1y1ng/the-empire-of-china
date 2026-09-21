@@ -8,7 +8,8 @@
 
 管线：
     源 markdown（华北风暴·正文·扩写稿.md）
-      → 规范化（抽出封面元信息；删除纯结构分隔线 `---`；压缩连续空行）
+      → 规范化（抽出封面元信息；剔除标题前分隔线、保留场景分隔线 `---`；
+        压缩连续空行；半角引号 → 中文引号）
       → pandoc -f gfm -t typst
       → 注入封面 / 目录 / 字体版式（正文仿宋 FangSong，标题方正小标宋 FZXiaoBiaoSong-B05S）
       → typst compile
@@ -231,7 +232,33 @@ def normalize(lines):
     return '\n'.join(out) + '\n', dropped, kept
 
 
-def build_pdf(src_lines, src_meta, head_values, pdf_path, keep_tmp):
+def normalize_quotes(text):
+    """源稿引号混用：既有 1349 对中文“”，也有 983 对半角 "" 与 66 对 ''。
+
+    半角引号会被 pandoc 转义成 \\"，typst 的弯引号替换就不再生效，直接排出来
+    是西文直引号；故在此按行配对统一成中文引号（每行引号数均为偶数，配对无歧义）。
+    嵌套的半角单引号（中引号内）转成 ‘’（中文内层引号规范）。
+    """
+    stats = {'"': 0, "'": 0}
+    pairs = (('"', ('“', '”')), ("'", ('‘', '’')))
+    out = []
+    for line in text.split('\n'):
+        for ch, (open_q, close_q) in pairs:
+            if ch in line:
+                res, depth = [], 0
+                for char in line:
+                    if char == ch:
+                        res.append(open_q if depth == 0 else close_q)
+                        depth ^= 1
+                        stats[ch] += 1
+                    else:
+                        res.append(char)
+                line = ''.join(res)
+        out.append(line)
+    return '\n'.join(out), stats
+
+
+def build_pdf(src_lines, head_values, pdf_path, keep_tmp):
     tmp_md = os.path.join(tempfile.gettempdir(), 'novel_book.tmp.md')
     tmp_typ = os.path.join(tempfile.gettempdir(), 'novel_book.tmp.typ')
     write(tmp_md, src_lines)
@@ -256,11 +283,14 @@ def main():
     ap.add_argument('--body-font', default=','.join(BODY_FONT), help='正文字体族（逗号分隔，按序回退）')
     ap.add_argument('--title-font', default=','.join(TITLE_FONT), help='标题字体族（逗号分隔，按序回退）')
     ap.add_argument('--keep-tmp', action='store_true', help='保留中间 typ（排查用）')
+    ap.add_argument('--no-quote-fix', dest='normalize_quotes', action='store_false',
+                    help='不将半角引号归一为中文引号（默认归一）')
     args = ap.parse_args()
 
     raw = read(SRC)
     title, subtitle, meta, body_lines = split_source(raw)
     body, dropped_hr, kept_hr = normalize(body_lines)
+    body, quote_stats = normalize_quotes(body) if args.normalize_quotes else (body, {})
     head_values = {
         'title': esc(title),
         'subtitle': esc(subtitle),
@@ -277,6 +307,8 @@ def main():
     print(f'       书名《{title}》／副题「{subtitle}」／封面元信息 {len(meta)} 行')
     print(f'       正文 {body.count(chr(10))} 行／部标题 {n_h1}／章标题 {n_h2}／'
           f'剔除结构分隔线 {dropped_hr} 条／保留场景分隔 {kept_hr} 条')
+    if quote_stats:
+        print(f'       引号归一：半角双引号 {quote_stats["\""]} 个→“”／半角单引号 {quote_stats["\'"]} 个→‘’')
 
     pdf_path = os.path.abspath(args.pdf)
     out_dir = os.path.dirname(pdf_path)
@@ -284,7 +316,7 @@ def main():
         os.makedirs(out_dir, exist_ok=True)
     except OSError as exc:
         raise SystemExit(f'输出目录不可用: {out_dir} ({exc})') from exc
-    size = build_pdf(body, meta, head_values, pdf_path, args.keep_tmp)
+    size = build_pdf(body, head_values, pdf_path, args.keep_tmp)
     print(f'[PDF ] {pdf_path} ({size / 1048576.0:.2f} MB)')
     print(f'       校验：py -3 tools/check_novel_pdf.py --pdf "{pdf_path}"')
     return 0

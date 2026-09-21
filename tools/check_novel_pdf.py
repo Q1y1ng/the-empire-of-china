@@ -324,6 +324,13 @@ def check_pdf(pdf_path, h2, miss_head):
     record('C', '罕见字未丢失（窸/窣/镚）', rare_ok and not miss_head,
            '、'.join(f'{c}×{sum(p.count(c) for p in pages)}' for c in RARE_CHARS))
 
+    # 引号归一：PDF 文本层不应再出现半角直引号
+    all_text = ''.join(pages)
+    straight = all_text.count('"') + all_text.count("'")
+    curly = all_text.count('“') + all_text.count('”')
+    record('C', '半角引号已全部转为中文引号', straight == 0 and curly >= 2600,
+           f'直引号 {straight} 个／中文引号 {curly} 个')
+
     first, last = pages[body_start] if body_start is not None else '', pages[-1]
     record('C', '首页正文抽样', '中发' in first or '第一章' in first, first.replace('\n', ' ')[:60])
     record('C', '尾页正文抽样', '制度' in last or '盆' in last, last.replace('\n', ' ')[-60:])
@@ -460,8 +467,8 @@ def check_layout(pdf_path, pages_text, body_start):
         return [row for row in lines if row['y0'] > page_h - MARGIN_Y_PT]
 
     foot = bottom_line(body_start)
-    centered = bool(foot) and abs((foot[0]['x0'] + foot[0]['x1']) / 2 - page_w / 2) < 3.0
-    record('D', '正文页码居中于页脚', centered,
+    foot_centered = bool(foot) and abs((foot[0]['x0'] + foot[0]['x1']) / 2 - page_w / 2) < 3.0
+    record('D', '正文页码居中于页脚', foot_centered,
            f'{foot[0]["text"] if foot else "-"}（x 中心 {((foot[0]["x0"] + foot[0]["x1"]) / 2):.1f}pt）' if foot else '')
     record('D', '封面与目录不编页码', not bottom_line(0) and not bottom_line(1),
            f'封面页脚 {len(bottom_line(0))} 行／目录页脚 {len(bottom_line(1))} 行')
