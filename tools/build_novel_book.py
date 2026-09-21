@@ -38,8 +38,11 @@ BODY_FONT = ('FangSong', 'SimSun', 'Microsoft YaHei')
 TITLE_FONT = ('FZXiaoBiaoSong-B05S', 'SimSun')
 
 HEAD = '''#set document(title: "{title}", author: "{author}")
+// 行距说明（实测）：typst 行高 = 字体固有行高（本机仿宋 @12pt ≈ 8.0pt = 0.667em）
+// + par(leading)；而段间距用的是 par(spacing) 替代 leading，所以两处必须取同一值，
+// 否则段落之间的间距会比行距更紧。0.95em ⇒ 行高 ≈ 19.4pt（≈1.62 倍）。
 #set text(font: {body_font}, size: 12pt, lang: "zh")
-#set par(justify: true, first-line-indent: 2em, leading: 0.68em, spacing: 0.35em)
+#set par(justify: true, first-line-indent: 2em, leading: 0.95em, spacing: 0.95em)
 #set page(paper: "a4", margin: (x: 2.2cm, y: 2.0cm), numbering: none, number-align: center)
 
 #let zbs = {title_font}
@@ -71,7 +74,7 @@ HEAD = '''#set document(title: "{title}", author: "{author}")
 // —— 引用块（作者附记／题记）：左缩进、首行不缩进 ——
 #show quote: it => block(inset: (left: 1.8em, right: 1.2em), above: 0.5em, below: 0.5em, {{
   set text(size: 11pt)
-  set par(first-line-indent: 0em, justify: true, leading: 0.6em)
+  set par(first-line-indent: 0em, justify: true, leading: 0.95em)
   it
 }})
 

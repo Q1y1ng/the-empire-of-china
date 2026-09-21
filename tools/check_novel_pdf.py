@@ -69,8 +69,11 @@ CN_NUM = {c: i for i, c in enumerate('零一二三四五六七八九')}
 
 # 版式基准（与 tools/build_novel_book.py 的注入参数一致）
 BODY_PT = 12.0          # 正文字号
-BODY_LEADING = 0.68     # typst par(leading:) 附加值
+BODY_LEADING = 0.95     # typst par(leading:) 附加值
 INDENT_PT = 24.0        # 首行缩进 2em = 2 × 12pt
+# typst 行高 = 字体固有行高 + leading；本机仿宋 @12pt 固有行高实测 ≈ 8.0pt（0.667em），
+# 故 0.95em 的行距 ≈ 8.0 + 11.4 = 19.4pt（≈1.62 倍）。段间距用同一值，保持全篇一致。
+BODY_PITCH_PT = 19.4
 MARGIN_X_PT = 2.2 * 72 / 2.54
 MARGIN_Y_PT = 2.0 * 72 / 2.54
 HEAD_PT = {'chapter': 20.0, 'part': 26.0, 'toc': 24.0}
@@ -352,6 +355,31 @@ def pymupdf_lines(page):
     return sorted(out, key=lambda row: row['y0'])
 
 
+def baseline_rows(page, size, tol=0.05):
+    """按基线聚簇还原「视觉行」。
+
+    pymupdf 的 line 分组在中文排版下会把同一行拆开或跨行合并，基线（origin y）
+    聚簇才可靠——行距、缩进、居中都以它为准。
+    """
+    pts = []
+    for block in page.get_text('dict')['blocks']:
+        for line in block.get('lines', []):
+            for span in line['spans']:
+                if span['text'].strip() and abs(span['size'] - size) < tol:
+                    pts.append((round(span['origin'][1], 2), span['bbox'][0], span['bbox'][2]))
+    pts.sort(key=lambda item: item[0])
+    rows, cur = [], []
+    for item in pts:
+        if cur and item[0] - cur[-1][0] > 1.0:
+            rows.append(cur)
+            cur = []
+        cur.append(item)
+    if cur:
+        rows.append(cur)
+    return [{'baseline': max(item[0] for item in r), 'x0': min(item[1] for item in r),
+             'x1': max(item[2] for item in r)} for r in rows]
+
+
 def check_layout(pdf_path, pages_text, body_start):
     print('\nD. 版式几何（pymupdf 逐 span 坐标）')
     doc = pymupdf.open(pdf_path)
@@ -361,15 +389,19 @@ def check_layout(pdf_path, pages_text, body_start):
 
     body_lines = pymupdf_lines(doc[body_start])
 
-    # 版心与边距
-    xs0 = [row['x0'] for row in body_lines]
-    xs1 = [row['x1'] for row in body_lines]
-    left, right_lim = min(xs0), max(xs1)
+    # 版心与边距（含标点悬挂；缩进/行距都以此页的视觉行为准）
+    body_rows = baseline_rows(doc[body_start], BODY_PT)
+    # 页脚页码在版心之外，算版心高时排除
+    body_bottom = max(row['y1'] for row in body_lines if row['y0'] < page_h - MARGIN_Y_PT)
+    left = min(row['x0'] for row in body_rows)
+    right_lim = max(row['x1'] for row in body_rows)
+    hang = max(0.0, right_lim - (page_w - MARGIN_X_PT))
     record('D', '版心边距（左右 2.2cm / 上下 2.0cm）',
-           abs(left - MARGIN_X_PT) < 2.0 and abs((page_w - right_lim) - MARGIN_X_PT) < 6.0
+           abs(left - MARGIN_X_PT) < 2.0 and hang <= BODY_PT * 0.55
            and min(row['y0'] for row in body_lines) >= MARGIN_Y_PT - 1
-           and max(row['y1'] for row in body_lines) <= page_h - MARGIN_Y_PT + 1,
-           f'左 {left:.1f}pt／右留白 {page_w - right_lim:.1f}pt（基准 {MARGIN_X_PT:.1f}）')
+           and body_bottom <= page_h - MARGIN_Y_PT + 1,
+           f'左 {left:.1f}pt／右留白 {page_w - right_lim:.1f}pt（基准 {MARGIN_X_PT:.1f}；'
+           f'标点悬挂 {hang:.1f}pt）／正文底 {body_bottom:.1f}pt（上限 {page_h - MARGIN_Y_PT:.1f}）')
 
     # 正文字族/字号
     body_spans = [row for row in body_lines if abs(row['size'] - BODY_PT) < 0.05]
@@ -378,28 +410,28 @@ def check_layout(pdf_path, pages_text, body_start):
     record('D', '正文字族为仿宋', all('FangSong' in row['font'] or 'SimFan' in row['font'] for row in body_spans),
            f'字族 {sorted({row["font"] for row in body_spans})}')
 
-    # 章标题：20pt、方正小标宋、居中、另起一页（位于版心顶部附近）
+    # 标题：字号 + 方正小标宋 + 居中（中文标点参与对齐，容差取 0.35em）
+    def centered(rows, size, name):
+        if not rows:
+            return record('D', name, False, '未找到该字号标题')
+        off = abs((rows[0]['x0'] + rows[0]['x1']) / 2 - page_w / 2)
+        return record('D', name, off < size * 0.35 and
+                      all(('XiaoBiaoSong' in row['font']) or ('FZXBS' in row['font']) for row in rows),
+                      f'{len(rows)} 处；{rows[0]["font"]}；居中偏差 {off:.1f}pt；{rows[0]["text"][:16]}')
+
     chap = [row for row in body_lines if abs(row['size'] - HEAD_PT['chapter']) < 0.05]
-    ok_center = bool(chap) and abs((chap[0]['x0'] + chap[0]['x1']) / 2 - page_w / 2) < 3.0
-    record('D', f'章标题 {HEAD_PT["chapter"]:.0f}pt + 方正小标宋 + 居中', ok_center and
-           all(('XiaoBiaoSong' in row['font']) or ('FZXBS' in row['font']) for row in chap),
-           f'{len(chap)} 处；{chap[0]["font"] if chap else "-"}；{chap[0]["text"][:16] if chap else "-"}')
+    centered(chap, HEAD_PT['chapter'], f'章标题 {HEAD_PT["chapter"]:.0f}pt + 方正小标宋 + 居中')
 
     part_page = next((i for i, t in enumerate(pages_text) if '第二部' in norm(t) and i > body_start), None)
-    toc_lines = pymupdf_lines(doc[1])
-    part_lines = pymupdf_lines(doc[part_page]) if part_page is not None else []
-    part = [row for row in part_lines if abs(row['size'] - HEAD_PT['part']) < 0.05]
-    record('D', f'部标题 {HEAD_PT["part"]:.0f}pt + 方正小标宋 + 居中', bool(part) and
-           abs((part[0]['x0'] + part[0]['x1']) / 2 - page_w / 2) < 3.0 and
-           all(('XiaoBiaoSong' in row['font']) or ('FZXBS' in row['font']) for row in part),
-           f'第 {part_page + 1 if part_page is not None else "?"} 页；{part[0]["text"][:18] if part else "-"}')
-    toc_title = [row for row in toc_lines if abs(row['size'] - HEAD_PT['toc']) < 0.05]
-    record('D', f'目录标题 {HEAD_PT["toc"]:.0f}pt + 方正小标宋 + 居中', bool(toc_title) and
-           abs((toc_title[0]['x0'] + toc_title[0]['x1']) / 2 - page_w / 2) < 3.0,
-           f'{toc_title[0]["font"] if toc_title else "-"}')
+    part = [row for row in (pymupdf_lines(doc[part_page]) if part_page is not None else [])
+            if abs(row['size'] - HEAD_PT['part']) < 0.05]
+    centered(part, HEAD_PT['part'], f'部标题 {HEAD_PT["part"]:.0f}pt + 方正小标宋 + 居中'
+             + (f'（第 {part_page + 1} 页）' if part_page is not None else ''))
+    centered([row for row in pymupdf_lines(doc[1]) if abs(row['size'] - HEAD_PT['toc']) < 0.05],
+             HEAD_PT['toc'], f'目录标题 {HEAD_PT["toc"]:.0f}pt + 方正小标宋 + 居中')
 
-    # 首行缩进：行首 x 应聚成「左右两簇」——版心左界 与 左界+2em
-    starts = sorted({round(row['x0'], 1) for row in body_spans})
+    # 首行缩进：行首 x 应聚成两簇——版心左界 与 左界 + 2em
+    starts = sorted({round(row['x0'], 1) for row in body_rows})
     margin = starts[0]
     indented = [x for x in starts if abs(x - margin - INDENT_PT) < 1.5]
     flush = [x for x in starts if abs(x - margin) < 1.5]
@@ -407,17 +439,20 @@ def check_layout(pdf_path, pages_text, body_start):
            f'缩进行首 x={indented[0] if indented else "-"}pt／不缩进 x={margin}pt（差 '
            f'{indented[0] - margin if indented else "-"}pt）')
 
-    # 行距：同一缩进簇内相邻行基线间距
-    steps = [round(body_spans[i + 1]['y0'] - body_spans[i]['y0'], 2)
-             for i in range(len(body_spans) - 1)
-             if abs(body_spans[i + 1]['x0'] - body_spans[i]['x0']) < 0.6]
-    det = 0.0
-    if steps:
-        steps_sorted = sorted(steps)
-        det = steps_sorted[len(steps_sorted) // 2]
-    expect_step = BODY_PT * (1 + BODY_LEADING)
-    record('D', f'行距 ≈ {expect_step:.2f}pt（{1 + BODY_LEADING:.2f} 倍）', abs(det - expect_step) < 1.0,
-           f'实测中位 {det:.2f}pt')
+    # 行距：视觉行基线差（缩进相同的算行内，缩进切换的算段间）
+    inside, between = [], []
+    for i in range(len(body_rows) - 1):
+        step = round(body_rows[i + 1]['baseline'] - body_rows[i]['baseline'], 2)
+        if abs(body_rows[i + 1]['x0'] - body_rows[i]['x0']) > 0.6:
+            between.append(step)
+        else:
+            inside.append(step)
+    med_in = sorted(inside)[len(inside) // 2] if inside else 0.0
+    med_bt = sorted(between)[len(between) // 2] if between else 0.0
+    record('D', f'行距 ≈ {BODY_PITCH_PT}pt（{BODY_PITCH_PT / BODY_PT:.2f} 倍）',
+           bool(inside) and abs(med_in - BODY_PITCH_PT) <= 1.0, f'实测中位 {med_in:.2f}pt（{len(inside)} 处）')
+    record('D', '段间距与行距一致（无额外段距）',
+           bool(between) and abs(med_bt - med_in) <= 0.6, f'段间中位 {med_bt:.2f}pt vs 行内 {med_in:.2f}pt')
 
     # 页码：正文页脚居中且与目录编号一致；封面与目录页无页码
     def bottom_line(idx):
