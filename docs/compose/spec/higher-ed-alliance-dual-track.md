@@ -1,14 +1,25 @@
 ---
 feature: higher-ed-alliance-dual-track
-status: designed
+status: delivered
 updated: 2026-12-19
-branch: main
-commits: # leave empty while in progress; fill at delivery
+branch: feat/state-organs-ting
+commits: d027644..1072b02 # 高教改动 d027644+94dd8f1；1072b02 含并行会话文件（见 Journey）
 ---
 
 # 高教联盟双轨重构
 
 ## Report
+
+**What was built** — 《全国高等教育设定(2026).md》联盟体系改为**双轨**：国际轨（W45 世界一流大学联盟·中国 45 席、世界一流学科联盟、长安集团联盟 14 校）与国内轨（C9、国内一流大学 95、国内一流学科 230），并以**国立大学教育联合体（国教联）**承接行政联合口径。补全史源：1840 后季维幸提案、1920s 中央大学联盟、战后教科文评定、1986 长安集团。成员改为**槽位真分割** 274＋137＋9＝420；正文不再使用旧数字代号。
+
+**Verification** — `tools/verify_higher_ed_alliances.py` PASS：废词残留 0；36+9=45、+50=95、+135=230；C9=9；长安=14；274+137+9=420。
+
+**Journey log** —
+1. 环境禁止 `git worktree add`，用户授权直接改 main；后半程工作区被并行会话切到 `feat/state-organs-ting`。
+2. 首版国教联 293/127 被 review 判定非真分割（政警/军民/京畿交叉），改为教育口 10+69+195 与协作 137+合作点 9。
+3. 正文删除旧代号字样（含「废止××」原句），满足字面清零。
+4. 长安集团 1986 与《中华帝国宪法》颁布同年，文内点明以免时间线拥挤。
+5. `1072b02` 误将并行会话（官员名录「厅」改名等）一并提交——消息仅写了 spec；该批文件本身完整在库，未再 amend。
 
 ## [S1] Problem
 
