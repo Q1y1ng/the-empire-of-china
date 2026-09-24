@@ -51,11 +51,15 @@ m7 = re.search(r"### 七、长安集团.*?\n---", text, re.S)
 rows7 = re.findall(r"^\| \d+ \|", m7.group(0), re.M) if m7 else []
 print("长安集团 rows:", len(rows7))
 
-print("arith formal/collab/points:", 10 + 69 + 195, 2 + 8 + 21 + 53 + 53, 9)
-print("partition:", 274 + 137 + 9)
+print("arith formal/collab/points:", 10 + 69 + 195, 20 + 53 + 53 + 8, 9)
+print("entity partition:", 274 + 134 + 9, "plus cross rows 3 =", 274 + 134 + 9 + 3)
 print("nested:", 9 + 36, 45 + 50, 95 + 135)
 assert 10 + 69 + 195 == 274
-assert 2 + 8 + 21 + 53 + 53 == 137
-assert 274 + 137 + 9 == 420
+assert 20 + 53 + 53 + 8 == 134
+assert 274 + 134 + 9 == 417
+assert 417 + 3 == 420
 assert len(rows3) == 36 and len(rows5) == 50 and len(rows6) == 135 and len(c9) == 9
+# no double-count formula residues
+assert "本部政警" not in text or "不另计" in text
+assert "2＋8＋21＋53＋53" not in text
 print("--- checks done ---")
