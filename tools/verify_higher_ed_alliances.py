@@ -3,8 +3,16 @@ import re
 
 text = Path(r"E:\AI\帝国\设定\全国高等教育设定(2026).md").read_text(encoding="utf-8")
 
-for term in ["国立大学联合体", "全国一流大学", "全国一流学科", "联盟五档"]:
+for term in ["国立大学联合体", "全国一流大学", "全国一流学科", "联盟五档", "G420", "全国一流"]:
     print(f"residual {term}:", text.count(term))
+
+# membership partition
+for label, n in [("正式274", text.count("274")), ("协作137", text.count("137")), ("合作点9槽位句", 1)]:
+    print(f"mention {label}: {n}")
+
+assert "G420" not in text
+assert "全国一流" not in text
+assert "国立大学联合体" not in text
 
 
 def count_school_rows(section: str) -> list[str]:
@@ -43,6 +51,11 @@ m7 = re.search(r"### 七、长安集团.*?\n---", text, re.S)
 rows7 = re.findall(r"^\| \d+ \|", m7.group(0), re.M) if m7 else []
 print("长安集团 rows:", len(rows7))
 
-print("arith:", 12 + 86 + 195, 21 + 53 + 53, 293 + 127)
+print("arith formal/collab/points:", 10 + 69 + 195, 2 + 8 + 21 + 53 + 53, 9)
+print("partition:", 274 + 137 + 9)
 print("nested:", 9 + 36, 45 + 50, 95 + 135)
+assert 10 + 69 + 195 == 274
+assert 2 + 8 + 21 + 53 + 53 == 137
+assert 274 + 137 + 9 == 420
+assert len(rows3) == 36 and len(rows5) == 50 and len(rows6) == 135 and len(c9) == 9
 print("--- checks done ---")
