@@ -1,9 +1,9 @@
 ---
 feature: grade-treatment
-status: in-progress
+status: delivered
 updated: 2026-09-26
 branch: feat/military-orbat
-commits: —
+commits: 37bff61..090b2f5
 ---
 
 # 级别待遇对照表（品级↔军衔↔高校主官）落改
@@ -47,8 +47,8 @@ commits: —
 
 ## Tasks
 
-- [ ] T1: 分卷第二编重构（标准衔加待遇列＋级别待遇对照＋军职待遇随军衔） — acceptance: 四/五两节含13行总表与军区司令二品口径；版本行补记 (covers: S2)
-- [ ] T2: 高教设定第八节校长级别待遇全梯 — acceptance: 12层级全梯＋军校警校分档＋待定注；版本行补记 (covers: S2)
-- [ ] T3: 总设定对照表总表＋机构级别注（第七编/附录一）＋附录二压缩行 — acceptance: 13行总表与分卷一致；机构级别注覆盖全部院校档 (covers: S2; depends: T1)
-- [ ] T4: 名录36处军区司令三品→二品 — acceptance: fix_mr_commander_grade.py 跑后12文件修订，grep 零残留（口径行2处白名单） (covers: S2; depends: T3)
-- [ ] T5: verify 扩展全绿＋合订本重建＋CHANGELOG — acceptance: 级别待遇锚点14组命中、名录44文件零残留、原断言不回归；设定集合订本重建；CHANGELOG [未发布] 补记 (covers: S2; depends: T4)
+- [x] T1: 分卷第二编重构（标准衔加待遇列＋级别待遇对照＋军职待遇随军衔） — acceptance: 四/五两节含13行总表与军区司令二品口径；版本行补记 (covers: S2) — 37bff61
+- [x] T2: 高教设定第八节校长级别待遇全梯 — acceptance: 12层级全梯＋军校警校分档＋待定注；版本行补记 (covers: S2) — 37bff61
+- [x] T3: 总设定对照表总表＋机构级别注（第七编/附录一）＋附录二压缩行 — acceptance: 13行总表与分卷一致；机构级别注覆盖全部院校档 (covers: S2; depends: T1) — 37bff61
+- [x] T4: 名录36处军区司令三品→二品 — acceptance: fix_mr_commander_grade.py 跑后12文件修订，grep 零残留（口径行2处白名单） (covers: S2; depends: T3) — 37bff61
+- [x] T5: verify 扩展全绿＋合订本重建＋CHANGELOG — acceptance: 级别待遇锚点14组命中、名录44文件零残留、原断言不回归；设定集合订本重建（49部分/12,671行/673KB）；CHANGELOG [未发布] 补记 (covers: S2; depends: T4) — 090b2f5
