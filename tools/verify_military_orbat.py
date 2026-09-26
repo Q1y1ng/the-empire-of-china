@@ -12,6 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 JUAN = (ROOT / "设定" / "全国军事编制设定(2026).md").read_text(encoding="utf-8")
 ZONG = (ROOT / "设定" / "中华帝国世界观总设定v2.0.md").read_text(encoding="utf-8")
+GAO = (ROOT / "设定" / "全国高等教育设定(2026).md").read_text(encoding="utf-8")
+ROSTERS = sorted((ROOT / "设定").glob("全国官员名录*.md"))
 
 # ── 陆军七级链：班15 → ×10 ×10 ×10 → 军10旅 → 军区约2个军 ──
 squad = 15
@@ -140,5 +142,49 @@ for bad in ["集团军", "合成旅", "舰艇大队", "航空旅"]:
 # 分卷术语说明中「八大战区」仅出现1次（指旧称，非使用）
 assert JUAN.count("八大战区") == 1
 print("残留扫描: 总设定『战区/集团军/合成旅/舰艇大队/航空旅/师/排-团』零命中；分卷仅术语说明1处")
+
+# ── 级别待遇对照（2026冻结·作者表）──
+GRADE_ANCHORS_JUAN = [
+    "级别待遇对照【核心·2026冻结·作者表】",
+    "以军衔来确认职级待遇",
+    "（资浅授中将者享三品）",
+    "皇家理工等重点国立校总校校长",
+    "吏二 | 少尉/准尉",
+]
+GRADE_ANCHORS_ZONG = [
+    "级别待遇对照（2026冻结版·作者表）",
+    "中央政治学院校长·帝国国防大学校长",
+    "高校机构级别随校长级别待遇同步",
+    "军区司令上将记二品，资浅授中将者享三品",
+]
+GRADE_ANCHORS_GAO = [
+    "校长级别待遇（2026冻结·作者表）",
+    "同州立大学",
+    "比总校校长低一级",
+    "整体再降一档",
+    "**四品**（校长授少将）",
+]
+for anchor in GRADE_ANCHORS_JUAN:
+    assert anchor in JUAN, f"分卷缺级别待遇锚点: {anchor}"
+for anchor in GRADE_ANCHORS_ZONG:
+    assert anchor in ZONG, f"总设定缺级别待遇锚点: {anchor}"
+for anchor in GRADE_ANCHORS_GAO:
+    assert anchor in GAO, f"高教设定缺级别待遇锚点: {anchor}"
+print(f"级别待遇对照: 分卷{len(GRADE_ANCHORS_JUAN)}+总设定{len(GRADE_ANCHORS_ZONG)}"
+      f"+高教{len(GRADE_ANCHORS_GAO)} 组锚点全部命中")
+
+# ── 名录：军区司令二品全域落地 ──
+NEW_KOUJING = "舰队司令、军区司令二品（上将·资浅授中将者三品）"
+koujing_hits = 0
+for path in ROSTERS:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if NEW_KOUJING in line:
+            koujing_hits += 1
+        elif "军区司令" in line and "三品" in line and "政委" not in line and "二~三品" not in line:
+            raise AssertionError(f"名录残留军区司令三品: {path.name}: {line.strip()}")
+assert koujing_hits == 2, f"口径行应为2处（卷三十五+合订本），实际{koujing_hits}"
+juan1 = (ROOT / "设定" / "全国官员名录·卷一·中央与京畿直隶州(2026).md").read_text(encoding="utf-8")
+assert "| 10 | 穆长缨※ | 委员 | 京畿军区司令 | 二品【推演】 |" in juan1
+print(f"名录修订: {len(ROSTERS)} 文件扫描，军区司令二品全域落地（口径行{koujing_hits}处），零残留")
 
 print("--- military-orbat checks done ---")
