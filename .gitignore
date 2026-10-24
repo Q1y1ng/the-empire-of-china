@@ -1,2 +1,5 @@
 # ZCode 会话数据（计划/缓存），不属于项目
 .zcode/
+
+# 本机 Windows 文件权限诊断产物（DSH 沙箱 ACL 修复记录），不属于项目
+.acl-recovery/
