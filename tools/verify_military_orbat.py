@@ -18,10 +18,10 @@ ROSTERS = sorted((ROOT / "设定").glob("全国官员名录*.md"))
 # ── 陆军七级链：班15 → ×10 ×10 ×10 → 军10旅 → 军区约2个军 ──
 squad = 15
 company, battalion, brigade, army = squad * 10, squad * 100, squad * 1000, squad * 10_000
-mr = 2 * army
-assert (company, battalion, brigade, army, mr) == (150, 1_500, 15_000, 150_000, 300_000)
+mr = int(2.5 * army)
+assert (company, battalion, brigade, army, mr) == (150, 1_500, 15_000, 150_000, 375_000)
 total_army = 8 * mr
-assert total_army == 2_400_000
+assert total_army == 3_000_000
 print(f"陆军链: 班{squad}→连{company}→营{battalion:,}→旅{brigade:,}→军{army:,}→军区{mr:,}；"
       f"八军区合计 {total_army:,}")
 
@@ -69,12 +69,12 @@ air_crew_squad, air_ac_squad = 15, 5
 air_mid_ac = 3 * air_ac_squad
 air_grp_ac = 4 * air_mid_ac
 air_bde_ac = 5 * air_grp_ac
-air_corps_ac = 8 * air_bde_ac
-air_all_ac = 8 * air_corps_ac
-air_crew_corps = 8 * 5 * 4 * 3 * air_crew_squad
-air_crew_all = 8 * air_crew_corps
-assert (air_mid_ac, air_grp_ac, air_bde_ac, air_corps_ac, air_all_ac) == (15, 60, 300, 2_400, 19_200)
-assert (air_crew_corps, air_crew_all) == (7_200, 57_600)
+air_corps_ac = 4 * air_bde_ac
+air_all_ac = 8 * air_corps_ac + 3_200
+air_crew_corps = 4 * 5 * 4 * 3 * air_crew_squad
+air_crew_all = 8 * air_crew_corps + 3_200 * 3
+assert (air_mid_ac, air_grp_ac, air_bde_ac, air_corps_ac, air_all_ac) == (15, 60, 300, 1_200, 12_800)
+assert (air_crew_corps, air_crew_all) == (3_600, 38_400)
 print(f"空军缩比: 中队{air_mid_ac}机→大队{air_grp_ac}机→旅{air_bde_ac}机→军{air_corps_ac:,}机→"
       f"全军{air_all_ac:,}机；空勤{air_crew_corps:,}/军、共{air_crew_all:,}人")
 
@@ -83,11 +83,11 @@ navy_squad = 5
 navy_company = 3 * navy_squad
 frigate, destroyer, cruiser = 3 * navy_company, 5 * navy_company, 10 * navy_company
 assert (navy_company, frigate, destroyer, cruiser) == (15, 45, 75, 150)
-flotilla_ships = 35 + 5 + 10
-flotilla_crew = 35 * frigate + 5 * destroyer + 10 * cruiser
-assert (flotilla_ships, flotilla_crew) == (50, 3_450)
-fleet_ships = 8 * flotilla_ships
-assert fleet_ships == 400 and 3 * fleet_ships == 1_200
+flotilla_ships = 28 + 4 + 8
+flotilla_crew = 28 * frigate + 4 * destroyer + 8 * cruiser
+assert (flotilla_ships, flotilla_crew) == (40, 2_760)
+fleet_ships = 6 * flotilla_ships
+assert fleet_ships == 240 and 3 * fleet_ships == 720
 print(f"海军: 护卫舰{frigate}/驱逐舰{destroyer}/巡洋舰{cruiser}人；支队{flotilla_ships}艘"
       f"（舰员{flotilla_crew:,}）；舰队{fleet_ships}艘×3＝{3 * fleet_ships:,}艘主力舰")
 
@@ -102,7 +102,7 @@ print(f"航母: 班{carrier_squad}→连{carrier_company}→营{carrier_battalio
 # ── 分卷文本锚点 ──
 ANCHORS = [
     "标准重装旅", "指挥岗位标准衔", "舰载航空兵", "战略力量（火箭军）", "水兵班",
-    "14,850", "旅部", "约19,200机", "约1,200艘主力舰", "3,450", "约3,550台架",
+    "14,850", "旅部", "约12,800机", "约720艘主力舰", "2,760", "约3,550台架",
     # 附录A 原草案列（含两处勘误标注）
     "炊事车×300", "步兵战车×800", "主战坦×300", "防空车×300", "远火×200",
     "自行炮×300", "卡车×140", "急救车×60", "武直×50", "运直×50",
@@ -155,7 +155,7 @@ GRADE_ANCHORS_ZONG = [
     "级别待遇对照（2026冻结版·作者表）",
     "中央政治学院校长·帝国国防大学校长",
     "高校机构级别随校长级别待遇同步",
-    "军区司令上将记二品，资浅授中将者享三品",
+    "军区司令职位三品；授上将者按二品高配",
 ]
 GRADE_ANCHORS_GAO = [
     "校长级别待遇（2026冻结·作者表）",
@@ -174,17 +174,17 @@ print(f"级别待遇对照: 分卷{len(GRADE_ANCHORS_JUAN)}+总设定{len(GRADE_
       f"+高教{len(GRADE_ANCHORS_GAO)} 组锚点全部命中")
 
 # ── 名录：军区司令二品全域落地 ──
-NEW_KOUJING = "舰队司令、军区司令二品（上将·资浅授中将者三品）"
+NEW_KOUJING = "军区司令职位三品（授上将者按二品高配）"
 koujing_hits = 0
 for path in ROSTERS:
     for line in path.read_text(encoding="utf-8").splitlines():
         if NEW_KOUJING in line:
             koujing_hits += 1
-        elif "军区司令" in line and "三品" in line and "政委" not in line and "二~三品" not in line:
-            raise AssertionError(f"名录残留军区司令三品: {path.name}: {line.strip()}")
+        elif "军区司令" in line and "二品" in line and "高配" not in line and "政委" not in line:
+            raise AssertionError(f"名录残留军区司令二品: {path.name}: {line.strip()}")
 assert koujing_hits == 2, f"口径行应为2处（卷三十五+合订本），实际{koujing_hits}"
 juan1 = (ROOT / "设定" / "全国官员名录·卷一·中央与京畿直隶州(2026).md").read_text(encoding="utf-8")
-assert "| 10 | 穆长缨※ | 委员 | 京畿军区司令 | 二品【推演】 |" in juan1
-print(f"名录修订: {len(ROSTERS)} 文件扫描，军区司令二品全域落地（口径行{koujing_hits}处），零残留")
+assert "| 10 | 穆长缨※ | 委员 | 京畿军区司令 | 三品（授上将者高配二品）【推演】 |" in juan1
+print(f"名录修订: {len(ROSTERS)} 文件扫描，军区司令三品（上将高配二品）全域落地（口径行{koujing_hits}处），零残留")
 
 print("--- military-orbat checks done ---")

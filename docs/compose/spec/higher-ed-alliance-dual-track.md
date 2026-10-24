@@ -1,7 +1,7 @@
 ---
 feature: higher-ed-alliance-dual-track
 status: delivered
-updated: 2026-12-19
+updated: 2026-09-24
 branch: feat/state-organs-ting
 commits: d027644..ea3323b # 高教主体 d027644+94dd8f1；实体真分割修复见后续 pathspec 提交
 ---
