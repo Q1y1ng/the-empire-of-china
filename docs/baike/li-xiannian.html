@@ -125,6 +125,12 @@
 
   .chips{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 0}
   .chips a{background:var(--tag); border:1px solid #dbe3ff; color:#2f4ecb; border-radius:12px; padding:2px 10px; font-size:12px}
+  .chipgroup{display:flex; gap:12px; align-items:flex-start; margin:14px 0 4px}
+  .chipgroup .grouplabel{
+    flex:0 0 46px; font-size:12px; color:var(--ink-3); line-height:1.5;
+    border-left:3px solid #c9d2e3; padding-left:8px; margin-top:4px;
+  }
+  .chipgroup .chips{margin:0}
 
   @media (max-width:1020px){
     .wrap{grid-template-columns:1fr}
@@ -364,11 +370,34 @@
     <p class="note"><b>词条声明：</b>本词条为架空历史设定「中华帝国」的百科式呈现，人物、机构、数据均属该设定体系；标【推演】者为可调整的推演项，标【核心】者与设定冻结核对一致。</p>
 
     <h2 class="sec" id="s10">相关条目<span class="edit">编辑</span></h2>
-    <div class="chips">
-      <a href="#">国务院</a><a href="#">中央政治局常务委员会</a><a href="#">中央财政经济委员会</a>
-      <a href="#">华国锋</a><a href="#">谭震林</a><a href="#">帝国中央银行</a>
-      <a href="#">全民基本补贴</a><a href="#">国家自动化红利基金</a><a href="#">三衡国策</a>
-      <a href="#">五年规划</a><a href="#">欧亚大陆桥</a><a href="#">国民议会</a>
+
+    <div class="chipgroup">
+      <span class="grouplabel">机构</span>
+      <div class="chips">
+        <a href="#">国务院</a><a href="#">中央政治局常务委员会</a><a href="#">中央政治局</a><a href="#">中央政治委员会</a>
+        <a href="#">国民议会</a><a href="#">国民议会财政经济委员会</a><a href="#">中央财政经济委员会</a>
+        <a href="#">财政部</a><a href="#">商务部</a><a href="#">国家发展改革委员会</a>
+        <a href="#">帝国中央银行</a><a href="#">帝国审计院</a><a href="#">国家统计局</a>
+        <a href="#">中央纪律检查委员会</a><a href="#">国家监察委员会</a><a href="#">中央组织委员会</a>
+      </div>
+    </div>
+
+    <div class="chipgroup">
+      <span class="grouplabel">人物</span>
+      <div class="chips">
+        <a href="#">朱昭文</a><a href="#">华国锋</a><a href="#">谭震林</a><a href="#">曾山</a>
+        <a href="#">李富春</a><a href="#">林伯渠</a><a href="#">邓子恢</a><a href="#">华铸民</a><a href="#">戴衡度</a>
+        <a href="#">刘伯承</a><a href="#">粟裕</a><a href="#">叶剑英</a>
+      </div>
+    </div>
+
+    <div class="chipgroup">
+      <span class="grouplabel">概念<br>事件</span>
+      <div class="chips">
+        <a href="#">三衡国策</a><a href="#">五年规划</a><a href="#">欧亚大陆桥</a>
+        <a href="#">全民基本补贴</a><a href="#">国家自动化红利基金</a>
+        <a href="#">《AI治理法》</a><a href="#">长安核聚变示范堆</a><a href="#">谋官论处</a>
+      </div>
     </div>
 
   </main>
