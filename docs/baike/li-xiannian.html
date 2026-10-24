@@ -132,6 +132,13 @@
   }
   .chipgroup .chips{margin:0}
 
+  /* ---------- 相关词条速查（锚点目标） ---------- */
+  [id]{scroll-margin-top:76px}
+  table.ref-table{font-size:13px}
+  table.ref-table td:first-child{font-weight:600; white-space:nowrap}
+  table.ref-table tr:target td{background:#fff8e6; box-shadow:inset 3px 0 0 #f0b429}
+  table.ref-table tr:target td:first-child{color:#b06f00}
+
   @media (max-width:1020px){
     .wrap{grid-template-columns:1fr}
     aside{position:static; order:-1}
@@ -374,31 +381,96 @@
     <div class="chipgroup">
       <span class="grouplabel">机构</span>
       <div class="chips">
-        <a href="#">国务院</a><a href="#">中央政治局常务委员会</a><a href="#">中央政治局</a><a href="#">中央政治委员会</a>
-        <a href="#">国民议会</a><a href="#">国民议会财政经济委员会</a><a href="#">中央财政经济委员会</a>
-        <a href="#">财政部</a><a href="#">商务部</a><a href="#">国家发展改革委员会</a>
-        <a href="#">帝国中央银行</a><a href="#">帝国审计院</a><a href="#">国家统计局</a>
-        <a href="#">中央纪律检查委员会</a><a href="#">国家监察委员会</a><a href="#">中央组织委员会</a>
+        <a href="#e-guowuyuan">国务院</a><a href="#e-pbs">中央政治局常务委员会</a><a href="#e-pb">中央政治局</a><a href="#e-pcc">中央政治委员会</a>
+        <a href="#e-parliament">国民议会</a><a href="#e-parl-fec">国民议会财政经济委员会</a><a href="#e-cfec">中央财政经济委员会</a>
+        <a href="#e-mof">财政部</a><a href="#e-moc">商务部</a><a href="#e-ndrc">国家发展改革委员会</a>
+        <a href="#e-pbc">帝国中央银行</a><a href="#e-audit">帝国审计院</a><a href="#e-stats">国家统计局</a>
+        <a href="#e-discipline">中央纪律检查委员会</a><a href="#e-supervision">国家监察委员会</a><a href="#e-org">中央组织委员会</a>
       </div>
     </div>
 
     <div class="chipgroup">
       <span class="grouplabel">人物</span>
       <div class="chips">
-        <a href="#">朱昭文</a><a href="#">华国锋</a><a href="#">谭震林</a><a href="#">曾山</a>
-        <a href="#">李富春</a><a href="#">林伯渠</a><a href="#">邓子恢</a><a href="#">华铸民</a><a href="#">戴衡度</a>
-        <a href="#">刘伯承</a><a href="#">粟裕</a><a href="#">叶剑英</a>
+        <a href="#e-zhu">朱昭文</a><a href="#e-hua">华国锋</a><a href="#e-tan">谭震林</a><a href="#e-zeng">曾山</a>
+        <a href="#e-li">李富春</a><a href="#e-lin">林伯渠</a><a href="#e-deng">邓子恢</a><a href="#e-huazhu">华铸民</a><a href="#e-dai">戴衡度</a>
+        <a href="#e-liu">刘伯承</a><a href="#e-su">粟裕</a><a href="#e-ye">叶剑英</a>
       </div>
     </div>
 
     <div class="chipgroup">
       <span class="grouplabel">概念<br>事件</span>
       <div class="chips">
-        <a href="#">三衡国策</a><a href="#">五年规划</a><a href="#">欧亚大陆桥</a>
-        <a href="#">全民基本补贴</a><a href="#">国家自动化红利基金</a>
-        <a href="#">《AI治理法》</a><a href="#">长安核聚变示范堆</a><a href="#">谋官论处</a>
+        <a href="#e-sanheng">三衡国策</a><a href="#e-plan">五年规划</a><a href="#e-bridge">欧亚大陆桥</a>
+        <a href="#e-ubi">全民基本补贴</a><a href="#e-fund">国家自动化红利基金</a>
+        <a href="#e-ailaw">《AI治理法》</a><a href="#e-fusion">长安核聚变示范堆</a><a href="#e-mouguan">谋官论处</a>
       </div>
     </div>
+
+    <h2 class="sec" id="appendix">附：相关词条速查<span class="edit">编辑</span></h2>
+    <p class="note"><b>用法：</b>点击上方任一相关条目，即跳到本页这一节对应的那一条；每条只给一句话释义、关键数据与出处，不另立页面。数据一律引自《帝国主数据表(2026)》与《全国官员名录(2026)》。</p>
+
+    <h3 class="sub">（一）机构（16 条）</h3>
+    <table class="tb ref-table">
+      <colgroup><col style="width:150px"><col><col style="width:26%"></colgroup>
+      <thead><tr><th>条目</th><th>释义</th><th>出处</th></tr></thead>
+      <tbody>
+        <tr id="e-guowuyuan"><td>国务院</td><td>最高国家行政机关，设 22 个组成部门（20 部＋2 委）；总理由皇帝提名、议会同意后任命，每年向议会提交国家年度治理报告。</td><td>总设定第六编；法律要目《中央政府组织法》</td></tr>
+        <tr id="e-pbs"><td>中央政治局常务委员会</td><td>11 席，皇帝任委员长；常委不排序，按职务分工，是日常国家中枢。</td><td>总设定第五编·一；主数据表 G-03</td></tr>
+        <tr id="e-pb"><td>中央政治局</td><td>28 人（11 名常委＋17 名委员），核心决策机关，审议政府重大政策、处理突发事件。</td><td>总设定第五编；主数据表 G-02</td></tr>
+        <tr id="e-pcc"><td>中央政治委员会</td><td>80 人，国家最高政治领导机关；掌长期战略、皇位继承确认、战争与和平、重大人事原则。</td><td>总设定第五编；主数据表 G-01</td></tr>
+        <tr id="e-parliament"><td>国民议会</td><td>720 席，<b>按人口比例分配</b>、无党派无党团、任期五年；行使立法、预算审议、监督、调查、质询五权。</td><td>《国民议会(2026)》一—二；主数据表 G-04</td></tr>
+        <tr id="e-parl-fec"><td>国民议会财政经济委员会</td><td>议会九个专门委员会之一，对口财政部、国家发展改革委员会、帝国中央银行、审计院；主任林伯渠。</td><td>《国民议会(2026)》四</td></tr>
+        <tr id="e-cfec"><td>中央财政经济委员会</td><td>二级机构，管经济、财政、金融与五年规划的顶层决策；主任曾山。李先念 2013—2019 年任其副主任。</td><td>总设定第六编；卷一·中央直属机构</td></tr>
+        <tr id="e-mof"><td>财政部</td><td>三品组成部门，管预算、国库、税政与政府债务；预算司为李先念 1992—2001 年任职处。部长邓子恢。</td><td>卷一·经济财政系统；卷三十六</td></tr>
+        <tr id="e-moc"><td>商务部</td><td>三品组成部门，管对外贸易、市场秩序与共荣圈结算安排；部长叶季壮。李先念 2001—2013 年任部长。</td><td>卷一·经济财政系统</td></tr>
+        <tr id="e-ndrc"><td>国家发展改革委员会</td><td>三品组成部门，管产业政策与区域协调；五年规划编制组由该委主任牵头。主任宋任穷。</td><td>卷一；《非常设机构通则》四</td></tr>
+        <tr id="e-pbc"><td>帝国中央银行</td><td>中华元（元／角／分＋数字元）唯一发行机关；设工商信贷局、货币政策司等。行长华铸民。</td><td>主数据表 E-01；卷一；卷三十六</td></tr>
+        <tr id="e-audit"><td>帝国审计院</td><td>财政审计机关，对议会负责；驻八州设特派办，报「财政关系图谱」。院长李富春（常委，高配一品）。</td><td>总设定第六编；卷一</td></tr>
+        <tr id="e-stats"><td>国家统计局</td><td>二级机构，管统计、普查与数据发布；主数据表所有指标的法定口径来源。局长戴衡度。</td><td>总设定第六编；主数据表</td></tr>
+        <tr id="e-discipline"><td>中央纪律检查委员会</td><td>管官员纪律与反腐，与国家监委分立、不得互兼；主席罗瑞卿（常委）。</td><td>总设定第八编；卷一</td></tr>
+        <tr id="e-supervision"><td>国家监察委员会</td><td>管公职监察；依《监察制度改革法》第六条设「关系图谱审查」，可要求当事人说明荐举关系。主席黄克诚（常委）。</td><td>总设定第八编；法律要目·监察制度改革法</td></tr>
+        <tr id="e-org"><td>中央组织委员会</td><td>管干部任用、跨级管理与考核档案；抽调名单须报其备案。主任陈云（常委）。</td><td>总设定第六编；《非常设机构通则》四条</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sub">（二）人物（12 条）</h3>
+    <table class="tb ref-table">
+      <colgroup><col style="width:150px"><col><col style="width:26%"></colgroup>
+      <thead><tr><th>条目</th><th>释义</th><th>出处</th></tr></thead>
+      <tbody>
+        <tr id="e-zhu"><td>朱昭文</td><td>今上，1976 年生，2015 年继位改元继文；兼政治局常委会委员长、议会常委会主席、军委主席。「权力很大，但看起来并不忙。」</td><td>小传三·1；主数据表 A-02</td></tr>
+        <tr id="e-hua"><td>华国锋</td><td>前任国务院总理（2013—2019），2019 年由李先念接任。</td><td>本词条·生平原总理任期；小传体例</td></tr>
+        <tr id="e-tan"><td>谭震林</td><td>国务院副总理、政治局委员，分管工业与基建；钢厂车间出身，「没批准过一个没有工期表的项目」。</td><td>小传四·12</td></tr>
+        <tr id="e-zeng"><td>曾山</td><td>中央财政经济委员会主任，财经委顶层决策的实际主持者。</td><td>卷一·中央直属机构</td></tr>
+        <tr id="e-li"><td>李富春</td><td>帝国审计院院长、政治局常委；计划与审计派，「数目不对就是人不对」。</td><td>小传三·9</td></tr>
+        <tr id="e-lin"><td>林伯渠</td><td>议会财政经济委员会主任，2026 年预算审议的主持者。</td><td>《国民议会(2026)》四</td></tr>
+        <tr id="e-deng"><td>邓子恢</td><td>财政部部长，长安财经系在财政口径上的主要节点。</td><td>卷一·经济财政系统</td></tr>
+        <tr id="e-huazhu"><td>华铸民</td><td>帝国中央银行行长，长安财经系在信贷线上的节点。</td><td>卷一·经济财政系统</td></tr>
+        <tr id="e-dai"><td>戴衡度</td><td>国家统计局局长，长安财经系在数据口径上的节点；主数据表的执行者。</td><td>卷一；主数据表</td></tr>
+        <tr id="e-liu"><td>刘伯承</td><td>中央军委副主席（常务主持）、政治局常委；军功参谋系核心，「只谈地形与补给」。</td><td>小传三·3</td></tr>
+        <tr id="e-su"><td>粟裕</td><td>中央军委委员（常务）、政治局委员；战役派，「沙盘上只摆三种方案」。</td><td>小传四·14</td></tr>
+        <tr id="e-ye"><td>叶剑英</td><td>总参谋长、军委委员、政治局委员；谋略派，「先算退路再算进路」。</td><td>小传四·15</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="sub">（三）概念·事件（8 条）</h3>
+    <table class="tb ref-table">
+      <colgroup><col style="width:150px"><col><col style="width:26%"></colgroup>
+      <thead><tr><th>条目</th><th>释义</th><th>出处</th></tr></thead>
+      <tbody>
+        <tr id="e-sanheng"><td>三衡国策</td><td>1740 年立：「工业不废农，海军不挤民，民生不误国」；此后所有五年规划与预算审议的隐性标尺。</td><td>编年史 1740 年条</td></tr>
+        <tr id="e-plan"><td>五年规划</td><td>政府制定 → 议会审议 → 皇帝批准；规划编制组期限 12—18 个月，由发改委主任牵头。</td><td>总设定第十编；《非常设机构通则》四</td></tr>
+        <tr id="e-bridge"><td>欧亚大陆桥</td><td>2013 年提出的基建计划，欧亚共荣体系的陆上骨架；李先念任副总理时改为「还款表前置」审批。</td><td>编年史第七编·四；本词条·副总理时期</td></tr>
+        <tr id="e-ubi"><td>全民基本补贴</td><td>620 元／月／人（7,440 元／年），年度规模 13.24 万亿元（占 GDP 6.1%）。</td><td>主数据表 E-02</td></tr>
+        <tr id="e-fund"><td>国家自动化红利基金</td><td>年度可分配 4.82 万亿元，承担基本补贴的 36.4%，其余由一般预算列支；每年向议会报年度报告。</td><td>主数据表 E-03</td></tr>
+        <tr id="e-ailaw"><td>《AI治理法》</td><td>2026 年立法议程；确立「算法可以提供意见，不得代替法定权力主体作出最终政治决定」。</td><td>编年史第七编·六</td></tr>
+        <tr id="e-fusion"><td>长安核聚变示范堆</td><td>2026 年在调试，首次并网发电目标 2027；科技支出 3.59 万亿元（占财政支出 5.4%）。</td><td>主数据表 I-01、D-12</td></tr>
+        <tr id="e-mouguan"><td>谋官论处</td><td>《监察制度改革法》第六条：以组织形态干预任免、分配官位者论罪；圈子治理的红线。</td><td>法律要目·监察制度改革法</td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:16px"><a href="#s10">↑ 返回相关条目</a></p>
 
   </main>
 
@@ -463,6 +535,7 @@
         <li><a href="#s8">8 争议</a></li>
         <li><a href="#s9">9 参考资料来源</a></li>
         <li><a href="#s10">10 相关条目</a></li>
+        <li><a href="#appendix">附 相关词条速查</a></li>
       </ol>
     </div>
 
