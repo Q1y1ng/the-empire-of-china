@@ -3,3 +3,6 @@
 
 # 本机 Windows 文件权限诊断产物（DSH 沙箱 ACL 修复记录），不属于项目
 .acl-recovery/
+
+# 本机快捷方式（含绝对路径，仅本机有效；指向 docs/baike/index.html）
+百科入口.lnk
