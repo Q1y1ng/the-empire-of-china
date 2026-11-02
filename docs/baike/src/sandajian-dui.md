@@ -1,7 +1,7 @@
 ---
 slug: sandajian-dui
 title: 三大舰队
-subtitle: 北海／东海／南海 · 直属中央军委、不入政治委员会
+subtitle: 北海／东海／南海 · 直属中央军委
 category: 机构
 summary: 三舰队合计约 720 艘主力舰；司令二品上将，政委管政治工作
 updated: 2026-10-25
