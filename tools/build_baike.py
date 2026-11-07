@@ -9,13 +9,13 @@
 源文件：docs/baike/src/<slug>.md
     文件头前置信息（--- 包起来）：
         slug: li-xiannian
-        title: 李先念
+        title: 沈叙衡
         subtitle: 中华帝国国务院总理
         category: 人物          # 机构 / 人物 / 概念
         summary: 一句话摘要（检索用）
         updated: 2026-10-25
         infobox:
-          中文名: 李先念
+          中文名: 沈叙衡
           ...
     正文：Markdown 子集（## / ### / 段落 / - 列表 / 1. 列表 / > 引文 / 表格 / **粗体**）
           交叉链接写作 [[词条名]] 或 [[词条名|显示文字]]，词条名必须存在，否则报错。
@@ -534,7 +534,7 @@ def build(check_only: bool = False):
   <h1>帝国百科</h1>
   <p>继文十一年（2026）· 中华帝国国家与人物条目总集 · {len(entries)} 条</p>
   <form class="search" onsubmit="return false;">
-    <input type="text" placeholder="输入词条名，如「国务院」「李先念」「三衡国策」" aria-label="搜索词条">
+    <input type="text" placeholder="输入词条名，如「国务院」「沈叙衡」「三衡国策」" aria-label="搜索词条">
     <div class="results"></div>
   </form>
 </div></div>
@@ -548,6 +548,14 @@ def build(check_only: bool = False):
 </div></footer>"""
     with open(os.path.join(BAIKE, "index.html"), "w", encoding="utf-8") as fh:
         fh.write(page("首页", home, index_json))
+
+    # ---- 清理旧稿（改名后残留的孤立页面）----
+    expected = {f"{slug}.html" for slug in entries} | {"index.html"}
+    stale = [fn for fn in os.listdir(BAIKE) if fn.endswith(".html") and fn not in expected]
+    for fn in stale:
+        os.remove(os.path.join(BAIKE, fn))
+    if stale:
+        print(f"[清理] 删除孤立页面 {len(stale)} 个：{'、'.join(sorted(stale)[:6])}{'…' if len(stale) > 6 else ''}")
 
     total_links = sum(len(v) for v in backlinks.values())
     print(f"[百科] 词条 {written} 页 + 首页 1 页 / 交叉链接 {total_links} 条 / 索引 {len(index)} 项")
