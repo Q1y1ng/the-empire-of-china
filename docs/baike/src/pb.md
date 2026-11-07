@@ -1,7 +1,7 @@
 ---
 slug: pb
 title: 中央政治局
-subtitle: 二十六人 · 核心决策机关
+subtitle: 二十七人 · 核心决策机关
 category: 机构
 summary: 9 名常委＋18 名委员；六州州委主席不占席位，京畿与江南两州州委主席为委员
 updated: 2026-10-31
