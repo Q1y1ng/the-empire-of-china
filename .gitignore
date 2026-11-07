@@ -6,3 +6,6 @@
 
 # 本机快捷方式（含绝对路径，仅本机有效；指向 docs/baike/index.html）
 百科入口.lnk
+
+# PDF/typst 构建中间产物（本机生成，不入库）
+build/

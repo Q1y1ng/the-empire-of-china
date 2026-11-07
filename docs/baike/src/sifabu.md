@@ -1,7 +1,7 @@
 ---
 slug: sifabu
 title: 司法部
-subtitle: 司法行政，不是审判
+subtitle: 司法行政职能
 category: 机构
 summary: 三品组成部门，部长史良；律师与监狱归它，判决不归它
 updated: 2026-10-25

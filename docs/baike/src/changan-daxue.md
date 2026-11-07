@@ -1,7 +1,7 @@
 ---
 slug: changan-daxue
 title: 京畿直隶州立长安大学
-subtitle: 州立而非国立，却在 C9 里 · 京畿直隶州 100 所院校的旗舰
+subtitle: 州立办学、位列 C9 · 京畿直隶州 100 所院校的旗舰
 category: 机构
 summary: 校长侯外庐（六品）；顶尖综合大学，中央大学联盟三校发起之一、C9 成员
 updated: 2026-10-26
