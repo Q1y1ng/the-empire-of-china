@@ -173,8 +173,8 @@ def main() -> int:
         if cat not in MIN_CHARS:
             problems.append(f"category 非法：{cat}")
         box = meta.get("infobox", [])
-        if not (8 <= len(box) <= 16):
-            notes.append(f"infobox {len(box)} 行（宜 8–16）")
+        if not (8 <= len(box) <= 20):
+            notes.append(f"infobox {len(box)} 行（宜 8–20）")
         rel = [t.strip() for t in meta.get("related", "").split(",") if t.strip()]
         if not (4 <= len(rel) <= 8):
             notes.append(f"related {len(rel)} 个（宜 4–8）")

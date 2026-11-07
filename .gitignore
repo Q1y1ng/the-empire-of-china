@@ -9,3 +9,7 @@
 
 # PDF/typst 构建中间产物（本机生成，不入库）
 build/
+
+# Python 缓存
+__pycache__/
+
