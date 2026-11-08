@@ -3,7 +3,7 @@ slug: zhou-changweihui
 title: 州人民政治委员会常务委员会
 subtitle: 州级最高政治机构 · 九席定制
 category: 机构
-summary: 八州各设九席；主席兼议政会常委会主席，副主席二人不分第一第二
+summary: 八州各设九席；主席兼议会常委会主席，副主席二人不分第一第二
 updated: 2026-11-08
 infobox:
   中文名: 州人民政治委员会常务委员会
