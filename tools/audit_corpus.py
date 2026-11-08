@@ -202,12 +202,18 @@ def check_master_table() -> None:
         if line.startswith(" 中央政治委员会人数口径"):
             findings["主数据表"].append(
                 f"{MASTER.name}:{i} 该行缺编号（应为 N-08），其上 N-08 行为空壳")
-    # 主表内部算术：G-01／G-01a／G-01b／G-01c
+    # 主表内部算术：G-01／G-01a／G-01b／G-01c（2026-11：政委会 80→79，三处须一致）
     text = "\n".join(read(MASTER))
-    m = re.search(r"政治局 \*\*27\*\*.*?共 80 人", text)
-    stats["主表 G-01a"] = "80 人构成已在表中勾稽" if m else "构成行未能自动核对"
-    if "74＋2＋4" in text.replace(" ", "") or "74**（" in text:
-        pass
+    for bad, why in (
+        ("共 80 人", "G-01a 仍写共 80 人"),
+        ("为 80 人", "N-08 仍写 2026.12 为 80 人"),
+        ("＝**80**", "G-01c 等式仍等于 80"),
+        ("政治口与直属机构 **6**", "G-01a 政治口与直属机构应为 5（含外事委主任 1）"),
+    ):
+        if bad in text:
+            findings["主数据表"].append(f"{MASTER.name} 政委会人数残留（应为 79）：{why}")
+    ok = ("共 79 人" in text) and ("＝**79**" in text) and ("2026.12 为 79 人" in text)
+    stats["主表 G-01a"] = "79 人构成三处（G-01a／G-01c／N-08）一致" if ok else "构成行未能自动核对"
 
 
 # ------------------------------------------------------------ 4 人名一致
