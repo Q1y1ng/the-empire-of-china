@@ -204,7 +204,8 @@ def build(check_only=False):
     for h1, units in volumes:
         if h1 is None:
             continue
-        toc_lines.append(f'- **{h1}**')
+        h1_disp = h1[2:] if h1.startswith('# ') else h1
+        toc_lines.append(f'- **{h1_disp}**')
         for title, _ in units:
             toc_lines.append(f'  - {title}')
 

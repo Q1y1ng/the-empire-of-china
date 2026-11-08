@@ -102,32 +102,161 @@ VOLUMES = [
 ]
 
 TYPST_SETTING_INJECT = '''#set document(title: "中华帝国设定集·全卷合订本（2026）", author: "Q1y1ng")
-#set text(font: ("SimSun", "FZXiaoBiaoSong-B05S", "Microsoft YaHei", "Libertinus Serif"), size: 10.5pt, lang: "zh")
-#set par(justify: true)
-#show heading.where(level: 1): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 16pt, weight: "regular")
-#show heading.where(level: 2): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 13pt, weight: "regular")
-#show heading.where(level: 3): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 11.5pt, weight: "regular")
-#show heading.where(level: 4): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 10.5pt, weight: "regular")
-#show heading: set block(above: 1.2em, below: 0.6em)
-#set page(margin: (x: 1.8cm, y: 2.0cm), numbering: "1")
-#set table(stroke: 0.4pt, inset: (x: 4pt, y: 2.5pt))
-#show table: set text(font: ("SimSun", "Microsoft YaHei"), size: 9pt)
-#outline(title: "目 录", depth: 2)
+#set page(
+  paper: "a4",
+  margin: (x: 2.4cm, top: 2.3cm, bottom: 2.2cm),
+  numbering: "— 1 —",
+  number-align: center,
+  header: context {
+    if counter(page).get().first() > 1 {
+      set text(size: 8pt, fill: luma(150), font: ("Noto Serif SC", "SimSun"))
+      align(center)[中华帝国设定集 · 全卷合订本（2026）]
+      v(-0.55em)
+    }
+  },
+)
+#set text(font: ("Noto Serif SC", "SimSun"), size: 10.5pt, lang: "zh", region: "cn")
+#set par(justify: true, leading: 0.75em, spacing: 0.55em, first-line-indent: (amount: 2em, all: true))
+
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  block(above: 0.4em, below: 1.6em, {
+    set par(first-line-indent: 0em)
+    set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 21pt, weight: "regular", tracking: 0.06em)
+    align(center, it.body)
+    v(0.45em)
+    align(center, line(length: 26%, stroke: 0.9pt + luma(120)))
+  })
+}
+#show heading.where(level: 2): it => block(above: 1.5em, below: 0.7em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 14.5pt, weight: "regular")
+  it.body
+  v(0.3em)
+  line(length: 100%, stroke: 0.5pt + luma(198))
+})
+#show heading.where(level: 3): it => block(above: 1.15em, below: 0.45em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("Noto Sans SC", "SimHei"), size: 11.8pt, weight: "bold")
+  it.body
+})
+#show heading.where(level: 4): it => block(above: 0.95em, below: 0.35em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("Noto Sans SC", "SimHei"), size: 10.5pt, weight: "bold")
+  it.body
+})
+#show heading.where(level: 5): it => block(above: 0.8em, below: 0.3em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("Noto Serif SC", "SimSun"), size: 10.5pt, weight: "bold")
+  it.body
+})
+
+#show quote.where(block: true): it => block(
+  width: 100%,
+  breakable: true,
+  inset: (left: 1.0em, right: 0.8em, top: 0.5em, bottom: 0.5em),
+  stroke: (left: 2.2pt + rgb("#B99B4E")),
+  fill: rgb("#FBF8F0"),
+  {
+    set text(size: 9.3pt, fill: rgb("#3B3B3B"))
+    set par(first-line-indent: 0em, leading: 0.78em, spacing: 0.55em)
+    it.body
+  }
+)
+
+#set list(indent: 1.5em, body-indent: 0.45em, spacing: 0.5em)
+#set enum(indent: 1.7em, body-indent: 0.45em, spacing: 0.5em)
+#show list: set par(first-line-indent: 0em, leading: 0.72em)
+#show enum: set par(first-line-indent: 0em, leading: 0.72em)
+
+#show table: set text(font: ("Noto Serif SC", "SimSun"), size: 8.8pt)
+#show table: set par(first-line-indent: 0em, leading: 0.7em, spacing: 0.2em, justify: false)
+#show table: set table(
+  stroke: 0.4pt + luma(186),
+  inset: (x: 5pt, y: 3.2pt),
+  fill: (_, y) => if y == 0 { rgb("#F1EDE1") } else { none },
+)
+#show table.cell.where(y: 0): set text(weight: "bold")
+#show table: it => align(center, it)
+
+
+#show divider: it => block(above: 1.3em, below: 1.3em,
+  align(center, line(length: 34%, stroke: 0.6pt + luma(150))))
+#set outline.entry(fill: repeat([.], gap: 0.32em))
+#show outline.entry.where(level: 1): set text(weight: "bold", size: 11pt)
+#outline(title: [目　录], depth: 2, indent: auto)
 #pagebreak()
 
 '''
 
 TYPST_ROSTER_INJECT = '''#set document(title: "全国官员名录·全卷合订本（2026）", author: "Q1y1ng")
-#set text(font: ("SimSun", "FZXiaoBiaoSong-B05S", "Microsoft YaHei", "Libertinus Serif"), size: 10.5pt, lang: "zh")
-#set par(justify: true)
-#show heading.where(level: 1): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 16pt, weight: "regular")
-#show heading.where(level: 2): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 13pt, weight: "regular")
-#show heading.where(level: 3): set text(font: ("FZXiaoBiaoSong-B05S", "SimSun"), size: 11.5pt, weight: "regular")
-#show heading: set block(above: 1.2em, below: 0.6em)
-#set page(margin: (x: 1.8cm, y: 2.0cm), numbering: "1")
-#set table(stroke: 0.4pt, inset: (x: 4pt, y: 2.5pt))
-#show table: set text(font: ("SimSun", "Microsoft YaHei"), size: 9pt)
-#outline(title: "目 录", depth: 1)
+#set page(
+  paper: "a4",
+  margin: (x: 2.2cm, top: 2.3cm, bottom: 2.2cm),
+  numbering: "— 1 —",
+  number-align: center,
+  header: context {
+    if counter(page).get().first() > 1 {
+      set text(size: 8pt, fill: luma(150))
+      align(center)[全国官员名录 · 全卷合订本（2026）]
+      v(-0.55em)
+    }
+  },
+)
+#set text(font: ("Noto Serif SC", "SimSun"), size: 10.5pt, lang: "zh", region: "cn")
+#set par(justify: true, leading: 0.75em, spacing: 0.55em, first-line-indent: (amount: 2em, all: true))
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  block(above: 0.4em, below: 1.6em, {
+    set par(first-line-indent: 0em)
+    set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 21pt, weight: "regular", tracking: 0.06em)
+    align(center, it.body)
+    v(0.45em)
+    align(center, line(length: 26%, stroke: 0.9pt + luma(120)))
+  })
+}
+#show heading.where(level: 2): it => block(above: 1.5em, below: 0.7em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 14.5pt, weight: "regular")
+  it.body
+  v(0.3em)
+  line(length: 100%, stroke: 0.5pt + luma(198))
+})
+#show heading.where(level: 3): it => block(above: 1.1em, below: 0.45em, {
+  set par(first-line-indent: 0em)
+  set text(font: ("Noto Sans SC", "SimHei"), size: 11.5pt, weight: "bold")
+  it.body
+})
+#show quote.where(block: true): it => block(
+  width: 100%,
+  breakable: true,
+  inset: (left: 1.0em, right: 0.8em, top: 0.5em, bottom: 0.5em),
+  stroke: (left: 2.2pt + rgb("#B99B4E")),
+  fill: rgb("#FBF8F0"),
+  {
+    set text(size: 9.3pt, fill: rgb("#3B3B3B"))
+    set par(first-line-indent: 0em, leading: 0.78em, spacing: 0.55em)
+    it.body
+  }
+)
+#set list(indent: 1.5em, body-indent: 0.45em, spacing: 0.5em)
+#set enum(indent: 1.7em, body-indent: 0.45em, spacing: 0.5em)
+#show list: set par(first-line-indent: 0em, leading: 0.72em)
+#show enum: set par(first-line-indent: 0em, leading: 0.72em)
+#show table: set text(font: ("Noto Serif SC", "SimSun"), size: 8.8pt)
+#show table: set par(first-line-indent: 0em, leading: 0.7em, spacing: 0.2em, justify: false)
+#show table: set table(
+  stroke: 0.4pt + luma(186),
+  inset: (x: 5pt, y: 3.2pt),
+  fill: (_, y) => if y == 0 { rgb("#F1EDE1") } else { none },
+)
+#show table.cell.where(y: 0): set text(weight: "bold")
+#show table: it => align(center, it)
+#show divider: it => block(above: 1.3em, below: 1.3em,
+  align(center, line(length: 34%, stroke: 0.6pt + luma(150))))
+#set outline.entry(fill: repeat([.], gap: 0.32em))
+#show outline.entry.where(level: 1): set text(weight: "bold", size: 11pt)
+#outline(title: [目　录], depth: 1, indent: auto)
 #pagebreak()
 
 '''
@@ -156,6 +285,31 @@ def shift_headings(text, level=1):
             m = HEADING_RE.match(line)
             if m:
                 n = min(len(m.group(1)) + level, 6)
+                line = '#' * n + line[len(m.group(1)):]
+        out.append(line)
+    return '\n'.join(out)
+
+
+def shift_doc_headings(text):
+    """整册文档降级：篇名 → 二级（单元层），其后的一级标题再降一级 → 三级。
+
+    这样「单元（H2）＞ 分卷/编（H3）＞ 节（H4）」严格嵌套；
+    单一级标题的文档（如主数据表）仍走 +1，节落在 H3。
+    """
+    out, in_fence, seen_h1 = [], False, False
+    for line in text.split('\n'):
+        if line.lstrip().startswith('```'):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if not in_fence:
+            m = HEADING_RE.match(line)
+            if m:
+                lvl = len(m.group(1))
+                extra = 1 if (lvl > 1 or not seen_h1) else 2
+                if lvl == 1:
+                    seen_h1 = True
+                n = min(lvl + extra, 6)
                 line = '#' * n + line[len(m.group(1)):]
         out.append(line)
     return '\n'.join(out)
@@ -235,7 +389,7 @@ def resolve_volumes():
                 disp = first_h1_title(raw)
             else:
                 raise SystemExit(f'未知单元类型: {spec}')
-            items.append((disp, shift_headings(raw, 1)))
+            items.append((disp, shift_headings(raw, 1) if kind == 'ts' else shift_doc_headings(raw)))
         vols.append((no, name, intro, items))
     return vols
 
@@ -272,6 +426,11 @@ def assert_no_uncovered_source():
         raise SystemExit(f'以下分卷未被十卷制映射覆盖（零遗漏断言）: {sorted(missing)}')
 
 
+def space_quote(text):
+    """把连续以 '> **' 开头的引用行拆成独立段落（PDF 里才好读）。"""
+    return re.sub(r'\n(?=> \*\*)', '\n>\n', text)
+
+
 def build_setting_book():
     assert_no_uncovered_source()
     vols = resolve_volumes()
@@ -301,7 +460,7 @@ def build_setting_book():
 
 {classify_index}'''
 
-    sections = [front]
+    sections = [space_quote(front)]
     for no, name, intro, items in vols:
         body = '\n\n'.join(text for *_, text in items)
         sections.append(f'# {no} {name}\n\n{intro}\n\n{body}')
@@ -347,7 +506,7 @@ def build_roster_book():
 **总目**
 
 {toc}'''
-    sections = [front] + texts
+    sections = [space_quote(front)] + texts
     out = '\n\n---\n\n'.join(sections) + '\n'
 
     # 卷序断言：成品中 42 个卷标题必须按卷一→卷四十二顺次出现
@@ -371,12 +530,26 @@ def build_roster_book():
     return out
 
 
+def fix_escaped_bold(typ):
+    """pandoc 对「CJK 紧邻 **《…》**」的边界判定失败，会留下 \\*\\* 字面量；转成 #strong[...]。"""
+    out = []
+    for line in typ.split('\n'):
+        while True:
+            m = re.search(r'\\\*\\\*(.+?)\\\*\\\*', line)
+            if not m:
+                break
+            line = line[:m.start()] + '#strong[' + m.group(1) + ']' + line[m.end():]
+        out.append(line)
+    return '\n'.join(out)
+
+
 def build_pdf(md_path, pdf_path, inject):
     tmp_typ = os.path.join(tempfile.gettempdir(), os.path.basename(md_path) + '.tmp.typ')
-    subprocess.run(['pandoc', '-f', 'gfm', md_path, '-t', 'typst', '-o', tmp_typ], check=True)
+    subprocess.run(['pandoc', '-f', 'gfm', '--wrap=none', md_path, '-t', 'typst', '-o', tmp_typ], check=True)
     try:
         with open(tmp_typ, encoding='utf-8') as fh:
             typ = fh.read()
+        typ = fix_escaped_bold(typ)
         with open(tmp_typ, 'w', encoding='utf-8') as fh:
             fh.write(inject + typ)
     except OSError as exc:
