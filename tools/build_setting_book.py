@@ -557,8 +557,12 @@ def fix_divider(typ):
 
 
 def fix_figure(typ):
-    """pandoc 把表格包进 #figure(..., kind: table)；figure 不能跨页，拆掉包装只留表格。"""
-    typ = re.sub(r'#figure\(\s*\n\s*align\(center\)\[', '#align(center)[', typ)
+    """pandoc 把表格包进 #figure(..., kind: table)；figure 不能跨页，拆掉包装只留表格。
+
+    包装原是 #figure(align(center)[...])，整表外包 align(center) 会让单元格内容
+    继承居中（长说明列显得松）；改为 align(left)，表格贴左、单元格左对齐。
+    """
+    typ = re.sub(r'#figure\(\s*\n\s*align\(center\)\[', '#align(left)[', typ)
     typ = re.sub(r'\]\]\s*\n\s*,\s*kind:\s*table\s*\n\s*\)', ']', typ)
     typ = re.sub(r'\]\s*\n\s*,\s*kind:\s*table\s*\n\s*\)', ']', typ)
     return typ
