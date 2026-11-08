@@ -11,7 +11,7 @@
         slug: li-xiannian
         title: 沈叙衡
         subtitle: 中华帝国国务院总理
-        category: 人物          # 机构 / 人物 / 概念
+        category: 人物          # 机构 / 人物 / 概念 / 地理 / 文化 / 事件
         summary: 一句话摘要（检索用）
         updated: 2026-10-25
         infobox:
@@ -34,7 +34,7 @@ from datetime import date
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BAIKE = os.path.join(ROOT, "docs", "baike")
 SRC = os.path.join(BAIKE, "src")
-CATEGORIES = ["机构", "人物", "概念"]
+CATEGORIES = ["机构", "人物", "概念", "地理", "文化", "事件"]
 
 
 # --------------------------------------------------------------------------
@@ -366,7 +366,7 @@ def topbar(home: str = "index.html") -> str:
   <div class="topbar-in">
     <a class="logo" href="{home}">帝国百科<small>帝国官方在线百科</small></a>
     <form class="search" onsubmit="return false;">
-      <input type="text" placeholder="搜索词条（机构 / 人物 / 概念）" aria-label="搜索词条">
+      <input type="text" placeholder="搜索词条（机构 / 人物 / 概念 / 地理 / 文化 / 事件）" aria-label="搜索词条">
       <div class="results"></div>
     </form>
     <nav><a href="{home}">首页</a><a href="{home}#cats">分类</a><a href="{home}#about">凡例</a></nav>
@@ -525,6 +525,8 @@ def build(check_only: bool = False):
             rows.append(
                 f'<li><a href="{slug}.html">{esc(m["title"])}</a><span>{esc(m.get("subtitle",""))}</span></li>'
             )
+        if not rows:
+            continue
         cats_html.append(
             f'<div class="cat"><h2>{cat}（{len(rows)}）</h2><ul>{"".join(rows)}</ul></div>'
         )
