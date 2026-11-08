@@ -27,7 +27,7 @@ def main() -> None:
     args = ap.parse_args()
 
     from build_setting_book import (TYPST_ROSTER_INJECT, TYPST_SETTING_INJECT,
-                                fix_divider, fix_escaped_bold)
+                                fix_divider, fix_escaped_bold, fix_figure)
 
     inject = TYPST_SETTING_INJECT if args.style == "setting" else TYPST_ROSTER_INJECT
     md = args.md if os.path.isabs(args.md) else os.path.join(ROOT, args.md)
@@ -38,7 +38,7 @@ def main() -> None:
     with open(tmp_typ, encoding="utf-8") as fh:
         body = fh.read()
     with open(tmp_typ, "w", encoding="utf-8") as fh:
-        fh.write(inject + fix_divider(fix_escaped_bold(body)))
+        fh.write(inject + fix_figure(fix_divider(fix_escaped_bold(body))))
     out = os.path.join(outdir, "preview-{p}.png")
     subprocess.run(["typst", "compile", "--format", "png", "--ppi", args.dpi,
                     "--pages", args.pages, tmp_typ, out], check=True)

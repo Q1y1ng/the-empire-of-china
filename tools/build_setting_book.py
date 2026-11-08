@@ -175,11 +175,21 @@ TYPST_SETTING_INJECT = '''#set document(title: "中华帝国设定集·全卷合
   fill: (_, y) => if y == 0 { rgb("#F1EDE1") } else { none },
 )
 #show table.cell.where(y: 0): set text(weight: "bold")
-#show table: it => align(center, it)
+#show figure.where(kind: table): it => it.body
 
 
 #show divider: it => block(above: 1.3em, below: 1.3em,
   align(center, line(length: 34%, stroke: 0.6pt + luma(150))))
+#show raw.where(block: true): it => block(
+  width: 100%, inset: (x: 1.0em, y: 0.7em),
+  fill: rgb("#F8F6F0"), radius: 1pt,
+  {
+    set text(font: ("Cascadia Mono", "Noto Sans SC"), size: 9pt, fill: rgb("#3A3A3A"))
+    set par(leading: 0.6em, first-line-indent: 0em, spacing: 0.3em)
+    it
+  }
+)
+#show raw.where(block: false): set text(font: ("Cascadia Mono", "Noto Sans SC"), size: 9.4pt, fill: rgb("#6B4A12"))
 #set outline.entry(fill: repeat([.], gap: 0.32em))
 #show outline.entry.where(level: 1): set text(weight: "bold", size: 11pt)
 #outline(title: [目　录], depth: 2, indent: auto)
@@ -247,9 +257,19 @@ TYPST_ROSTER_INJECT = '''#set document(title: "全国官员名录·全卷合订�
   fill: (_, y) => if y == 0 { rgb("#F1EDE1") } else { none },
 )
 #show table.cell.where(y: 0): set text(weight: "bold")
-#show table: it => align(center, it)
+#show figure.where(kind: table): it => it.body
 #show divider: it => block(above: 1.3em, below: 1.3em,
   align(center, line(length: 34%, stroke: 0.6pt + luma(150))))
+#show raw.where(block: true): it => block(
+  width: 100%, inset: (x: 1.0em, y: 0.7em),
+  fill: rgb("#F8F6F0"), radius: 1pt,
+  {
+    set text(font: ("Cascadia Mono", "Noto Sans SC"), size: 9pt, fill: rgb("#3A3A3A"))
+    set par(leading: 0.6em, first-line-indent: 0em, spacing: 0.3em)
+    it
+  }
+)
+#show raw.where(block: false): set text(font: ("Cascadia Mono", "Noto Sans SC"), size: 9.4pt, fill: rgb("#6B4A12"))
 #set outline.entry(fill: repeat([.], gap: 0.32em))
 #show outline.entry.where(level: 1): set text(weight: "bold", size: 11pt)
 #outline(title: [目　录], depth: 1, indent: auto)
@@ -439,14 +459,7 @@ def build_setting_book():
     date = datetime.date.today().isoformat()
     front = f'''# 《中华帝国设定集·全卷合订本（2026）》
 
-> **体例**：本册为**混编重编本**——全部设定打散到编/卷级单元、按主题重排为十卷；单元正文逐字保留，不改写、不删减，※【推演】与【冻结】标注照录。
-> **层级与编号**：卷为一级标题、单元为二级标题、单元内标题整体降一级；各单元保留原编/卷编号（如「第九编：军事体系」），以便与分册及文内交叉引用对照。总目中〔总设定〕标记表示该编出自《中华帝国世界观总设定 v2.0》。
-> **层次约定**：同主题「摘要编在前作导读、专卷全文殿后展开」（军事、教育、世界、首都四处）；两见内容为设定层与全文层互备，零删减。
-> **收录范围**：中华帝国（架空历史）全部世界观设定文档——《中华帝国世界观总设定 v2.0》《中华帝国编年史（约1360—2026）》《世界近代史推演（约1360—2026）》《长安城市志》《全国高等教育设定（2026）》《全国军事编制设定（2026）》《全国官员名录（总索引＋42卷）》。
-> **不含**：小说《华北风暴》正文（单独成册，不入设定集；其人物与空间锚点见卷四十二及城市志卷九）。
-> **编制日期**：{date}（继文十一年）。
-> **符号约定**：※＝推演创作；【推演】＝可调整的推演项（非冻结）；【待定】＝尚未裁决（遇此即问作者）；【冻结】＝作者已拍板，不再改动。
-> **分册版本**：各文档分册仍单独保留于设定目录。
+> **符号约定**：※＝推演创作；【推演】＝可调整的推演项（非冻结）；【待定】＝尚未裁决；【冻结】＝作者已拍板，不再改动。
 
 **总目**
 
@@ -493,11 +506,7 @@ def build_roster_book():
     date = datetime.date.today().isoformat()
     front = f'''# 《全国官员名录·全卷合订本（2026）》
 
-> **收录范围**：《全国官员名录》总索引＋卷一至卷四十二，一品至吏级全序列（约4,300+岗位，口径见总索引）。
-> **体例**：本册为整卷粘贴式抽印本；2026-09-26 重建时修正卷序错乱，现按总索引＋卷一至卷四十二顺次排列，与分册一致。
-> **编制日期**：{date}（继文十一年）。
-> **符号约定**：※＝推演创作；【推演】＝可调整的推演项（非冻结）；【待定】＝尚未裁决（遇此即问作者）；【冻结】＝作者已拍板，不再改动。
-> **分册版本**：四十二卷分册仍单独保留于设定目录。
+> **符号约定**：※＝推演创作；【推演】＝可调整的推演项（非冻结）；【待定】＝尚未裁决；【冻结】＝作者已拍板，不再改动。
 
 **总目**
 
@@ -547,13 +556,21 @@ def fix_divider(typ):
     )
 
 
+def fix_figure(typ):
+    """pandoc 把表格包进 #figure(..., kind: table)；figure 不能跨页，拆掉包装只留表格。"""
+    typ = re.sub(r'#figure\(\s*\n\s*align\(center\)\[', '#align(center)[', typ)
+    typ = re.sub(r'\]\]\s*\n\s*,\s*kind:\s*table\s*\n\s*\)', ']', typ)
+    typ = re.sub(r'\]\s*\n\s*,\s*kind:\s*table\s*\n\s*\)', ']', typ)
+    return typ
+
+
 def build_pdf(md_path, pdf_path, inject):
     tmp_typ = os.path.join(tempfile.gettempdir(), os.path.basename(md_path) + '.tmp.typ')
     subprocess.run(['pandoc', '-f', 'gfm', '--wrap=none', md_path, '-t', 'typst', '-o', tmp_typ], check=True)
     try:
         with open(tmp_typ, encoding='utf-8') as fh:
             typ = fh.read()
-        typ = fix_divider(fix_escaped_bold(typ))
+        typ = fix_figure(fix_divider(fix_escaped_bold(typ)))
         with open(tmp_typ, 'w', encoding='utf-8') as fh:
             fh.write(inject + typ)
     except OSError as exc:
