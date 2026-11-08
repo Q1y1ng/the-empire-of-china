@@ -132,8 +132,6 @@ TYPST_SETTING_INJECT = '''#set document(title: "中华帝国设定集·全卷合
   set par(first-line-indent: 0em)
   set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 14.5pt, weight: "regular")
   it.body
-  v(0.3em)
-  line(length: 100%, stroke: 0.5pt + luma(198))
 })
 #show heading.where(level: 3): it => block(above: 1.15em, below: 0.45em, {
   set par(first-line-indent: 0em)
@@ -219,8 +217,6 @@ TYPST_ROSTER_INJECT = '''#set document(title: "全国官员名录·全卷合订�
   set par(first-line-indent: 0em)
   set text(font: ("FZXiaoBiaoSong-B05S", "Noto Serif SC"), size: 14.5pt, weight: "regular")
   it.body
-  v(0.3em)
-  line(length: 100%, stroke: 0.5pt + luma(198))
 })
 #show heading.where(level: 3): it => block(above: 1.1em, below: 0.45em, {
   set par(first-line-indent: 0em)
@@ -543,13 +539,21 @@ def fix_escaped_bold(typ):
     return '\n'.join(out)
 
 
+def fix_divider(typ):
+    """pandoc 把 Markdown 的 --- 输出为 #divider()；换成居中的短横线。"""
+    return typ.replace(
+        '#divider()',
+        '#v(0.7em)\n#align(center)[#line(length: 32%, stroke: 0.6pt + luma(150))]\n#v(0.7em)',
+    )
+
+
 def build_pdf(md_path, pdf_path, inject):
     tmp_typ = os.path.join(tempfile.gettempdir(), os.path.basename(md_path) + '.tmp.typ')
     subprocess.run(['pandoc', '-f', 'gfm', '--wrap=none', md_path, '-t', 'typst', '-o', tmp_typ], check=True)
     try:
         with open(tmp_typ, encoding='utf-8') as fh:
             typ = fh.read()
-        typ = fix_escaped_bold(typ)
+        typ = fix_divider(fix_escaped_bold(typ))
         with open(tmp_typ, 'w', encoding='utf-8') as fh:
             fh.write(inject + typ)
     except OSError as exc:
@@ -576,4 +580,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-
