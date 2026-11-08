@@ -55,8 +55,10 @@ def main() -> int:
         if len(names) < 2:
             continue
 
-        def score(r: dict) -> tuple[int, int]:
-            title, cat = info.get(r["entry"], ("", ""))
+        def score(r: dict) -> tuple[int, int, int]:
+            mm = re.search(r"[（(]([a-z0-9-]+)[）)]", r["entry"])
+            slug = mm.group(1) if mm else r["entry"]
+            title, cat = info.get(slug, ("", ""))
             if cat != "机构" or not title:
                 home = 0
             elif title == org:
@@ -73,7 +75,9 @@ def main() -> int:
             fixes.append((win, lose, org, post))
 
     for win, lose, org, post in fixes:
-        p = SRC / f"{lose['entry']}.md"
+        slug = re.search(r"[（(]([a-z0-9-]+)[）)]", lose["entry"])
+        slug = slug.group(1) if slug else lose["entry"]
+        p = SRC / f"{slug}.md"
         if not p.exists():
             print(f"[缺文件] {lose['entry']}")
             continue

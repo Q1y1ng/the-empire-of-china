@@ -92,7 +92,7 @@ def main() -> int:
         pre, rest = text.split(TITLE, 1)
         nxt = rest.find("\n## ", 1)
         text = pre + rest[nxt + 1:] if nxt > 0 else pre
-    anchor = "## 五、使用指南"
+    anchor = "## 六、使用指南" if "## 六、使用指南" in text else "## 五、使用指南"
     if anchor not in text:
         print("未找到「## 五、使用指南」，放弃写入")
         return 1
