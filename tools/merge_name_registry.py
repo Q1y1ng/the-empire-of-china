@@ -57,8 +57,8 @@ def main() -> int:
             mm = re.search(r"[（(]([a-z0-9-]+)[）)]", x["entry"])
             slug = mm.group(1) if mm else x["entry"]
             title, cat = info.get(slug, ("", ""))
-            home = 2 if (cat == "机构" and title == org) else (1 if (cat == "机构" and title and (title in org or org in title)) else 0)
-            return (-home, -len(title), int(x["batch"][1:]))
+            rank = 0 if cat == "人物" else (1 if cat == "机构" else 2)
+            return (rank, -len(title), int(x["batch"][1:]))
         dedup.append(sorted(rs, key=score)[0])
     dedup.sort(key=lambda r: (r["batch"], int(r["no"])))
     rows = dedup

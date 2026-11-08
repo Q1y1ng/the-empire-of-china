@@ -55,19 +55,18 @@ def main() -> int:
         if len(names) < 2:
             continue
 
-        def score(r: dict) -> tuple[int, int, int]:
+        def score(r: dict) -> tuple[int, int, str]:
+            """作者 2026-11-08 裁定：同岗异名按**人物词条**统一；无人物条时按机构条，再按批号。"""
             mm = re.search(r"[（(]([a-z0-9-]+)[）)]", r["entry"])
             slug = mm.group(1) if mm else r["entry"]
             title, cat = info.get(slug, ("", ""))
-            if cat != "机构" or not title:
-                home = 0
-            elif title == org:
-                home = 2
-            elif title in org or org in title:
-                home = 1
+            if cat == "人物":
+                rank = 0
+            elif cat == "机构":
+                rank = 1
             else:
-                home = 0
-            return (-home, -len(title), r["batch"])
+                rank = 2
+            return (rank, -len(title), r["batch"])
 
         rs_sorted = sorted(rs, key=score)
         win = rs_sorted[0]
