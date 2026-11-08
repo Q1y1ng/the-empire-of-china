@@ -70,6 +70,8 @@ ERA_RE = re.compile(r"(革鼎|承宪|继文)([零〇一二两三四五六七八�
 
 def check_era() -> None:
     n = 0
+    year_first = re.compile(r"(\d{4})\s*年（(革鼎|承宪|继文)([零〇一二两三四五六七八九十百]+)年）")
+    table_row = re.compile(r"^\|\s*(\d{4})(?:\.\d{1,2})?[^|]*\|\s*(革鼎|承宪|继文)([零〇一二两三四五六七八九十百]+)年")
     for p in setting_files() + baike_files():
         for i, line in enumerate(read(p), 1):
             for m in ERA_RE.finditer(line):
@@ -82,6 +84,23 @@ def check_era() -> None:
                     findings["时代换算"].append(
                         f"{p.name}:{i} {era}{cn}年＝{ERA_BASE[era] + v}，文中括注 {year}"
                         f"｜{line.strip()[:70]}")
+            for m in year_first.finditer(line):
+                n += 1
+                year, era, cn = int(m.group(1)), m.group(2), m.group(3)
+                v = cn2int(cn)
+                if v is not None and ERA_BASE[era] + v != year:
+                    findings["时代换算"].append(
+                        f"{p.name}:{i}「{year} 年（{era}{cn}年）」不符："
+                        f"{era}{cn}＝{ERA_BASE[era] + v} 年｜{line.strip()[:70]}")
+            m = table_row.match(line.strip())
+            if m:
+                n += 1
+                year, era, cn = int(m.group(1)), m.group(2), m.group(3)
+                v = cn2int(cn)
+                if v is not None and ERA_BASE[era] + v != year:
+                    findings["时代换算"].append(
+                        f"{p.name}:{i} 表内 {year} 年与「{era}{cn}年」不符"
+                        f"（应＝{ERA_BASE[era] + v} 年）｜{line.strip()[:70]}")
     stats["时代括注"] = f"{n} 处（元年在位次年：革鼎＝1930＋N／承宪＝1981＋N／继文＝2015＋N）"
 
 
@@ -146,6 +165,8 @@ BLACKLIST: list[tuple[str, str, str]] = [
     (r"政委会\s*91\s*人", "80 人", "政委会规模旧稿"),
     (r"二品\s*41\s*人", "二品 42 人", "二品人数旧稿"),
     (r"政治局\s*26\b", "政治局 27", "政治局人数旧稿"),
+    (r"政治局\s*[|｜]\s*26\s*人", "政治局 27 人（9 常委＋18 委员）", "政治局人数旧稿（表内）"),
+    (r"中央政治局由\*\*二十六人", "二十七人", "政治局人数旧稿（宪法原引）"),
     (r"政治局委员\s*17\s*人", "18 人", "政治局委员旧稿"),
     (r"副国级以上\s*50\s*人", "51 人", "副国级旧稿"),
     (r"216\.0\s*万亿", "360.0 万亿元", "GDP 旧值"),
@@ -158,7 +179,7 @@ BLACKLIST: list[tuple[str, str, str]] = [
     (r"17\.5\s*亿", "17.8 亿", "人口旧值"),
     (r"汇率\s*6\.97", "6.00", "汇率旧值"),
 ]
-HISTORY_MARK = ("旧值", "已作废", "作废", "旧稿", "原为", "旧版")
+HISTORY_MARK = ("旧值", "已作废", "作废", "旧稿", "原为", "旧版", "改定", "后经")
 
 
 def check_numbers() -> None:
@@ -168,8 +189,7 @@ def check_numbers() -> None:
                 m = re.search(pat, line)
                 if not m:
                     continue
-                span = line[max(0, m.start() - 40): m.end() + 40]
-                if any(k in span for k in HISTORY_MARK):
+                if any(k in line for k in HISTORY_MARK):
                     continue
                 findings["数字口径"].append(
                     f"{p.name}:{i}「{why}」应作 {canon}｜{line.strip()[:90]}")
