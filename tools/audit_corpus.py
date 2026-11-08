@@ -108,7 +108,7 @@ def check_era() -> None:
 VOL33_COL = {"一": 1, "二": 1, "三": 1, "四": 1, "五": 0, "六": 0, "七": 1,
              "八": 1, "九": 2, "十": 2, "十一": 2, "十二": 2, "十三": 1}
 VOL33_EXPECT = {"一": 1, "二": 27, "三": 3, "四": 3, "五": 1, "六": 1, "七": 6,
-                "八": 1, "九": 19, "十": 5, "十一": 9, "十二": 4, "十三": 1}
+                "八": 1, "九": 19, "十": 4, "十一": 9, "十二": 4, "十三": 1}
 
 
 def parse_vol33() -> None:
@@ -151,9 +151,9 @@ def parse_vol33() -> None:
                 pass
             seen.setdefault(name, sec)
     stats["政委会名单"] = (f"逐表合计 {total} 人次／去重 {len(seen)} 人"
-                          f"（口径 80 人，委员 79 人）；重复列名 {total - len(seen)} 处")
-    if len(seen) != 80:
-        findings["政委会名单"].append(f"去重后 {len(seen)} 人，主表 G-01 口径 80 人")
+                          f"（口径 79 人，委员 78 人）；重复列名 {total - len(seen)} 处")
+    if len(seen) != 79:
+        findings["政委会名单"].append(f"去重后 {len(seen)} 人，主表 G-01 口径 79 人")
     # 二品以上必在政治局／副国级序列
     high = [n for sec, lst in rows.items() for n, r in lst if "二品" in r or "一品" in r]
     stats["政委会二品以上"] = f"{len(set(high))} 人（口径 51 人，含皇帝）"
