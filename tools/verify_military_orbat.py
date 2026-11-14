@@ -104,7 +104,7 @@ print(f"航母: 班{carrier_squad}→连{carrier_company}→营{carrier_battalio
 # ── 分卷文本锚点 ──
 ANCHORS = [
     "标准重装旅", "指挥岗位标准衔", "舰载航空兵", "战略力量（火箭军）", "水兵班",
-    "14,850", "旅部", "约12,800机", "约720艘主力舰", "2,760", "约3,550台架",
+    "14,850", "旅部", "作战机约12,800架", "约720艘主力舰", "2,760", "约3,550台架",
     # 附录A 原草案列（含两处勘误标注）
     "炊事车×300", "步兵战车×800", "主战坦×300", "防空车×300", "远火×200",
     "自行炮×300", "卡车×140", "急救车×60", "武直×50", "运直×50",
@@ -146,24 +146,29 @@ assert JUAN.count("八大战区") == 1
 print("残留扫描: 总设定『战区/集团军/合成旅/舰艇大队/航空旅/师/排-团』零命中；分卷仅术语说明1处")
 
 # ── 级别待遇对照（2026冻结·作者表）──
+# 2026-11-14 锚点按现口径重写（原 4 条与现文对不上）：
+#   JUAN「（资浅授中将者享三品）」                → 改「级别待遇以军衔确认」（原括注已不在正文）
+#   ZONG「高校机构级别随校长级别待遇同步」        → 改附录一现文（三品级单位·校长三品）
+#   ZONG「军区司令职位三品；授上将者按二品高配」  → 该口径 2026.12 已作废，改附录二现文（中将·职位三品）
+#   GAO 「整体再降一档」                          → 改现表说法（省立·市立八品）
 GRADE_ANCHORS_JUAN = [
     "级别待遇对照【核心·2026冻结·作者表】",
     "以军衔来确认职级待遇",
-    "（资浅授中将者享三品）",
+    "**级别待遇以军衔确认**",
     "皇家理工等重点国立校总校校长",
     "吏二 | 少尉/准尉",
 ]
 GRADE_ANCHORS_ZONG = [
     "级别待遇对照（2026冻结版·作者表）",
     "中央政治学院校长·帝国国防大学校长",
-    "高校机构级别随校长级别待遇同步",
-    "军区司令职位三品；授上将者按二品高配",
+    "中央政治学院、帝国国防大学为**三品级单位**（校长三品）",
+    "军区司令＝中将（职位三品）",
 ]
 GRADE_ANCHORS_GAO = [
     "校长级别待遇（2026冻结·作者表）",
     "同州立大学",
     "比总校校长低一级",
-    "整体再降一档",
+    "**八品**（市立随省立【推演】）",
     "**四品**（校长授少将）",
 ]
 for anchor in GRADE_ANCHORS_JUAN:
@@ -175,18 +180,21 @@ for anchor in GRADE_ANCHORS_GAO:
 print(f"级别待遇对照: 分卷{len(GRADE_ANCHORS_JUAN)}+总设定{len(GRADE_ANCHORS_ZONG)}"
       f"+高教{len(GRADE_ANCHORS_GAO)} 组锚点全部命中")
 
-# ── 名录：军区司令二品全域落地 ──
-NEW_KOUJING = "军区司令职位三品（授上将者按二品高配）"
+# ── 名录：军区司令三品·中将全域落地（2026.12 起「授上将高配二品」作废）──
+# 2026-11-14：原口径行「军区司令职位三品（授上将者按二品高配）」已作废，改为现口径；
+#             合订本已移到 设定集/，ROSTERS 只剩分卷，故命中数由 2 改为 1。
+NEW_KOUJING = "军区司令职位三品（中将）"
 koujing_hits = 0
 for path in ROSTERS:
     for line in path.read_text(encoding="utf-8").splitlines():
         if NEW_KOUJING in line:
             koujing_hits += 1
-        elif "军区司令" in line and "二品" in line and "高配" not in line and "政委" not in line:
+        elif ("军区司令" in line and "二品" in line
+              and "高配" not in line and "政委" not in line):
             raise AssertionError(f"名录残留军区司令二品: {path.name}: {line.strip()}")
-assert koujing_hits == 2, f"口径行应为2处（卷三十五+合订本），实际{koujing_hits}"
+assert koujing_hits == 1, f"口径行应为1处（卷三十五，合订本已移出源目录），实际{koujing_hits}"
 juan1 = (ROOT / "设定" / "全国官员名录·卷一·中央与京畿直隶州(2026).md").read_text(encoding="utf-8")
-assert "| 10 | 穆长缨※ | 委员 | 京畿军区司令 | 三品（授上将者高配二品）【推演】 |" in juan1
-print(f"名录修订: {len(ROSTERS)} 文件扫描，军区司令三品（上将高配二品）全域落地（口径行{koujing_hits}处），零残留")
+assert "| 7 | — | 常委 | 京畿军区司令 | 三品（中将）【推演】 |" in juan1
+print(f"名录修订: {len(ROSTERS)} 文件扫描，军区司令三品·中将全域落地（口径行{koujing_hits}处），旧「高配二品」零残留")
 
 print("--- military-orbat checks done ---")
