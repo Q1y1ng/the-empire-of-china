@@ -409,7 +409,10 @@ def check_lint() -> None:
     import sys
     for label, cmd in (("check_baike", [sys.executable, "tools/check_baike.py", "--quiet"]),
                        ("build_baike --check", [sys.executable, "tools/build_baike.py", "--check"]),
-                       ("check_resume_age", [sys.executable, "tools/check_resume_age.py"])):
+                       ("check_resume_age", [sys.executable, "tools/check_resume_age.py"]),
+                       # 2026-11-14 起纳入：军事编制交叉校验。此前它长期跑不通（陈旧锚点＋作废口径），
+                       # 因为不在体检集合里，坏了三轮没人发现；挂进来后口径一漂当场变红。
+                       ("verify_military_orbat", [sys.executable, "tools/verify_military_orbat.py"])):
         r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True,
                            encoding="utf-8", errors="ignore")
         tail = [l for l in r.stdout.strip().split("\n") if l.strip()]
