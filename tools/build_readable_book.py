@@ -9,7 +9,7 @@
   * 末尾附「覆盖清单」与「同步约定」。
 
 用法：
-    py -3 tools/build_readable_book.py            # 生成 设定/中华帝国设定全书(2026).md
+    py -3 tools/build_readable_book.py            # 生成 设定集/中华帝国设定全书(2026).md
     py -3 tools/build_readable_book.py --check    # 只报告，不写文件
 """
 import argparse
@@ -17,9 +17,9 @@ import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SETTING = os.path.join(ROOT, '设定')
-SRC = os.path.join(SETTING, '中华帝国设定集·全卷合订本(2026).md')
-OUT = os.path.join(ROOT, '中华帝国设定全书(2026).md')
+BOOK = os.path.join(ROOT, '设定集')
+SRC = os.path.join(BOOK, '中华帝国设定集·全卷合订本(2026).md')
+OUT = os.path.join(BOOK, '中华帝国设定全书(2026).md')
 
 # 摘要单元 -> 独立分卷（去重：正文替换为导读小目录 + 指针）
 #   匹配 compendium 中的 H2 标题（无 〔总设定〕 标记）

@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""把 设定/ 源文件的逐行改写同步进《中华帝国设定全书(2026).md》。
+"""把 设定/ 源文件的逐行改写同步进《中华帝国设定全书(2026).md》（位于 设定集/）。
 做法：取 git diff -U0 的 -/+ 行对（要求 1:1），在全书中做字面替换。
-用法：py -3 .rewrite/sync_book.py <源文件相对路径> [...]
+用法：py -3 tools/sync_book_from_setting.py <源文件相对路径> [...]
 """
-import io, re, subprocess, sys
+import io, os, re, subprocess, sys
 
-BOOK = '中华帝国设定全书(2026).md'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BOOK = os.path.join(ROOT, '设定集', '中华帝国设定全书(2026).md')
 
 
 def pairs_for(path):

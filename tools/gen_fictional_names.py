@@ -40,7 +40,7 @@ GIVEN = """
 
 def existing_names() -> set[str]:
     names: set[str] = set()
-    files = list((ROOT / "设定").glob("*.md")) + [ROOT / "中华帝国设定全书(2026).md"]
+    files = list((ROOT / "设定").glob("*.md")) + [ROOT / "设定集" / "中华帝国设定全书(2026).md"]
     files += list((ROOT / "docs" / "baike" / "src").glob("*.md"))
     for f in files:
         if not f.exists():

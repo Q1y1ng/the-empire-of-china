@@ -3,9 +3,11 @@
 """《中华帝国设定集·全卷合订本》混编编译器（十卷制）＋《全国官员名录·全卷合订本》汇编器
 
 用法（在仓库任意位置执行均可）：
-    python tools/build_setting_book.py                        # 汇编两份 Markdown 合订本
+    python tools/build_setting_book.py                        # 汇编两份 Markdown 合订本（输出到 设定集/）
     python tools/build_setting_book.py --pdf 输出.pdf         # 同时生成设定集 PDF（需 pandoc + typst）
     python tools/build_setting_book.py --roster-pdf 输出.pdf  # 同时生成名录订本 PDF
+
+目录约定：设定/ ＝单章源与分卷（唯一可改的地方）；设定集/ ＝由源拼成的成品（勿手改）。
 
 混编体例（2026-09-26 重编，取代旧的"整卷分块粘贴"式 49 部分结构）：
   * 全部设定打散到「编/卷」级单元，按主题重排为十卷；单元正文逐字保留、不改写不删减；
@@ -29,8 +31,9 @@ import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SETTING = os.path.join(ROOT, '设定')
-OUT_MD = os.path.join(SETTING, '中华帝国设定集·全卷合订本(2026).md')
-OUT_ROSTER_MD = os.path.join(SETTING, '全国官员名录·全卷合订本(2026).md')
+BOOK = os.path.join(ROOT, '设定集')
+OUT_MD = os.path.join(BOOK, '中华帝国设定集·全卷合订本(2026).md')
+OUT_ROSTER_MD = os.path.join(BOOK, '全国官员名录·全卷合订本(2026).md')
 
 TS_FILE = '中华帝国世界观总设定v2.0.md'
 DOC_FILES = [
@@ -500,6 +503,7 @@ def build_setting_book():
     check_completeness(out, sources)
 
     try:
+        os.makedirs(BOOK, exist_ok=True)
         with open(OUT_MD, 'w', encoding='utf-8') as fh:
             fh.write(out)
     except OSError as exc:
@@ -536,6 +540,7 @@ def build_roster_book():
     check_completeness(out, sources)
 
     try:
+        os.makedirs(BOOK, exist_ok=True)
         with open(OUT_ROSTER_MD, 'w', encoding='utf-8') as fh:
             fh.write(out)
     except OSError as exc:
