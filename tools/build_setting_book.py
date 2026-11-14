@@ -35,7 +35,18 @@ BOOK = os.path.join(ROOT, '设定集')
 OUT_MD = os.path.join(BOOK, '中华帝国设定集·全卷合订本(2026).md')
 OUT_ROSTER_MD = os.path.join(BOOK, '全国官员名录·全卷合订本(2026).md')
 
-TS_FILE = '中华帝国世界观总设定v2.0.md'
+# 总设定已于 2026-11-14 按编拆为单章（题头＋26 编＋附录一/二＋分类索引，共 30 个文件）。
+# 要求：各文件一级标题逐字保留——ts_block() 靠标题匹配，改了标题就会匹配失败。
+TS_GLOB = '总设定·*.md'
+
+
+def ts_paths():
+    hits = glob.glob(os.path.join(SETTING, TS_GLOB))
+    if not hits:
+        raise SystemExit('未找到总设定单章：设定/总设定·*.md')
+    return sorted(hits)
+
+
 DOC_FILES = [
     '中华帝国编年史1700-2026.md',
     '世界近代史推演.md',
@@ -388,9 +399,23 @@ def roster_paths():
     return idx[0], juans
 
 
+_TS_BLOCKS = None
+
+
+def all_ts_blocks():
+    """把 30 个总设定单章拼成 (标题, 块全文) 列表，进程内缓存一次。"""
+    global _TS_BLOCKS
+    if _TS_BLOCKS is None:
+        blocks = []
+        for p in ts_paths():
+            blocks.extend(split_h1_blocks(read(p).strip()))
+        _TS_BLOCKS = blocks
+    return _TS_BLOCKS
+
+
 def ts_block(key):
     """按标题取总设定的一个一级标题块（标题精确匹配优先，前缀匹配兜底）。"""
-    blocks = split_h1_blocks(read(os.path.join(SETTING, TS_FILE)).strip())
+    blocks = all_ts_blocks()
     exact = [(t, b) for t, b in blocks if t == key]
     if len(exact) == 1:
         return exact[0][1]
@@ -447,9 +472,9 @@ def check_completeness(out_text, sources):
 
 
 def assert_no_uncovered_source():
-    """设定目录下除两个成品外的每个 .md 都必须被十卷制映射覆盖。"""
+    """设定目录下每个 .md 都必须被十卷制映射覆盖（成品已移到 设定集/，此处只扫源）。"""
     idx_path, juan_paths = roster_paths()
-    covered = {TS_FILE} | set(DOC_FILES) | {os.path.basename(idx_path)} | {
+    covered = {os.path.basename(p) for p in ts_paths()} | set(DOC_FILES) | {os.path.basename(idx_path)} | {
         os.path.basename(p) for p in juan_paths}
     all_md = {os.path.basename(p) for p in glob.glob(os.path.join(SETTING, '*.md'))
               if '合订本' not in os.path.basename(p)}
@@ -495,7 +520,7 @@ def build_setting_book():
     if h1 != 1 + len(VOLUMES):
         raise SystemExit(f'一级标题数异常: {h1}（应为 {1 + len(VOLUMES)}）')
     idx_path, juan_paths = roster_paths()
-    sources = {TS_FILE: read(os.path.join(SETTING, TS_FILE))}
+    sources = {os.path.basename(p): read(p) for p in ts_paths()}
     for name in DOC_FILES:
         sources[name] = read(os.path.join(SETTING, name))
     for p in [idx_path] + juan_paths:

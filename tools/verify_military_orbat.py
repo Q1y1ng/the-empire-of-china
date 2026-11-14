@@ -3,7 +3,7 @@
 
 校验对象：
     设定/全国军事编制设定(2026).md   —— 新编军事编制分卷
-    设定/中华帝国世界观总设定v2.0.md —— 第九编摘要＋附录二（2026修订版）
+    设定/总设定·第九编·军事体系.md ＋ 设定/总设定·附录二·军队层级与军衔表.md —— 第九编摘要＋附录二（2026修订版）
 断言内容：陆军七级人数链、标准重装旅兵力与16行装备核算、空军缩比倍率与总量、
 海军舰员/支队/舰队、航母编成、军衔两表冻结未动、旧术语残留零命中。
 """
@@ -11,7 +11,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 JUAN = (ROOT / "设定" / "全国军事编制设定(2026).md").read_text(encoding="utf-8")
-ZONG = (ROOT / "设定" / "中华帝国世界观总设定v2.0.md").read_text(encoding="utf-8")
+# 总设定自 2026-11-14 起拆为单章（设定/总设定·*.md）；此处拼回全文再取锚点
+ZONG = "\n".join(p.read_text(encoding="utf-8")
+                 for p in sorted((ROOT / "设定").glob("总设定·*.md")))
 GAO = (ROOT / "设定" / "全国高等教育设定(2026).md").read_text(encoding="utf-8")
 ROSTERS = sorted((ROOT / "设定").glob("全国官员名录*.md"))
 
