@@ -63,7 +63,11 @@ def rows_of(path: Path) -> list[tuple[int, str]]:
 
 def main() -> int:
     write = "--write" in sys.argv
-    lines = BIO.read_text(encoding="utf-8").split("\n")
+    text = BIO.read_text(encoding="utf-8")
+    if "履历：\n- " in text:
+        print("检测到 2026-11 六要素履历格式（『履历：』后接『- 起止』条目），旧『YYYY年职务』重写器不再适用，跳过。")
+        return 0
+    lines = text.split("\n")
     out = list(lines)
     changed = 0
     for i, line in enumerate(lines):
