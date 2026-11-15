@@ -221,7 +221,11 @@ def main():
         import sys
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from build_setting_book import build_pdf, TYPST_SETTING_INJECT
-        build_pdf(OUT, os.path.abspath(args.pdf), TYPST_SETTING_INJECT)
+        # 全书自带书名，不沿用合订本的文档标题（否则 PDF 属性页显示「全卷合订本」）
+        inject = TYPST_SETTING_INJECT.replace(
+            '中华帝国设定集·全卷合订本（2026）', '中华帝国设定全书（2026）'
+        )
+        build_pdf(OUT, os.path.abspath(args.pdf), inject)
 
 
 if __name__ == '__main__':
