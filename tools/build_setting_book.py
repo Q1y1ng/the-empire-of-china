@@ -77,8 +77,10 @@ DOC_FILES = [
     '教育内容(2026).md',
     '城市志·十四城(2026).md',
     '人物志·名人与皇陵(2026).md',
-    '口径台账(2026).md',
 ]
+
+# 不入合订本的源文件（工具卷：《口径台账》是改口径时用的台账，不属于设定正文）
+BOOK_EXCLUDE = {'口径台账(2026).md'}
 ORDER_CN = [
     '一', '二', '三', '四', '五', '六', '七', '八', '九', '十',
     '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九',
@@ -93,7 +95,7 @@ TS_CLASSIFY_INDEX = '附录：设定分类索引'
 VOLUMES = [
     ('第一卷', '总纲',
      '本卷为全书总纲：《中华帝国世界观总设定 v2.0》题头说明与第一编（世界观总览），给出这一世界的定位、读法与基本盘；其后九卷均为本卷框架的分领域展开。',
-     [('ts', '《中华帝国世界观总设定 v2.0》'), ('ts', '第一编：世界观总览'), ('doc', '帝国主数据表(2026).md'), ('doc', '口径台账(2026).md')]),
+     [('ts', '《中华帝国世界观总设定 v2.0》'), ('ts', '第一编：世界观总览'), ('doc', '帝国主数据表(2026).md')]),
     ('第二卷', '历史·内史',
      '本卷为帝国内部历史。先列总设定第二编（帝国起源与建国·设定层）；继以《编年史》全文（序章、第一至七编、尾声，约1360—2026编年叙事，附历史循环总模型、五个时代一览、皇室世系年表）；殿以总设定第十七编（帝国历史年表·史表速查）。',
      [('ts', '第二编：帝国起源与建国'), ('doc', '中华帝国编年史1700-2026.md'), ('ts', '第十七编：帝国历史年表')]),
@@ -482,7 +484,7 @@ def assert_no_uncovered_source():
     covered = {os.path.basename(p) for p in ts_paths()} | set(DOC_FILES) | {os.path.basename(idx_path)} | {
         os.path.basename(p) for p in juan_paths}
     all_md = {os.path.basename(p) for p in glob.glob(os.path.join(SETTING, '*.md'))
-              if '合订本' not in os.path.basename(p)}
+              if '合订本' not in os.path.basename(p)} - BOOK_EXCLUDE
     missing = all_md - covered
     if missing:
         raise SystemExit(f'以下分卷未被十卷制映射覆盖（零遗漏断言）: {sorted(missing)}')
