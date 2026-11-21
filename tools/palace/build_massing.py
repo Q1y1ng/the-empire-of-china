@@ -1,14 +1,10 @@
 """宫城（皇宫）3D 体量白模 —— Blender 5.x 无头脚本，数据全部取自 palace_data.py。
 
 用法：
-    blender -b --factory-startup -P build_massing.py -- --out <输出目录> [--samples 128]
+    blender -b --factory-startup -P build_massing.py -- --out <输出目录> [--samples 160] [--res 1920]
 
-产物：
-    palace_massing.blend     可直接在 GUI 里转着看
-    palace_massing.glb       glTF（留给后续网页漫游）
-    *.png                    鸟瞰 / 人视 / 正射总平面
-口径：架空混合 —— 明官式为骨（庑殿顶、台基、城台门楼、角楼），
-      殿身面阔进深为按设定占地反推的推定值，现代附楼为架空改造。
+排布与 2D 同一套数据：外朝三殿同台、内廷后三宫、六宫各成院落、值房沿墙、内金水河五桥、四隅角楼。
+产物：palace_massing.blend / palace_massing.glb / *.png
 """
 
 import argparse
@@ -26,12 +22,12 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import palace_data as D  # noqa: E402
 
-# ------------------------------------------------------------------ 参数
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
 ap.add_argument("--out", default=os.path.join(HERE, "..", "..", "docs", "assets"))
-ap.add_argument("--samples", type=int, default=128)
-ap.add_argument("--res", type=int, default=1600)
+ap.add_argument("--samples", type=int, default=160)
+ap.add_argument("--res", type=int, default=1920)
+ap.add_argument("--only", default="", help="只渲染名字含该串的机位（其余跳过）")
 args = ap.parse_args(argv)
 WORK = os.path.join(os.environ.get("TEMP", HERE), "palace_massing")
 os.makedirs(WORK, exist_ok=True)
@@ -40,8 +36,9 @@ os.makedirs(args.out, exist_ok=True)
 P = D.PALACE
 HW, HD = P["width"] / 2, P["depth"] / 2
 T, H = P["wall_t"], P["wall_h"]
+WH, WT = P["inner_wall_h"], P["inner_wall_t"]
 
-# ------------------------------------------------------------------ 场景初始化
+# ------------------------------------------------------------------ 场景
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
 sc.unit_settings.system = "METRIC"
@@ -64,17 +61,23 @@ def material(name, rgb, rough=0.75, metal=0.0):
 
 MAT = {
     "roof": material("琉璃黄", (0.70, 0.42, 0.045), 0.45),
+    "roof2": material("琉璃黄·庑", (0.60, 0.37, 0.05), 0.5),
+    "tile": material("青瓦", (0.26, 0.26, 0.25), 0.8),
     "wall": material("宫墙红", (0.42, 0.075, 0.06), 0.85),
     "citywall": material("城墙红", (0.38, 0.095, 0.075), 0.9),
     "stone": material("台基白", (0.66, 0.63, 0.55), 0.85),
+    "platform": material("三台石", (0.62, 0.59, 0.51), 0.9),
     "ground": material("城外地面", (0.31, 0.30, 0.27), 0.95),
     "plaza": material("宫城地坪", (0.50, 0.47, 0.41), 0.95),
     "water": material("水面", (0.025, 0.09, 0.15), 0.06, 0.2),
     "green": material("绿地", (0.17, 0.27, 0.12), 0.95),
+    "tree": material("树冠", (0.18, 0.30, 0.14), 0.9),
+    "trunk": material("树干", (0.20, 0.14, 0.10), 0.9),
     "service": material("值房灰", (0.68, 0.66, 0.60), 0.9),
     "path": material("御道", (0.76, 0.73, 0.66), 0.9),
     "glass": material("现代玻璃", (0.16, 0.30, 0.40), 0.25, 0.15),
     "ridge": material("屋脊压顶", (0.32, 0.22, 0.09), 0.5),
+    "rock": material("假山石", (0.45, 0.43, 0.39), 0.95),
 }
 
 
@@ -106,8 +109,8 @@ def mesh_from(name, verts, faces, mat=None):
     return ob
 
 
-def hip_roof(name, w, d, h, x, y, z0, mat, overhang=3.0, ridge_cap=True):
-    """庑殿顶：四坡。w2>=d2 时脊沿 x，否则脊沿 y。"""
+def hip_roof(name, w, d, h, x, y, z0, mat=None, overhang=3.0):
+    mat = mat or MAT["roof"]
     w2, d2 = w + 2 * overhang, d + 2 * overhang
     v = [(-w2 / 2, -d2 / 2, 0), (w2 / 2, -d2 / 2, 0), (w2 / 2, d2 / 2, 0), (-w2 / 2, d2 / 2, 0)]
     if w2 >= d2:
@@ -123,15 +126,15 @@ def hip_roof(name, w, d, h, x, y, z0, mat, overhang=3.0, ridge_cap=True):
         cap = [(x - 1.1, y - rl / 2, z0 + h), (x + 1.1, y - rl / 2, z0 + h),
                (x + 1.1, y + rl / 2, z0 + h), (x - 1.1, y + rl / 2, z0 + h)]
     ob = mesh_from(name, [(x + a, y + b, z0 + c) for a, b, c in v], f, mat)
-    if ridge_cap:
+    if w2 >= d2 and w2 > 30:      # 正脊（小建筑不画）
         mesh_from(name + "_脊", cap + [(px, py, pz + 1.2) for px, py, pz in cap],
                   [(0, 1, 2, 3), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)],
                   MAT["ridge"])
     return ob
 
 
-def gable_roof(name, w, d, h, x, y, z0, mat, overhang=2.2):
-    """悬山顶：两坡，屋脊沿长边。"""
+def gable_roof(name, w, d, h, x, y, z0, mat=None, overhang=2.2):
+    mat = mat or MAT["roof"]
     w2, d2 = w + 2 * overhang, d + 2 * overhang
     swap = d2 > w2
     if swap:
@@ -139,57 +142,74 @@ def gable_roof(name, w, d, h, x, y, z0, mat, overhang=2.2):
     v = [(-w2 / 2, -d2 / 2, 0), (w2 / 2, -d2 / 2, 0), (w2 / 2, d2 / 2, 0), (-w2 / 2, d2 / 2, 0),
          (-w2 / 2, 0, h), (w2 / 2, 0, h)]
     f = [(0, 1, 5, 4), (3, 2, 5, 4), (0, 4, 3), (1, 2, 5)]
-    if swap:                                   # 脊改沿 y：交换本地 x/y
+    if swap:
         v = [(b, a, c) for a, b, c in v]
     return mesh_from(name, [(x + a, y + b, z0 + c) for a, b, c in v], f, mat)
 
 
-def add_hall(h):
-    """殿身 + 台基 + 屋顶（+ 月台 / 门楼）。"""
-    w, d = h["w"], h["d"]
-    z0 = 0.0
-    if h.get("base"):
-        b = h["base"]
-        box(h["name"] + "_台基", b["w"], b["d"], b["h"], h["cx"], h["cy"], 0.0, MAT["stone"])
-        z0 = b["h"]
-    if h.get("terrace"):
-        t = h["terrace"]
-        box(h["name"] + "_月台", t["w"], t["d"], t["h"], h["cx"], t["cy"], 0.0, MAT["stone"])
+def pyramid_roof(name, w, d, h, x, y, z0, mat=None, overhang=2.6):
+    mat = mat or MAT["roof"]
+    w2, d2 = w + 2 * overhang, d + 2 * overhang
+    v = [(-w2 / 2, -d2 / 2, 0), (w2 / 2, -d2 / 2, 0), (w2 / 2, d2 / 2, 0), (-w2 / 2, d2 / 2, 0),
+         (0, 0, h)]
+    f = [(0, 1, 4), (1, 2, 4), (2, 3, 4), (3, 0, 4)]
+    return mesh_from(name, [(x + a, y + b, z0 + c) for a, b, c in v], f, mat)
 
-    body_h = h["h"]
-    if h["kind"] == "gate":
-        body_mat = MAT["citywall"]
-    elif h["kind"] == "modern":
-        body_mat = MAT["glass"]
+
+def add_struct(s):
+    z = s.get("z", 0.0)
+    w, d, h = s["w"], s["d"], s["h"]
+    x, y = s["cx"], s["cy"]
+    kind = s["kind"]
+
+    if s.get("base"):
+        b = s["base"]
+        box(s["name"] + "_台基", b["w"], b["d"], b["h"], x, y, z, MAT["stone"])
+        z += b["h"]
+    if s.get("terrace"):
+        t = s["terrace"]
+        box(s["name"] + "_月台", t["w"], t["d"], t["h"], x, t["cy"], s.get("z", 0.0), MAT["stone"])
+
+    if kind == "gate":
+        body = MAT["citywall"]
+    elif kind == "modern":
+        body = MAT["glass"]
+    elif kind == "corridor":
+        body = MAT["wall"]
     else:
-        body_mat = MAT["wall"]
-    box(h["name"], w, d, body_h, h["cx"], h["cy"], z0, body_mat)
+        body = MAT["wall"]
+    box(s["name"], w, d, h, x, y, z, body)
 
-    top = z0 + body_h
-    roof = h.get("roof", "hip")
+    top = z + h
+    roof = s.get("roof", "hip")
+    rmat = MAT[D.roof_mat_for(kind, w, d)]
     if roof == "hip":
-        hip_roof(h["name"] + "_屋顶", w, d, max(0.22 * min(w, d) + 1.2, 4.0),
-                 h["cx"], h["cy"], top, MAT["roof"])
+        hip_roof(s["name"] + "_顶", w, d, max(0.22 * min(w, d) + 1.2, 3.2), x, y, top, rmat)
     elif roof == "gable":
-        gable_roof(h["name"] + "_屋顶", w, d, max(0.26 * min(w, d) + 1.0, 3.2),
-                   h["cx"], h["cy"], top, MAT["roof"])
+        gable_roof(s["name"] + "_顶", w, d, max(0.26 * min(w, d) + 1.0, 2.4), x, y, top, rmat,
+                   overhang=1.6 if kind == "corridor" else 2.2)
+    elif roof == "pyramid":
+        pyramid_roof(s["name"] + "_顶", w, d, max(0.30 * min(w, d) + 1.0, 3.0), x, y, top)
     elif roof == "flat":
-        box(h["name"] + "_顶", w, d, 0.9, h["cx"], h["cy"], top, MAT["ridge"])
+        box(s["name"] + "_顶", w, d, 0.9, x, y, top, MAT["ridge"])
 
-    if h.get("tower"):
-        t = h["tower"]
-        tz = z0 + body_h
-        box(h["name"] + "_门楼", t["w"], t["d"], t["h"], h["cx"], h["cy"], tz, MAT["wall"])
-        ttop = tz + t["h"]
-        rh = max(0.24 * min(t["w"], t["d"]) + 0.8, 2.6)
-        if h.get("tower_roof") == "gable":
-            gable_roof(h["name"] + "_门楼顶", t["w"], t["d"], rh, h["cx"], h["cy"], ttop,
-                       MAT["roof"], overhang=2.0)
+    if s.get("tower"):
+        t = s["tower"]
+        box(s["name"] + "_门楼", t["w"], t["d"], t["h"], x, y, top, MAT["wall"])
+        tt = top + t["h"]
+        rh = max(0.24 * min(t["w"], t["d"]) + 0.8, 2.4)
+        if s.get("tower_roof") == "gable":
+            gable_roof(s["name"] + "_门楼顶", t["w"], t["d"], rh, x, y, tt, overhang=1.8)
         else:
-            hip_roof(h["name"] + "_门楼顶", t["w"], t["d"], rh, h["cx"], h["cy"], ttop,
-                     MAT["roof"], overhang=2.0)
-        top = ttop
-    return top
+            hip_roof(s["name"] + "_门楼顶", t["w"], t["d"], rh, x, y, tt, overhang=1.8)
+        top = tt
+
+
+def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
+    mat = mat or MAT["wall"]
+    box(name, x1 - x0, y1 - y0, h, (x0 + x1) / 2, (y0 + y1) / 2, 0.0, mat)
+    box(name + "_瓦", (x1 - x0) + 0.6, (y1 - y0) + 0.6, 0.5,
+        (x0 + x1) / 2, (y0 + y1) / 2, h, MAT["ridge"])
 
 
 # ------------------------------------------------------------------ 地面 / 护城河
@@ -204,19 +224,9 @@ for nm, (w_, d_, x_, y_) in {
     "西": (mw, 2 * (HD + T / 2), -HW - T / 2 - mw / 2, 0),
 }.items():
     box("护城河" + nm, w_, d_, 1.6, x_, y_, -1.2, MAT["water"])
-    # 河岸压石
     box("河岸" + nm, w_ + 3, d_ + 3, 0.35, x_, y_, -0.35, MAT["stone"])
 
-for b in D.BRIDGES:
-    box(b["name"], b["w"], b["d"], 1.2, b["cx"], b["cy"], -0.4, MAT["stone"])
-    for s in (-1, 1):
-        off = (b["w"] / 2 - 1.2) * s
-        box(b["name"] + "_栏", 2.0, b["d"], 1.3, b["cx"] + off, b["cy"], 0.8, MAT["stone"])
-
-p = D.PATH
-box("御道", p["x1"] - p["x0"], p["y1"] - p["y0"], 0.25, 0, (p["y0"] + p["y1"]) / 2, 0.0, MAT["path"])
-
-# ------------------------------------------------------------------ 城墙 + 角楼
+# ------------------------------------------------------------------ 城墙
 openings = {g["side"]: g["opening"] for g in D.GATES}
 
 
@@ -240,25 +250,87 @@ ct = D.CORNER_TOWER
 for sx in (-1, 1):
     for sy in (-1, 1):
         box("角楼", ct["w"], ct["d"], ct["h"], sx * HW, sy * HD, 0.0, MAT["citywall"])
-        hip_roof("角楼顶", ct["w"], ct["d"], 5.0, sx * HW, sy * HD, ct["h"], MAT["roof"], overhang=2.0)
+        pyramid_roof("角楼顶", ct["w"], ct["d"], 5.0, sx * HW, sy * HD, ct["h"],
+                     overhang=2.0)
 
-# ------------------------------------------------------------------ 值房 / 琼苑
+# ------------------------------------------------------------------ 三台 / 院墙 / 河
+def prism(name, poly, h, z0, mat):
+    n = len(poly)
+    verts = [(x, y, z0) for x, y in poly] + [(x, y, z0 + h) for x, y in poly]
+    faces = [tuple(range(n)), tuple(range(2 * n - 1, n - 1, -1))]
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append((i, j, j + n, i + n))
+    return mesh_from(name, verts, faces, mat)
+
+
+prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, MAT["platform"])
+for p in D.PLATFORMS:
+    box(p["name"], p["w"], p["d"], p["h"], p["cx"], p["cy"], 0.0, MAT["platform"])
+
+for w in D.inner_line_walls():
+    add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"])
+for c in D.COMPOUNDS:
+    for w in D.compound_walls(c):
+        add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"], h=WH)
+
+R = D.RIVER
+pts = R["points"]
+half = R["width"] / 2
+verts, faces = [], []
+for i, (x, y) in enumerate(pts):
+    if i == 0:
+        dx, dy = pts[1][0] - x, pts[1][1] - y
+    elif i == len(pts) - 1:
+        dx, dy = x - pts[-2][0], y - pts[-2][1]
+    else:
+        dx, dy = pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]
+    L = math.hypot(dx, dy) or 1.0
+    nx, ny = -dy / L * half, dx / L * half
+    verts += [(x + nx, y + ny, 0.12), (x - nx, y - ny, 0.12)]
+for i in range(len(pts) - 1):
+    a = i * 2
+    faces.append((a, a + 1, a + 3, a + 2))
+mesh_from("内金水河", verts, faces, MAT["water"])
+
+# 御道
+box("御道", 18, 900, 0.22, 0, -20, 0.02, MAT["path"])
+
+# ------------------------------------------------------------------ 琼苑 / 值房 / 树
+g = next(c for c in D.COMPOUNDS if c["name"] == "琼苑")
+box("琼苑地面", g["x1"] - g["x0"] - 4, g["y1"] - g["y0"] - 4, 0.5,
+    (g["x0"] + g["x1"]) / 2, (g["y0"] + g["y1"]) / 2, 0.25, MAT["green"])
+
 for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
     box(f"值房{i:02d}", w, d, hh, cx, cy, 0.0, MAT["service"])
-    gable_roof(f"值房{i:02d}_顶", w, d, 1.8, cx, cy, hh, MAT["roof"], overhang=1.0)
+    gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
 
-g = next(z for z in D.ZONES if z["key"] == "garden")
-box("琼苑", g["x1"] - g["x0"], g["y1"] - g["y0"], 0.5, (g["x0"] + g["x1"]) / 2,
-    (g["y0"] + g["y1"]) / 2, 0.25, MAT["green"])
+for i, (x, y) in enumerate(D.trees()):
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.45, depth=2.2, location=(x, y, 1.35))
+    tr = bpy.context.object
+    tr.data.materials.append(MAT["trunk"])
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=3.4, location=(x, y, 4.6))
+    cr = bpy.context.object
+    cr.scale = (1.0, 1.0, 0.85)
+    cr.data.materials.append(MAT["tree"])
 
-# ------------------------------------------------------------------ 殿宇
-for h in D.HALLS:
-    add_hall(h)
+# ------------------------------------------------------------------ 单体
+for s in D.STRUCTS:
+    if s["kind"] == "rock":
+        for k, (dx, dy, dz, sc_) in enumerate(((0, 0, 0, 1.0), (7, -4, 0.2, 0.62), (-6, 3, 0.1, 0.55))):
+            b = box(f'{s["name"]}_{k}', s["w"] * sc_ * 0.8, s["d"] * sc_ * 0.9,
+                    s["h"] * sc_, s["cx"] + dx, s["cy"] + dy, dz, MAT["rock"])
+            b.rotation_euler[2] = math.radians(12 * k)
+        continue
+    if s["kind"] == "bridge":
+        box(s["name"], s["w"], s["d"], s["h"], s["cx"], s["cy"], -0.4, MAT["stone"])
+        continue
+    add_struct(s)
 
 # ------------------------------------------------------------------ 相机 / 灯光
 cam_data = bpy.data.cameras.new("Cam")
 cam_data.clip_start = 1.0
-cam_data.clip_end = 40000.0          # 默认 100 m，米制大场景必改
+cam_data.clip_end = 40000.0
 cam = bpy.data.objects.new("Cam", cam_data)
 col.objects.link(cam)
 sc.camera = cam
@@ -274,7 +346,7 @@ sun_d.energy = 2.6
 sun_d.angle = math.radians(4)
 sun = bpy.data.objects.new("Sun", sun_d)
 col.objects.link(sun)
-sun.rotation_euler = (math.radians(40), math.radians(0), math.radians(225))
+sun.rotation_euler = (math.radians(40), 0, math.radians(225))
 
 sc.world = bpy.data.worlds.new("World")
 sc.world.use_nodes = True
@@ -295,13 +367,15 @@ sc.view_settings.exposure = -0.25
 AR = 16 / 9
 shots = [
     ("鸟瞰·东南", dict(loc=(820, -980, 520), target=(0, 10, 0), lens=45)),
-    ("鸟瞰·正南", dict(loc=(0, -1950, 800), target=(0, 30, 0), lens=55)),
     ("鸟瞰·中轴", dict(loc=(90, -820, 175), target=(0, -70, 0), lens=58)),
-    ("人视·金瓯殿", dict(loc=(120, -300, 10.0), target=(-15, -178, 20), lens=35)),
+    ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
+    ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
 ]
 
 results = {}
 for name, s in shots:
+    if args.only and args.only not in name:
+        continue
     cam.location = s["loc"]
     cam_data.type = "PERSP"
     cam_data.lens = s["lens"]
@@ -315,19 +389,18 @@ for name, s in shots:
     results[name] = {"s": round(time.time() - t0, 1), "bytes": os.path.getsize(path)}
     print("RENDER", name, results[name])
 
-cam_data.type = "ORTHO"
-cam_data.ortho_scale = 1480
-cam.location = (0, 0, 4000)
-cam.rotation_euler = (0, 0, 0)
-sc.render.resolution_x, sc.render.resolution_y = (1400, 1780)
-path = os.path.join(WORK, "massing_正射总平面.png")
-sc.render.filepath = path
-t0 = time.time()
-bpy.ops.render.render(write_still=True)
-results["正射总平面"] = {"s": round(time.time() - t0, 1), "bytes": os.path.getsize(path)}
-cam_data.type = "PERSP"
-
-# （素模一版因白对白看不出体量，已弃用；要看形体用鸟瞰图）
+if not args.only:
+    cam_data.type = "ORTHO"
+    cam_data.ortho_scale = 1480
+    cam.location = (0, 0, 4000)
+    cam.rotation_euler = (0, 0, 0)
+    sc.render.resolution_x, sc.render.resolution_y = (1400, 1780)
+    path = os.path.join(WORK, "massing_正射总平面.png")
+    sc.render.filepath = path
+    t0 = time.time()
+    bpy.ops.render.render(write_still=True)
+    results["正射总平面"] = {"s": round(time.time() - t0, 1), "bytes": os.path.getsize(path)}
+    cam_data.type = "PERSP"
 
 # ------------------------------------------------------------------ 导出
 blend = os.path.join(WORK, "palace_massing.blend")
