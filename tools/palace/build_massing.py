@@ -261,9 +261,16 @@ for side, x in (("E", HW), ("W", -HW)):
 ct = D.CORNER_TOWER
 for sx in (-1, 1):
     for sy in (-1, 1):
-        box("角楼", ct["w"], ct["d"], ct["h"], sx * HW, sy * HD, 0.0, MAT["citywall"])
-        pyramid_roof("角楼顶", ct["w"], ct["d"], 5.0, sx * HW, sy * HD, ct["h"],
-                     overhang=2.0)
+        if args.precise:
+            before = set(col.objects)
+            PL.wall_tower("角楼", ct["w"], ct["d"], z=0.0, body_h=ct["h"])
+            for ob in set(col.objects) - before:
+                ob.location.x += sx * HW
+                ob.location.y += sy * HD
+        else:
+            box("角楼", ct["w"], ct["d"], ct["h"], sx * HW, sy * HD, 0.0, MAT["citywall"])
+            pyramid_roof("角楼顶", ct["w"], ct["d"], 5.0, sx * HW, sy * HD, ct["h"],
+                         overhang=2.0)
 
 # ------------------------------------------------------------------ 三台 / 院墙 / 河
 def prism(name, poly, h, z0, mat):
@@ -280,6 +287,10 @@ PL.make_materials()
 prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, PL.MAT["stone2"])
 PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
 PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
+PL.balustrade_line(-215, -110, 117.5, D.PLATFORM_H, along_x=False)
+PL.balustrade_line(-215, -110, -117.5, D.PLATFORM_H, along_x=False)
+PL.balustrade_line(-50, 10, 103.5, D.PLATFORM_H, along_x=False)
+PL.balustrade_line(-50, 10, -103.5, D.PLATFORM_H, along_x=False)
 for p in D.PLATFORMS:
     box(p["name"], p["w"], p["d"], p["h"], p["cx"], p["cy"], 0.0, MAT["platform"])
 
@@ -382,13 +393,27 @@ for _i, s in enumerate(D.STRUCTS):
             add_struct_precise(s)
         continue
     if s["kind"] == "rock":
-        for k, (dx, dy, dz, sc_) in enumerate(((0, 0, 0, 1.0), (7, -4, 0.2, 0.62), (-6, 3, 0.1, 0.55))):
-            b = box(f'{s["name"]}_{k}', s["w"] * sc_ * 0.8, s["d"] * sc_ * 0.9,
-                    s["h"] * sc_, s["cx"] + dx, s["cy"] + dy, dz, MAT["rock"])
-            b.rotation_euler[2] = math.radians(12 * k)
+        if args.precise:
+            before = set(col.objects)
+            PL.rockery(s["name"], s["w"], s["d"], s["h"], z=0.0)
+            for ob in set(col.objects) - before:
+                ob.location.x += s["cx"]
+                ob.location.y += s["cy"]
+        else:
+            for k, (dx, dy, dz, sc_) in enumerate(((0, 0, 0, 1.0), (7, -4, 0.2, 0.62), (-6, 3, 0.1, 0.55))):
+                b = box(f'{s["name"]}_{k}', s["w"] * sc_ * 0.8, s["d"] * sc_ * 0.9,
+                        s["h"] * sc_, s["cx"] + dx, s["cy"] + dy, dz, MAT["rock"])
+                b.rotation_euler[2] = math.radians(12 * k)
         continue
     if s["kind"] == "bridge":
-        box(s["name"], s["w"], s["d"], s["h"], s["cx"], s["cy"], -0.4, MAT["stone"])
+        if args.precise:
+            before = set(col.objects)
+            PL.bridge(s["name"], s["w"], s["d"], z=-0.4)
+            for ob in set(col.objects) - before:
+                ob.location.x += s["cx"]
+                ob.location.y += s["cy"]
+        else:
+            box(s["name"], s["w"], s["d"], s["h"], s["cx"], s["cy"], -0.4, MAT["stone"])
         continue
     add_struct(s)
 
@@ -486,6 +511,13 @@ blend = os.path.join(WORK, "palace_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
 glb = os.path.join(WORK, "palace_massing.glb")
 bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
+glb_lite = None
+if args.precise:      # 轻量 glb：剔掉斗拱/值房/树/城墙等重复件，便于网页加载
+    for ob in list(col.objects):
+        if ob.name.split("·")[0].startswith(("斗拱", "值房", "树", "城墙", "角楼", "三台·望柱")):
+            bpy.data.objects.remove(ob, do_unlink=True)
+    glb_lite = os.path.join(WORK, "palace_precise_lite.glb")
+    bpy.ops.export_scene.gltf(filepath=glb_lite, export_format="GLB", export_apply=True)
 
 tris = 0
 for o in col.objects:

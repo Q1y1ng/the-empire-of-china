@@ -471,6 +471,47 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
 
 
 # ------------------------------------------------------------------ 整殿
+def wall_tower(name, w, d, z=0.0, body_h=10.0):
+    """角楼：城台 + 上层柱廊 + 斗拱 + 庑殿顶。"""
+    box(name + "·台", w, d, body_h, 0, 0, z, MAT["citywall"])
+    zt = z + body_h
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            column(sx * (w / 2 - 1.4), sy * (d / 2 - 1.4), zt, zt + 2.8, 0.28)
+    ring_beam(name + "·额", w - 1.6, d - 1.6, zt + 2.8, 0.42, 0.34, MAT["cai_blue"])
+    box(name + "·窗", w - 3.2, 0.14, 1.5, 0, -d / 2 + 1.2, zt + 0.9, MAT["lattice"])
+    dougong_ring(w - 1.2, d - 1.2, zt + 3.3, spacing=1.4, lod=1)
+    hip_roof(name + "·顶", w + 3.4, d + 3.4, zt + 3.9, max(3.4, w * 0.30), step=0.5)
+    ridges(w + 3.4, d + 3.4, zt + 3.9, max(3.4, w * 0.30), (w + 3.4) - (d + 3.4),
+           with_kiss=False)
+
+
+def bridge(name, w, d, z=0.0):
+    """石桥：桥面 + 两侧望柱栏板。"""
+    box(name + "·面", w, d, 0.95, 0, 0, z, MAT["stone2"])
+    for sx in (-1, 1):
+        n = max(2, int(w / 2.4))
+        for i in range(n + 1):
+            x = -w / 2 + i * w / n
+            box(name + "·望柱", 0.24, 0.24, 0.95, x, sx * (d / 2 - 0.28), z + 0.95, MAT["stone"])
+        box(name + "·栏板", w, 0.18, 0.5, 0, sx * (d / 2 - 0.28), z + 1.1, MAT["stone"])
+
+
+def rockery(name, w, d, h, z=0.0):
+    """假山：几块不规则石头叠成。"""
+    import math as _m
+    specs = [(0.0, -0.10, 0.00, 0.62), (-0.26, 0.10, 0.05, 0.44), (0.24, 0.14, 0.03, 0.40),
+             (0.05, 0.24, 0.10, 0.34), (-0.12, -0.22, 0.08, 0.30), (0.16, -0.16, 0.16, 0.26)]
+    for i, (dx, dy, dz, sc) in enumerate(specs):
+        bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=1.0,
+                                              location=(dx * w, dy * d, z + dz * h))
+        ob = bpy.context.object
+        ob.name = f"{name}·石{i}"
+        ob.scale = (sc * w * 0.62, sc * d * 0.62, sc * h * 0.75)
+        ob.rotation_euler = (_m.radians(18 * i), _m.radians(11 * i), _m.radians(37 * i))
+        ob.data.materials.append(MAT["stone2"])
+
+
 def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
          base_h=3.2, col_h=12.0, plaque=None, lod=1, stairs=True, balustrade=True):
     """按明官式排一座殿：台基 + 柱网 + 额枋 + 斗拱 + 椽 + 屋顶（单檐/重檐）。"""
