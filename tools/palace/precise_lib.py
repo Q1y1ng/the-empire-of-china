@@ -192,16 +192,38 @@ def ring_beam(name, w, d, z, h, t, mat):
 
 
 def beams(xs, ys, z, h, t=0.55):
+    """额枋：按清式彩画分段——两端箍头（青）、中间枋心（绿/青交替），交界加金线。"""
+    def one(name, cx, cy, bw, bd, along_x, heart):
+        # 箍头 0.3 / 枋心 0.4
+        segs = [(0.15, MAT["cai_blue"]), (0.70, heart), (0.15, MAT["cai_blue"])]
+        pos = -0.5
+        for frac, mat in segs:
+            length = frac
+            center = (pos + length / 2) * bw
+            if along_x:
+                box(f"{name}·{mat.name}", bw * length, t, h, cx + center, cy, z, mat)
+            else:
+                box(f"{name}·{mat.name}", t, bw * length, h, cx, cy + center, z, mat)
+            pos += length
+        # 金线（分界）
+        for k in (-0.2, 0.2):
+            if along_x:
+                box(f"{name}·金", 0.12, t + 0.06, h * 0.92, cx + k * bw, cy, z + h * 0.04, MAT["gold"])
+            else:
+                box(f"{name}·金", t + 0.06, 0.12, h * 0.92, cx, cy + k * bw, z + h * 0.04, MAT["gold"])
+
     for i in range(len(xs) - 1):
-        x, bw = (xs[i] + xs[i + 1]) / 2, xs[i + 1] - xs[i] - t * 1.7
-        m = MAT["cai_blue"] if i % 2 == 0 else MAT["cai_green"]
-        box(f"额枋S{i}", bw, t, h, x, -sum(ys) / 2, z, m)
-        box(f"额枋N{i}", bw, t, h, x, sum(ys) / 2, z, m)
+        bw = xs[i + 1] - xs[i] - t * 1.7
+        cx = (xs[i] + xs[i + 1]) / 2
+        heart = MAT["cai_green"] if i % 2 == 0 else MAT["cai_blue"]
+        one(f"额枋S{i}", cx, -sum(ys) / 2, bw, t, True, heart)
+        one(f"额枋N{i}", cx, sum(ys) / 2, bw, t, True, heart)
     for i in range(len(ys) - 1):
-        y, bw = (ys[i] + ys[i + 1]) / 2, ys[i + 1] - ys[i] - t * 1.7
-        m = MAT["cai_blue"] if i % 2 == 0 else MAT["cai_green"]
-        box(f"额枋E{i}", t, bw, h, sum(xs) / 2, y, z, m)
-        box(f"额枋W{i}", t, bw, h, -sum(xs) / 2, y, z, m)
+        bw = ys[i + 1] - ys[i] - t * 1.7
+        cy = (ys[i] + ys[i + 1]) / 2
+        heart = MAT["cai_green"] if i % 2 == 0 else MAT["cai_blue"]
+        one(f"额枋E{i}", sum(xs) / 2, cy, bw, t, False, heart)
+        one(f"额枋W{i}", -sum(xs) / 2, cy, bw, t, False, heart)
 
 
 # ------------------------------------------------------------------ 斗拱
