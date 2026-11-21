@@ -474,6 +474,7 @@ shots = [
     ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
     ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
     ("细部·外朝", dict(loc=(86, -320, 62), target=(0, -120, 20), lens=52)),
+    ("正立面·正射", dict(loc=(0, -420, 34), target=(0, 0, 30), lens=0, ortho=108)),
 ]
 
 results = {}
@@ -481,9 +482,14 @@ for name, s in shots:
     if args.only and args.only not in name:
         continue
     cam.location = s["loc"]
-    cam_data.type = "PERSP"
-    cam_data.lens = s["lens"]
-    look_at(cam, s["target"])
+    if s.get("ortho"):
+        cam_data.type = "ORTHO"
+        cam_data.ortho_scale = s["ortho"]
+        cam.rotation_euler = (math.pi / 2, 0, 0)
+    else:
+        cam_data.type = "PERSP"
+        cam_data.lens = s["lens"]
+        look_at(cam, s["target"])
     sc.render.resolution_x = args.res
     sc.render.resolution_y = int(args.res / AR)
     path = os.path.join(WORK, f"massing_{name}.png")
@@ -516,6 +522,10 @@ if args.precise:      # 轻量 glb：剔掉斗拱/值房/树/城墙等重复件�
     for ob in list(col.objects):
         if ob.name.split("·")[0].startswith(("斗拱", "值房", "树", "城墙", "角楼", "三台·望柱")):
             bpy.data.objects.remove(ob, do_unlink=True)
+    for ob in col.objects:
+        if ob.type == "MESH":
+            dm = ob.modifiers.new("dec", "DECIMATE")
+            dm.ratio = 0.28
     glb_lite = os.path.join(WORK, "palace_precise_lite.glb")
     bpy.ops.export_scene.gltf(filepath=glb_lite, export_format="GLB", export_apply=True)
 

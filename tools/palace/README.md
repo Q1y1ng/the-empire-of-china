@@ -57,6 +57,7 @@ uv pip install --python "$TEMP/palace-build/Scripts/python.exe" \
 | `docs/assets/皇宫宫城(2026)·体量白模·内廷.png` | 内廷特写：十二院与后罩房、夹道值房 |
 | `docs/assets/皇宫宫城(2026)·体量白模·人视金瓯殿.png` | 人视：三台、月台、殿身比例 |
 | `docs/assets/皇宫宫城(2026)·体量白模.glb` | glTF，后续网页漫游直接用 |
+| `docs/assets/皇宫宫城(2026)·精模·{鸟瞰,中轴,内廷,人视金瓯殿,外朝细部,正射总平面,正立面}.png` | 精模七图（1920×1080，128 spp）|
 | `%TEMP%/palace_massing/palace_massing.blend` | 可在 Blender GUI 里转着看；TEMP 会被清，要留就另存 |
 
 ## 四、平面怎么排的

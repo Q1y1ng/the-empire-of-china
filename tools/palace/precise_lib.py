@@ -288,17 +288,22 @@ def corr(x, amp):
     return amp * math.cos(2 * math.pi * x / 0.62)
 
 
+def hip_height(x, y, w, d, h):
+    """庑殿屋面上任意点的相对高度（举折 + 瓦垄 + 翼角）。"""
+    L = max(w - d, 0.18 * w)
+    t = min(max(max(abs(y), max(abs(x) - L / 2, 0.0)) / (d / 2), 0.0), 1.0)
+    z = h * (1.0 - t) ** 1.50
+    amp = 0.115 * (0.30 + 0.70 * t)
+    z += corr(x if abs(x) <= L / 2 else y, amp)
+    z += 0.5 * max(0.0, (abs(x) / (w / 2)) * (abs(y) / (d / 2))) ** 6
+    return z
+
+
 def hip_roof(name, w, d, z_eave, h, step=0.55, mat=None):
     mat = mat or MAT["tile"]
-    L = max(w - d, 0.18 * w)
 
     def f(x, y):
-        t = min(max(max(abs(y), max(abs(x) - L / 2, 0.0)) / (d / 2), 0.0), 1.0)
-        z = h * (1.0 - t) ** 1.50
-        amp = 0.115 * (0.30 + 0.70 * t)
-        z += corr(x if abs(x) <= L / 2 else y, amp)
-        z += 0.5 * max(0.0, (abs(x) / (w / 2)) * (abs(y) / (d / 2))) ** 6
-        return z_eave + z
+        return z_eave + hip_height(x, y, w, d, h)
 
     nx, ny = max(int(w / step), 4), max(int(d / step), 4)
     verts, faces = [], []
@@ -363,11 +368,11 @@ def ridges(w, d, z_eave, h, ridge_len, with_kiss=True):
                 t0, t1 = i / n, (i + 1) / n
                 xa, ya = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
                 xb, yb = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
-                za = z_eave + h * (1 - t0) ** 1.50 - 0.55
-                zb = z_eave + h * (1 - t1) ** 1.50 - 0.55
+                mx, my = (xa + xb) / 2, (ya + yb) / 2
+                mz = z_eave + hip_height(mx, my, w, d, h) - 0.18
                 seg = math.hypot(xb - xa, yb - ya)
-                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.5, 0.6, 0.6,
-                         (xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2, MAT["tile2"])
+                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.45, 0.55, 0.55,
+                         mx, my, mz, MAT["tile2"])
                 ob.rotation_euler[2] = math.atan2(yb - ya, xb - xa)
 
 
