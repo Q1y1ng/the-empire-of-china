@@ -236,21 +236,27 @@ for nm, (w_, d_, x_, y_) in {
 openings = {g["side"]: g["opening"] for g in D.GATES}
 
 
-def wall_bar(name, w, d, x, y):
+def wall_bar(name, w, d, x, y, along_x=True):
     box(name, w, d, H, x, y, 0.0, MAT["citywall"])
     box(name + "_顶", w + 1.2, d + 1.2, 0.7, x, y, H, MAT["ridge"])
+    if args.precise:
+        if along_x:
+            PL.crenel_band(name + "_垛", x - w / 2, x + w / 2, y - d / 2 + 0.55, H + 0.7, along_x=True)
+        else:
+            PL.crenel_band(name + "_垛", y - d / 2, y + d / 2, x - w / 2 + 0.55, H + 0.7,
+                           along_x=False)
 
 
 for side, y in (("S", -HD), ("N", HD)):
     gw = openings[side]
     seg = HW + T / 2 - gw / 2
-    wall_bar(f"城墙{side}1", seg, T, -(gw / 2 + seg / 2), y)
-    wall_bar(f"城墙{side}2", seg, T, gw / 2 + seg / 2, y)
+    wall_bar(f"城墙{side}1", seg, T, -(gw / 2 + seg / 2), y, along_x=True)
+    wall_bar(f"城墙{side}2", seg, T, gw / 2 + seg / 2, y, along_x=True)
 for side, x in (("E", HW), ("W", -HW)):
     gw = openings[side]
     seg = HD + T / 2 - gw / 2
-    wall_bar(f"城墙{side}1", T, seg, x, -(gw / 2 + seg / 2))
-    wall_bar(f"城墙{side}2", T, seg, x, gw / 2 + seg / 2)
+    wall_bar(f"城墙{side}1", T, seg, x, -(gw / 2 + seg / 2), along_x=False)
+    wall_bar(f"城墙{side}2", T, seg, x, gw / 2 + seg / 2, along_x=False)
 
 ct = D.CORNER_TOWER
 for sx in (-1, 1):
@@ -311,8 +317,15 @@ box("琼苑地面", g["x1"] - g["x0"] - 4, g["y1"] - g["y0"] - 4, 0.5,
     (g["x0"] + g["x1"]) / 2, (g["y0"] + g["y1"]) / 2, 0.25, MAT["green"])
 
 for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
-    box(f"值房{i:02d}", w, d, hh, cx, cy, 0.0, MAT["service"])
-    gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
+    if args.precise:
+        before = set(col.objects)
+        PL.small_house(f"值房{i:02d}", w, d, z=0.0, h=hh)
+        for ob in set(col.objects) - before:
+            ob.location.x += cx
+            ob.location.y += cy
+    else:
+        box(f"值房{i:02d}", w, d, hh, cx, cy, 0.0, MAT["service"])
+        gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
 
 for i, (x, y) in enumerate(D.trees()):
     bpy.ops.mesh.primitive_cylinder_add(radius=0.45, depth=2.2, location=(x, y, 1.35))
@@ -379,6 +392,19 @@ for _i, s in enumerate(D.STRUCTS):
         continue
     add_struct(s)
 
+# ------------------------------------------------------------------ 现代化改造（架空混合·推定）
+if args.precise:
+    glass = PL.MAT["glass"]
+    metal = PL.MAT["metal"]
+    # 金瓯殿南侧玻璃门厅 + 金属雨棚（三台前陛之下）
+    box("改造·金瓯殿门厅", 26, 9, 4.2, 0, -236, 0.0, glass)
+    box("改造·金瓯殿雨棚", 30, 11, 0.5, 0, -236, 4.2, metal)
+    # 承天门内安检棚
+    box("改造·安检棚", 14, 7, 3.4, 26, -448, 0.0, glass)
+    box("改造·安检棚顶", 16, 9, 0.4, 26, -448, 3.4, metal)
+    # 紫光阁现代附楼檐口（已有体块，加金属檐）
+    box("改造·紫光阁附楼檐", 38, 58, 0.5, 330, -150, 9.0, metal)
+
 # ------------------------------------------------------------------ 相机 / 灯光
 cam_data = bpy.data.cameras.new("Cam")
 cam_data.clip_start = 1.0
@@ -394,7 +420,7 @@ def look_at(ob, target):
 
 
 sun_d = bpy.data.lights.new("Sun", type="SUN")
-sun_d.energy = 4.2
+sun_d.energy = 3.0
 sun_d.angle = math.radians(4)
 sun = bpy.data.objects.new("Sun", sun_d)
 col.objects.link(sun)
@@ -413,7 +439,7 @@ sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 6
 sc.render.image_settings.file_format = "PNG"
 sc.view_settings.view_transform = "Standard"
-sc.view_settings.exposure = -0.25
+sc.view_settings.exposure = -0.2
 
 # ------------------------------------------------------------------ 出图
 AR = 16 / 9

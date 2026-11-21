@@ -352,19 +352,21 @@ def ridges(w, d, z_eave, h, ridge_len, with_kiss=True):
         for s in (-1, 1):
             box(f"鸱吻{s}", 1.2, 0.95, 2.0, s * (ridge_len / 2 + 0.85), 0,
                 z_eave + h - 0.05, MAT["gold"])
+    if w < 60:
+        return
     for sx in (-1, 1):
         for sy in (-1, 1):
             x0, y0 = sx * ridge_len / 2, 0.0
-            x1, y1 = sx * w / 2, sy * d / 2
+            x1, y1 = sx * w / 2 * 0.93, sy * d / 2 * 0.93
             n = 7
             for i in range(n):
                 t0, t1 = i / n, (i + 1) / n
                 xa, ya = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
                 xb, yb = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
-                za = z_eave + h * (1 - t0) ** 1.50 - 0.35
-                zb = z_eave + h * (1 - t1) ** 1.50 - 0.35
+                za = z_eave + h * (1 - t0) ** 1.50 - 0.55
+                zb = z_eave + h * (1 - t1) ** 1.50 - 0.55
                 seg = math.hypot(xb - xa, yb - ya)
-                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.25, 0.42, 0.5,
+                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.5, 0.6, 0.6,
                          (xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2, MAT["tile2"])
                 ob.rotation_euler[2] = math.atan2(yb - ya, xb - xa)
 
@@ -405,6 +407,33 @@ def lattice_bay(name, w, h, x, y, z0, rot=0.0, bars=6):
     ob.location = (x, y, z0)
     ob.rotation_euler[2] = rot
     return ob
+
+
+def small_house(name, w, d, z=0.0, h=4.5, tile=None):
+    """值房/库房：台明 + 墙 + 门 + 窗 + 青瓦两坡顶。"""
+    tile = tile or MAT["tile_gray"]
+    box(name + "·台明", w + 0.9, d + 0.9, 0.42, 0, 0, z, MAT["stone2"])
+    box(name + "·墙", w, d, h, 0, 0, z + 0.42, MAT["wall"])
+    box(name + "·门", min(1.6, w * 0.30), 0.14, h * 0.72, 0, -d / 2 - 0.04, z + 0.42, MAT["door"])
+    for sgn in (1, -1):
+        box(name + "·窗", min(1.2, w * 0.18), 0.10, h * 0.26, sgn * w * 0.28,
+            -d / 2 - 0.03, z + h * 0.55, MAT["lattice"])
+    gable_roof(name + "·顶", w + 0.5, d + 0.5, z + 0.42 + h,
+               max(1.5, min(d, w) * 0.30), tile, overhang=0.9)
+
+
+def crenel_band(name, x0, x1, y, z, h=1.5, spacing=1.9, along_x=True, mat=None):
+    """城墙垛口：一条带上按间距排小垛，合成一个网格。"""
+    mat = mat or MAT["citywall"]
+    verts, faces = [], []
+    n = max(int(abs(x1 - x0) / spacing), 2)
+    for i in range(n):
+        t = x0 + (x1 - x0) * (i + 0.5) / n
+        if along_x:
+            cuboid(verts, faces, t, y, z + h / 2, 1.2, 0.7, h)
+        else:
+            cuboid(verts, faces, y, t, z + h / 2, 0.7, 1.2, h)
+    return mesh_from(name, verts, faces, mat, merge=False)
 
 
 def gable_roof(name, w, d, z_eave, h, mat=None, overhang=1.2):
