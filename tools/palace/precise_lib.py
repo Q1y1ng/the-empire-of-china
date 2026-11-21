@@ -37,8 +37,8 @@ def make_materials():
         soffit=_mat("椽望", (0.10, 0.075, 0.07), 0.9),
         column=_mat("朱红柱", (0.44, 0.08, 0.06), 0.6),
         wall=_mat("朱红墙", (0.40, 0.07, 0.06), 0.9),
-        stone=_mat("汉白玉", (0.82, 0.80, 0.74), 0.65),
-        stone2=_mat("石阶", (0.72, 0.70, 0.64), 0.8),
+        stone=_mat("汉白玉", (0.72, 0.70, 0.64), 0.6),
+        stone2=_mat("石阶", (0.60, 0.58, 0.52), 0.75),
         cai_blue=_mat("彩画青", (0.05, 0.20, 0.32), 0.6),
         cai_green=_mat("彩画绿", (0.05, 0.22, 0.16), 0.6),
         gold=_mat("金", (0.74, 0.56, 0.16), 0.32, 0.9),
@@ -294,7 +294,7 @@ def hip_roof(name, w, d, z_eave, h, step=0.55, mat=None):
 
     def f(x, y):
         t = min(max(max(abs(y), max(abs(x) - L / 2, 0.0)) / (d / 2), 0.0), 1.0)
-        z = h * (1.0 - t) ** 1.32
+        z = h * (1.0 - t) ** 1.50
         amp = 0.115 * (0.30 + 0.70 * t)
         z += corr(x if abs(x) <= L / 2 else y, amp)
         z += 0.5 * max(0.0, (abs(x) / (w / 2)) * (abs(y) / (d / 2))) ** 6
@@ -361,12 +361,22 @@ def ridges(w, d, z_eave, h, ridge_len, with_kiss=True):
                 t0, t1 = i / n, (i + 1) / n
                 xa, ya = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
                 xb, yb = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
-                za = z_eave + h * (1 - t0) ** 1.32 - 0.9
-                zb = z_eave + h * (1 - t1) ** 1.32 - 0.9
+                za = z_eave + h * (1 - t0) ** 1.50 - 0.9
+                zb = z_eave + h * (1 - t1) ** 1.50 - 0.9
                 seg = math.hypot(xb - xa, yb - ya)
                 ob = box(f"垂脊{sx}{sy}{i}", seg + 0.25, 0.5, 0.7,
                          (xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2, MAT["tile2"])
                 ob.rotation_euler[2] = math.atan2(yb - ya, xb - xa)
+
+
+def balustrade_line(x0, x1, y, z, n=None, along_x=True):
+    n = n or max(2, int(abs(x1 - x0) / 3.6))
+    for i in range(n + 1):
+        t = x0 + (x1 - x0) * i / n
+        if along_x:
+            box("三台·望柱", 0.32, 0.32, 1.1, t, y, z, MAT["stone"])
+        else:
+            box("三台·望柱", 0.32, 0.32, 1.1, y, t, z, MAT["stone"])
 
 
 # ------------------------------------------------------------------ 门窗
@@ -397,6 +407,40 @@ def lattice_bay(name, w, h, x, y, z0, rot=0.0, bars=6):
     return ob
 
 
+def gable_roof(name, w, d, z_eave, h, mat=None, overhang=1.2):
+    """两坡（悬山）顶：给廊庑、值房用。"""
+    mat = mat or MAT["tile"]
+    w2, d2 = w + 2 * overhang, d + 2 * overhang
+    swap = d2 > w2
+    if swap:
+        w2, d2 = d2, w2
+    v = [(-w2 / 2, -d2 / 2, 0), (w2 / 2, -d2 / 2, 0), (w2 / 2, d2 / 2, 0), (-w2 / 2, d2 / 2, 0),
+         (-w2 / 2, 0, h), (w2 / 2, 0, h)]
+    f = [(0, 1, 5, 4), (3, 2, 5, 4), (0, 4, 3), (1, 2, 5)]
+    if swap:
+        v = [(b, a, c) for a, b, c in v]
+    return mesh_from(name, [(a, b, z_eave + c) for a, b, c in v], f, mat)
+
+
+def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
+    """廊庑：两排柱 + 阑额 + 两坡瓦顶。"""
+    long_x = w >= d
+    span = w if long_x else d
+    n = bays or max(3, int(span / 4.5))
+    for i in range(n + 1):
+        t = -span / 2 + i * span / n
+        if long_x:
+            column(t, -(d / 2 - 0.7), z, z + h, 0.20)
+            column(t, d / 2 - 0.7, z, z + h, 0.20)
+        else:
+            column(-(w / 2 - 0.7), t, z, z + h, 0.20)
+            column(w / 2 - 0.7, t, z, z + h, 0.20)
+    ring_beam(name + "·阑额", w, d, z + h, 0.34, 0.30, MAT["cai_blue"])
+    box(name + "·墙", w - 1.6, d - 1.6, h - 0.3, 0, 0, z, MAT["wall"])
+    gable_roof(name + "·顶", w + 0.6, d + 0.6, z + h + 0.34,
+               max(1.4, (d if long_x else w) * 0.26), overhang=1.0)
+
+
 # ------------------------------------------------------------------ 整殿
 def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
          base_h=3.2, col_h=12.0, plaque=None, lod=1, stairs=True, balustrade=True):
@@ -422,7 +466,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         rafter_band(f"{name}·椽", w + 1, d + 1, eave_lo - 0.12, depth=3.4)
 
     if storeys == 1:
-        roof_h = max(0.30 * d, 4.0)
+        roof_h = max(0.46 * d, 6.0)
         hip_roof(name + "·顶", w + 8, d + 8, eave_lo + 0.42, roof_h,
                  step=0.55 if lod >= 2 else 0.8)
         ridges(w + 8, d + 8, eave_lo + 0.42, roof_h, (w + 8) - (d + 8))
@@ -457,7 +501,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         eave_hi = ring_z + 4.6
         dougong_ring(up_w - 1.1, up_d - 1.1, eave_hi - 0.82, spacing=2.0, lod=lod)
         rafter_band(f"{name}·上椽", up_w - 1.1, up_d - 1.1, eave_hi - 0.3, depth=2.8)
-        roof_h = max(0.30 * up_d, 5.0)
+        roof_h = max(0.42 * up_d, 7.0)
         hip_roof(name + "·上顶", up_w + 6, up_d + 6, eave_hi + 0.35, roof_h,
                  step=0.55 if lod >= 2 else 0.8)
         ridges(up_w + 6, up_d + 6, eave_hi + 0.35, roof_h, (up_w + 6) - (up_d + 6))

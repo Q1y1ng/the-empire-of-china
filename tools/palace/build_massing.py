@@ -270,7 +270,10 @@ def prism(name, poly, h, z0, mat):
     return mesh_from(name, verts, faces, mat)
 
 
-prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, MAT["platform"])
+PL.make_materials()
+prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, PL.MAT["stone2"])
+PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
+PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
 for p in D.PLATFORMS:
     box(p["name"], p["w"], p["d"], p["h"], p["cx"], p["cy"], 0.0, MAT["platform"])
 
@@ -355,8 +358,15 @@ print("BUILD structs", len(D.STRUCTS), flush=True)
 for _i, s in enumerate(D.STRUCTS):
     if _i % 20 == 0:
         print("  struct", _i, s["name"], flush=True)
-    if args.precise and s["kind"] in ("hall", "gate", "pavilion", "tower"):
-        add_struct_precise(s)
+    if args.precise and s["kind"] in ("hall", "gate", "pavilion", "tower", "corridor"):
+        if s["kind"] == "corridor":
+            before = set(col.objects)
+            PL.colonnade(s["name"], s["w"], s["d"], z=s.get("z", 0.0), h=min(4.8, s["h"] + 0.4))
+            for ob in set(col.objects) - before:
+                ob.location.x += s["cx"]
+                ob.location.y += s["cy"]
+        else:
+            add_struct_precise(s)
         continue
     if s["kind"] == "rock":
         for k, (dx, dy, dz, sc_) in enumerate(((0, 0, 0, 1.0), (7, -4, 0.2, 0.62), (-6, 3, 0.1, 0.55))):
@@ -384,17 +394,17 @@ def look_at(ob, target):
 
 
 sun_d = bpy.data.lights.new("Sun", type="SUN")
-sun_d.energy = 2.6
+sun_d.energy = 4.2
 sun_d.angle = math.radians(4)
 sun = bpy.data.objects.new("Sun", sun_d)
 col.objects.link(sun)
-sun.rotation_euler = (math.radians(40), 0, math.radians(225))
+sun.rotation_euler = (math.radians(33), 0, math.radians(232))
 
 sc.world = bpy.data.worlds.new("World")
 sc.world.use_nodes = True
 bg = sc.world.node_tree.nodes["Background"]
 bg.inputs[0].default_value = (0.60, 0.72, 0.90, 1.0)
-bg.inputs[1].default_value = 0.45
+bg.inputs[1].default_value = 0.32
 
 sc.render.engine = "CYCLES"
 sc.cycles.device = "GPU"
@@ -408,7 +418,7 @@ sc.view_settings.exposure = -0.25
 # ------------------------------------------------------------------ 出图
 AR = 16 / 9
 shots = [
-    ("鸟瞰·东南", dict(loc=(820, -980, 520), target=(0, 10, 0), lens=45)),
+    ("鸟瞰·东南", dict(loc=(620, -760, 380), target=(0, -60, 0), lens=48)),
     ("鸟瞰·中轴", dict(loc=(90, -820, 175), target=(0, -70, 0), lens=58)),
     ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
     ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
