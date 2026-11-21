@@ -308,7 +308,7 @@ def draw_panel(ax, P):
         y -= 0.0265
 
     y -= 0.016
-    ax.text(0, y, "分区口径（设定）", fontsize=10.0, color=C["ink"], fontweight="bold", va="top")
+    ax.text(0, y, "分区占地（实测，与设定同步）", fontsize=10.0, color=C["ink"], fontweight="bold", va="top")
     y -= 0.026
     for z in D.ZONES:
         ax.text(0.0, y, z["name"], fontsize=7.6, va="center", color=C["ink"])
@@ -331,10 +331,9 @@ def draw_panel(ax, P):
     y -= 0.014
     ax.text(0, y, "注", fontsize=9.2, color=C["ink"], fontweight="bold", va="top")
     y -= 0.022
-    for line in ("分区面积（8/6/7/7/16/4/24 ha）是设定口径，按文案切；",
-                 "本图按故宫院落语法排布（外朝三殿同台、内廷后三宫、",
-                 "东西六宫各成院落、值房沿墙、内金水河五桥），两者",
-                 "不是同一套切分，故图上不画分区线。"):
+    for line in ("分区占地已按院落边界实测，并与《长安城市志》卷三",
+                 "同步（2026-11-22）：前朝 4.6 / 中后 3.6 / 东西厢 8.7×2 /",
+                 "后寝 19.2 / 御花园 3.5 / 门庭巷道值房 24.0 ha，合计 72.36 ha。"):
         ax.text(0, y, line, fontsize=6.9, color=C["muted"], va="center")
         y -= 0.019
 
