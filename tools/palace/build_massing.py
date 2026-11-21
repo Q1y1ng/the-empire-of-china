@@ -21,6 +21,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import palace_data as D  # noqa: E402
+import precise_lib as PL  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -28,6 +29,7 @@ ap.add_argument("--out", default=os.path.join(HERE, "..", "..", "docs", "assets"
 ap.add_argument("--samples", type=int, default=160)
 ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位（其余跳过）")
+ap.add_argument("--precise", action="store_true", help="用明官式构件库出精模（慢）")
 args = ap.parse_args(argv)
 WORK = os.path.join(os.environ.get("TEMP", HERE), "palace_massing")
 os.makedirs(WORK, exist_ok=True)
@@ -44,6 +46,9 @@ sc = bpy.context.scene
 sc.unit_settings.system = "METRIC"
 sc.unit_settings.scale_length = 1.0
 col = sc.collection
+if args.precise:
+    PL.set_collection(col)
+    PL.make_materials()
 
 
 def material(name, rgb, rough=0.75, metal=0.0):
@@ -82,14 +87,15 @@ MAT = {
 
 
 def box(name, w, d, h, x, y, z0=0.0, mat=None):
-    bpy.ops.mesh.primitive_cube_add(size=1, location=(x, y, z0 + h / 2))
-    ob = bpy.context.object
-    ob.name = name
-    ob.scale = (w, d, h)
-    bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-    if mat:
-        ob.data.materials.append(mat)
-    return ob
+    hx, hy, hz = w / 2, d / 2, h / 2
+    cz = z0 + hz
+    verts = [(x - hx, y - hy, cz - hz), (x + hx, y - hy, cz - hz),
+             (x + hx, y + hy, cz - hz), (x - hx, y + hy, cz - hz),
+             (x - hx, y - hy, cz + hz), (x + hx, y - hy, cz + hz),
+             (x + hx, y + hy, cz + hz), (x - hx, y + hy, cz + hz)]
+    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1),
+             (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    return mesh_from(name, verts, faces, mat)
 
 
 def mesh_from(name, verts, faces, mat=None):
@@ -315,7 +321,43 @@ for i, (x, y) in enumerate(D.trees()):
     cr.data.materials.append(MAT["tree"])
 
 # ------------------------------------------------------------------ 单体
-for s in D.STRUCTS:
+def add_struct_precise(st):
+    w, d, h = st["w"], st["d"], st["h"]
+    z = st.get("z", 0.0)
+    base_h = st["base"]["h"] if st.get("base") else max(0.9, min(2.4, h * 0.16))
+    k = st["kind"]
+    x, y = st["cx"], st["cy"]
+    if k == "gate":
+        PL.gate_house(st["name"], w, d, z=z, h=h)
+        return
+    if k == "pavilion":
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                PL.column(x + sx * (w / 2 - 0.7), y + sy * (d / 2 - 0.7), z, z + h, 0.20)
+        PL.hip_roof(st["name"] + "·顶", w + 2.6, d + 2.6, z + h, max(2.4, h * 0.55), step=0.5)
+        PL.ridges(w + 2.6, d + 2.6, z + h, max(2.4, h * 0.55), (w + 2.6) - (d + 2.6),
+                 with_kiss=False)
+        return
+    storeys = 2 if (w >= 64 and h >= 11 and k in ("hall", "tower")) else 1
+    lod = 2 if w >= 60 else (1 if w >= 34 else 0)
+    n = max(3, int(round(w / 7)))
+    m = max(3, int(round(d / 9)))
+    before = set(col.objects)
+    PL.hall(st["name"], w, d, bays=[w / n] * n, dbays=[d / m] * m, z=z, storeys=storeys,
+            base_h=base_h, col_h=h * 0.92, plaque=(st["name"] == "金瓯殿"), lod=lod,
+            stairs=(w >= 30), balustrade=(w >= 34))
+    for ob in set(col.objects) - before:      # 构件库按原点建，整体挪到院落实位
+        ob.location.x += x
+        ob.location.y += y
+
+
+print("BUILD structs", len(D.STRUCTS), flush=True)
+for _i, s in enumerate(D.STRUCTS):
+    if _i % 20 == 0:
+        print("  struct", _i, s["name"], flush=True)
+    if args.precise and s["kind"] in ("hall", "gate", "pavilion", "tower"):
+        add_struct_precise(s)
+        continue
     if s["kind"] == "rock":
         for k, (dx, dy, dz, sc_) in enumerate(((0, 0, 0, 1.0), (7, -4, 0.2, 0.62), (-6, 3, 0.1, 0.55))):
             b = box(f'{s["name"]}_{k}', s["w"] * sc_ * 0.8, s["d"] * sc_ * 0.9,
