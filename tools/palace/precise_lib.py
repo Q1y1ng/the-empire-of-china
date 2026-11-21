@@ -361,10 +361,10 @@ def ridges(w, d, z_eave, h, ridge_len, with_kiss=True):
                 t0, t1 = i / n, (i + 1) / n
                 xa, ya = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
                 xb, yb = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
-                za = z_eave + h * (1 - t0) ** 1.50 - 0.9
-                zb = z_eave + h * (1 - t1) ** 1.50 - 0.9
+                za = z_eave + h * (1 - t0) ** 1.50 - 0.35
+                zb = z_eave + h * (1 - t1) ** 1.50 - 0.35
                 seg = math.hypot(xb - xa, yb - ya)
-                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.25, 0.5, 0.7,
+                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.25, 0.42, 0.5,
                          (xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2, MAT["tile2"])
                 ob.rotation_euler[2] = math.atan2(yb - ya, xb - xa)
 
@@ -466,7 +466,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         rafter_band(f"{name}·椽", w + 1, d + 1, eave_lo - 0.12, depth=3.4)
 
     if storeys == 1:
-        roof_h = max(0.46 * d, 6.0)
+        roof_h = max(0.36 * d, 5.0)
         hip_roof(name + "·顶", w + 8, d + 8, eave_lo + 0.42, roof_h,
                  step=0.55 if lod >= 2 else 0.8)
         ridges(w + 8, d + 8, eave_lo + 0.42, roof_h, (w + 8) - (d + 8))
@@ -487,7 +487,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
                         rot=math.pi / 2, bars=3)
     else:
         up_w, up_d = w * 0.78, d * 0.80
-        ring_z = eave_lo + (up_w / 2 - w / 2) * 0.55 + 3.2
+        ring_z = eave_lo + max(4.2, 0.075 * w)      # 围脊：下檐之上 5~7 m
         ring_roof(name + "·下檐", w + 8, d + 8, up_w + 1.2, up_d + 1.2,
                   eave_lo + 0.42, ring_z - eave_lo - 0.42, nu=34, nv=6)
         for nm, ww, dd, yy, xx in (("S", up_w + 3.4, 0.85, -(up_d / 2 + 0.6), 0),
@@ -498,10 +498,10 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         box(f"{name}·上檐身", up_w - 2, up_d - 2, 3.0, 0, 0, ring_z, MAT["wall"])
         ring_beam(f"{name}·上额枋", up_w - 2, up_d - 2, ring_z + 3.0, 0.8, 0.8, MAT["cai_blue"])
         ring_beam(f"{name}·上平板", up_w - 1.1, up_d - 1.1, ring_z + 3.8, 0.25, 0.65, MAT["wall"])
-        eave_hi = ring_z + 4.6
+        eave_hi = ring_z + 5.2
         dougong_ring(up_w - 1.1, up_d - 1.1, eave_hi - 0.82, spacing=2.0, lod=lod)
         rafter_band(f"{name}·上椽", up_w - 1.1, up_d - 1.1, eave_hi - 0.3, depth=2.8)
-        roof_h = max(0.42 * up_d, 7.0)
+        roof_h = max(0.34 * up_d, 6.0)
         hip_roof(name + "·上顶", up_w + 6, up_d + 6, eave_hi + 0.35, roof_h,
                  step=0.55 if lod >= 2 else 0.8)
         ridges(up_w + 6, up_d + 6, eave_hi + 0.35, roof_h, (up_w + 6) - (up_d + 6))
