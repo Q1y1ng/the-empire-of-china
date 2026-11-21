@@ -460,7 +460,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     box(f"{name}·墙身", w - 1.4, d - 1.4, col_h - 0.2, 0, 0, z0, MAT["wall"])
     beams(xs, ys, z0 + col_h, 0.9)
     ring_beam(f"{name}·平板枋", w + 1, d + 1, z0 + col_h + 0.9, 0.28, 0.7, MAT["wall"])
-    eave_lo = z0 + col_h + 1.18
+    eave_lo = z0 + col_h + 1.68   # 檐口抬高，露出斗拱
     if lod > 0:
         dougong_ring(w + 1, d + 1, eave_lo - 0.62, lod=lod)
         rafter_band(f"{name}·椽", w + 1, d + 1, eave_lo - 0.12, depth=3.4)
@@ -515,10 +515,31 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
     if plaque:
         zz = z0 + col_h * 0.72
-        box(name + "·匾框", min(5.2, w * 0.12), 0.28, min(2.1, col_h * 0.2), 0, -d / 2 - 0.12,
-            zz - 0.2, MAT["gold"])
-        box(name + "·匾", min(4.7, w * 0.11), 0.32, min(1.72, col_h * 0.17), 0, -d / 2 - 0.16,
-            zz, MAT["plaque"])
+        pw, ph = min(5.2, w * 0.12), min(2.1, col_h * 0.2)
+        box(name + "·匾框", pw, 0.28, ph, 0, -d / 2 - 0.12, zz - ph / 2, MAT["gold"])
+        box(name + "·匾", pw * 0.9, 0.32, ph * 0.82, 0, -d / 2 - 0.16, zz - ph * 0.41,
+            MAT["plaque"])
+        cu = bpy.data.curves.new(name + "·匾文", type="FONT")
+        cu.body = plaque
+        cu.size = ph * 0.52
+        cu.align_x = "CENTER"
+        cu.align_y = "CENTER"
+        cu.extrude = 0.03
+        for fp in (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc"):
+            try:
+                cu.font = bpy.data.fonts.load(fp)
+                break
+            except Exception:
+                continue
+        ob = bpy.data.objects.new(name + "·匾文", cu)
+        _col().objects.link(ob)
+        ob.location = (0, -d / 2 - 0.36, zz)
+        ob.rotation_euler = (math.pi / 2, 0, 0)
+        ob.data.materials.append(MAT["gold"])
+        bpy.ops.object.select_all(action="DESELECT")
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.convert(target="MESH")
 
 
 def gate_house(name, w, d, z=0.0, h=9.0):

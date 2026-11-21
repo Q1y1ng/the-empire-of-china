@@ -347,7 +347,7 @@ def add_struct_precise(st):
     m = max(3, int(round(d / 9)))
     before = set(col.objects)
     PL.hall(st["name"], w, d, bays=[w / n] * n, dbays=[d / m] * m, z=z, storeys=storeys,
-            base_h=base_h, col_h=h * 0.92, plaque=(st["name"] == "金瓯殿"), lod=lod,
+            base_h=base_h, col_h=h * 0.92, plaque=("金瓯殿" if st["name"] == "金瓯殿" else None), lod=lod,
             stairs=(w >= 30), balustrade=(w >= 34))
     for ob in set(col.objects) - before:      # 构件库按原点建，整体挪到院落实位
         ob.location.x += x
