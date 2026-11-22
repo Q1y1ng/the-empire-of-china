@@ -26,6 +26,7 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import hall_data as D  # noqa: E402
+import hall_tex as TX  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -112,6 +113,14 @@ else:
         "bronze": mat("铜门", L(D.SRGB["bronze"]), 0.35, metal=0.9),
         "marble_w": mat("汉白玉柱", L(D.SRGB["white_marble"]), 0.28),
     }
+
+
+if not WHITE:
+    MAT["dome"] = MAT["ceil"]
+    MAT["soffit"] = MAT["ceil"]
+
+# 精模：把程序化材质换成烘好的可平铺贴图（glTF 不认节点）
+TEXTURE_TILES = TX.setup(MAT, os.path.join(HERE, "tex")) if P else {}
 
 
 # ------------------------------------------------------------------ 网格累加器
@@ -501,7 +510,7 @@ def build_balcony(tier, idx):
 def build_seats(tier, idx, desks=True):
     g = f"seat{idx}"
     S = Mesh(f"座席{idx}", MAT["seat"], g)
-    DD = Mesh(f"桌板{idx}", MAT["gold"] if P else MAT["seat"], g) if desks else None
+    DD = Mesh(f"桌板{idx}", MAT["stage"] if P else MAT["seat"], g) if desks else None
     for row in D.tier_rows(tier):
         r, z = row["r"], row["z"]
         for (t0, t1, n) in row["blocks"]:
@@ -810,6 +819,10 @@ def setup_lights():
     if args.cut:
         for xx in (-500, -430, -360):
             area(f"剖面光{xx}", (xx, AX + 70, 20), (a(90), 0, 0), 60, 5200)
+    if P:
+        # 精模材质吃光，池座上补两盏低位面光
+        area("池座补光N", (-462, AX + 26, 7.5), (0, 0, 0), 40, 3200)
+        area("池座补光S", (-462, AX - 26, 7.5), (0, 0, 0), 40, 3200)
     # 前厅
     area("前厅光", (-350, AX, 19), (0, 0, 0), 70, 1400)
     area("前厅光N", (-350, AX + 70, 16), (a(35), 0, 0), 30, 380)
@@ -868,7 +881,7 @@ def setup_render():
     sc.view_settings.view_transform = "AgX" if P else "Standard"
     sc.view_settings.look = "None"
     sc.view_settings.exposure = (args.exposure if args.exposure is not None
-                                 else (0.0 if P else -2.4))
+                                 else (-1.0 if P else -2.4))
     return cam
 
 
@@ -955,6 +968,9 @@ for o in col.objects:
 
 blend = os.path.join(WORK, f"grandhall_{'precise' if P else 'massing'}.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
+
+if TEXTURE_TILES:
+    TX.apply_uv(col.objects, TEXTURE_TILES)
 
 glb = os.path.join(args.out, f"国家广场(2026)·万人大礼堂·{prefix}.glb")
 if not args.no_glb:
