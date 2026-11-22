@@ -65,7 +65,7 @@ SEAT = {"pitch": 0.58, "row": 0.95, "aisle": 1.6, "aisle_every": 18.0}
 # 三层座席。池座为纯扇面（wrap=0）；两层挑台为**U 形**——前缘在轴线上最深、
 # 沿两侧向台口方向包转（wrap = 侧翼前伸的半径量，theta_ref = 该前伸量对应的张角）。
 TIERS = [
-    {"key": "pit", "name": "池座", "r0": 37.0, "r1": 79.0,
+    {"key": "pit", "name": "池座", "r0": 38.5, "r1": 79.8,
      "z0": 0.0, "slope": 0.075, "wrap": 0.0, "theta_ref": 0.5, "target": 4690},
     {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 76.5,
      "z0": 10.0, "slope": 0.38, "wrap": 0.0, "theta_ref": 0.5, "target": 3020},

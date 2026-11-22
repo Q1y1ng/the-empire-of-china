@@ -512,9 +512,9 @@ def build_seats(tier, idx, desks=True):
                 th = t0 + step * (k + 0.5)
                 x = FX + (r + 0.12) * math.cos(th)
                 y = FY + (r + 0.12) * math.sin(th)
-                # 椅座 + 靠背
+                # 椅座 + 靠背（靠背在座席后方，即 +r 一侧）
                 S.box(x, y, z + 0.40, 0.52, 0.50, 0.09, rz=th + math.pi / 2)
-                S.box(x - 0.26 * math.cos(th), y - 0.26 * math.sin(th), z + 0.44,
+                S.box(x + 0.26 * math.cos(th), y + 0.26 * math.sin(th), z + 0.44,
                       0.52, 0.10, 0.52, rz=th + math.pi / 2)
                 if P:
                     for sgn in (1, -1):
@@ -522,15 +522,22 @@ def build_seats(tier, idx, desks=True):
                               y + sgn * 0.27 * math.sin(th + math.pi / 2),
                               z + 0.42, 0.05, 0.5, 0.05, rz=th + math.pi / 2)
             if DD:
-                rr = r - 0.32
-                p0 = (FX + rr * math.cos(t0), FY + rr * math.sin(t0), z + 0.70)
-                p1 = (FX + rr * math.cos(t1), FY + rr * math.sin(t1), z + 0.70)
-                p2 = (FX + (rr - 0.34) * math.cos(t1), FY + (rr - 0.34) * math.sin(t1), z + 0.70)
-                p3 = (FX + (rr - 0.34) * math.cos(t0), FY + (rr - 0.34) * math.sin(t0), z + 0.70)
-                DD.add([p0, p1, p2, p3, (p0[0], p0[1], z + 0.62), (p1[0], p1[1], z + 0.62),
-                        (p2[0], p2[1], z + 0.62), (p3[0], p3[1], z + 0.62)],
-                       [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
-                        (2, 6, 7, 3), (3, 7, 4, 0)])
+                # 桌板按弧分段，避免大块用弦直连、中段凹进舞台
+                rr_out, rr_in = r - 0.28, r - 0.62
+                if rr_in > 36.4:
+                    seg = max(1, int((t1 - t0) * r / 1.2))
+                    for q in range(seg):
+                        a0 = t0 + (t1 - t0) * q / seg
+                        a1 = t0 + (t1 - t0) * (q + 1) / seg
+                        p0 = (FX + rr_out * math.cos(a0), FY + rr_out * math.sin(a0), z + 0.70)
+                        p1 = (FX + rr_out * math.cos(a1), FY + rr_out * math.sin(a1), z + 0.70)
+                        p2 = (FX + rr_in * math.cos(a1), FY + rr_in * math.sin(a1), z + 0.70)
+                        p3 = (FX + rr_in * math.cos(a0), FY + rr_in * math.sin(a0), z + 0.70)
+                        DD.add([p0, p1, p2, p3,
+                                (p0[0], p0[1], z + 0.62), (p1[0], p1[1], z + 0.62),
+                                (p2[0], p2[1], z + 0.62), (p3[0], p3[1], z + 0.62)],
+                               [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+                                (2, 6, 7, 3), (3, 7, 4, 0)])
     emit(S)
     if DD:
         emit(DD)
