@@ -712,19 +712,32 @@ def _pole(name, r0, r1, h, x, y, z0, material, n=12):
 
 
 def flag_platform(cx=0.0, cy=-780.0):
-    """升旗台：三级台、汉白玉栏板、30 m 旗杆、国旗。"""
-    box("升旗台·铺装", 30, 30, 0.05, cx, cy, 0.20, MAT["paving_axis"])
+    """升旗台：40 m 铺装、三层汉白玉台、四面踏步、栏板、32 m 旗杆。"""
+    box("升旗台·铺装", 40, 40, 0.06, cx, cy, 0.20, MAT["paving_axis"])
     z = 0.20
-    for i, w in enumerate((24, 20, 16)):
-        box(f"升旗台·台{i}", w, w, 0.30, cx, cy, z, MAT["marble"])
-        z += 0.30
-    box("升旗台·杆座", 2.4, 2.4, 0.8, cx, cy, z, MAT["stone_light"])
-    _pole("升旗台·旗杆", 0.20, 0.10, 30.0, cx, cy, z + 0.8, MAT["lamp_bronze"], n=12)
-    cyl("升旗台·杆顶", 0.22, 0.5, cx, cy, z + 0.8 + 30.0, MAT["roof_gold"], n=12)
-    rail_edge("升旗台·栏板N", "x", cy + 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
-    rail_edge("升旗台·栏板S", "x", cy - 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
-    rail_edge("升旗台·栏板E", "y", cx + 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
-    rail_edge("升旗台·栏板W", "y", cx - 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
+    for i, w in enumerate((38, 32, 26)):
+        box(f"升旗台·台{i}", w, w, 0.55, cx, cy, z, MAT["marble"])
+        z += 0.55
+    box("升旗台·台顶", 20, 20, 0.35, cx, cy, z, MAT["marble"])
+    z += 0.35
+    box("升旗台·杆座", 3.6, 3.6, 1.0, cx, cy, z, MAT["stone_light"])
+    _pole("升旗台·旗杆", 0.24, 0.10, 34.0, cx, cy, z + 1.0, MAT["lamp_bronze"], n=12)
+    cyl("升旗台·杆顶", 0.26, 0.5, cx, cy, z + 35.0, MAT["roof_gold"], n=12)
+    # 四面各五级踏步，踏步顶面逐级降到地面
+    for k in range(5):
+        zz = z - (k + 1) * 0.40
+        off = 10.0 + (k + 0.5) * 0.50
+        box("升旗台·踏步N", 3.8, 0.50, 0.40, cx, cy + off, zz, MAT["marble"])
+        box("升旗台·踏步S", 3.8, 0.50, 0.40, cx, cy - off, zz, MAT["marble"])
+        box("升旗台·踏步E", 0.50, 3.8, 0.40, cx + off, cy, zz, MAT["marble"])
+        box("升旗台·踏步W", 0.50, 3.8, 0.40, cx - off, cy, zz, MAT["marble"])
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box("升旗台·角柱", 0.7, 0.7, 1.5, cx + sx * 9.7, cy + sy * 9.7, z, MAT["marble"])
+    rail_edge("升旗台·栏板N", "x", cy + 10.0, -10.0, 10.0, [(-2.2, 2.2)], z0=z)
+    rail_edge("升旗台·栏板S", "x", cy - 10.0, -10.0, 10.0, [(-2.2, 2.2)], z0=z)
+    rail_edge("升旗台·栏板E", "y", cx + 10.0, cy - 10.0, cy + 10.0, [(cy - 2.2, cy + 2.2)], z0=z)
+    rail_edge("升旗台·栏板W", "y", cx - 10.0, cy - 10.0, cy + 10.0, [(cy - 2.2, cy + 2.2)], z0=z)
 
 
 def huabiao(name, x, y):
@@ -1178,7 +1191,7 @@ if P:
         ("承天门人视", dict(loc=(0, -650, 3.5), target=(0, -468, 15), lens=34)),
         ("广场北口", dict(loc=(0, -720, 6), target=(0, -620, 2), lens=45)),
         ("中央纪念碑", dict(loc=(0, -1250, 4.5), target=(0, -1035, 20), lens=45)),
-        ("升旗台", dict(loc=(0, -900, 3.5), target=(0, -780, 18), lens=35)),
+        ("升旗台", dict(loc=(0, -880, 4.0), target=(0, -780, 14), lens=34)),
         ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
     ]
 
