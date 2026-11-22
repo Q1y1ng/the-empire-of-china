@@ -598,18 +598,14 @@ def crenel_band(name, x0, x1, y, z, h=1.5, spacing=1.9, along_x=True, mat=None):
 
 
 def gable_roof(name, w, d, z_eave, h, mat=None, overhang=1.2):
-    """两坡（悬山）顶：给廊庑、值房用。"""
-    mat = mat or MAT["tile"]
-    w2, d2 = w + 2 * overhang, d + 2 * overhang
-    swap = d2 > w2
-    if swap:
-        w2, d2 = d2, w2
-    v = [(-w2 / 2, -d2 / 2, 0), (w2 / 2, -d2 / 2, 0), (w2 / 2, d2 / 2, 0), (-w2 / 2, d2 / 2, 0),
-         (-w2 / 2, 0, h), (w2 / 2, 0, h)]
-    f = [(0, 1, 5, 4), (3, 2, 5, 4), (0, 4, 3), (1, 2, 5)]
-    if swap:
-        v = [(b, a, c) for a, b, c in v]
-    return mesh_from(name, [(a, b, z_eave + c) for a, b, c in v], f, mat)
+    """两坡（悬山）顶：给廊庑、值房用。举折与四坡同一套曲线，带米制 UV 与正脊。"""
+    ROOF, _, _ = _lg()
+    long_x = w >= d
+    span = (d if long_x else w) + 2 * overhang
+    ridge = (w if long_x else d) + 2 * overhang
+    if not long_x:
+        span, ridge = span, ridge
+    return ROOF.two_slope(_self(), name, ridge, span, z_eave, h, mat=mat)
 
 
 def colonnade(name, w, d, z=0.0, h=4.6, bays=None):

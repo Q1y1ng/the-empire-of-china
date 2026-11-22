@@ -213,6 +213,33 @@ def hip_surface(pl, name, W, D, z0, H, step=0.8, lift=1.35, mat=None, thick=0.36
     return _mesh_multi(pl, name, grids, mat, thick=thick)
 
 
+def two_slope(pl, name, W, D, z_eave, H, step=0.8, mat=None, thick=0.32):
+    """两坡（悬山）顶：W = 脊向长边，D = 进深；举折与四坡同一套 profile。"""
+    mat = mat or pl.MAT.get("tile_gray") or pl.MAT["tile"]
+    R = D / 2.0
+    nrows = max(4, int(R / max(step, 0.35)))
+    ts, vs = _arc_table(H, R, nrows)
+    nx = max(2, int(W / step))
+    grids = []
+    for sy in (-1, 1):
+        g = []
+        for i in range(nx + 1):
+            x = -W / 2 + i * W / nx
+            col = []
+            for j, t in enumerate(ts):
+                y = sy * R * (1.0 - t)
+                z = z_eave + H * profile(t)
+                col.append((x, y, z, x + W / 2, vs[j]))
+            g.append(col)
+        grids.append(g)
+    ob = _mesh_multi(pl, name, grids, mat, thick=thick)
+    # 正脊
+    zr = z_eave + H
+    sweep(pl, name + "·正脊", [(-W / 2, 0.0, zr - 0.04), (W / 2, 0.0, zr - 0.04)],
+          0.26, -0.10, 0.34, pl.MAT.get("glaze_plain_dark") or mat)
+    return ob
+
+
 def ring_surface(pl, name, OW, OD, IW, ID, z0, H, step=0.8, lift=1.35, mat=None, thick=0.36):
     """重檐下檐（围屋面）：外檐口 OW×OD 升到内圈 IW×ID。"""
     mat = mat or pl.MAT["tile"]
