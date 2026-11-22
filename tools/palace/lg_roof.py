@@ -268,6 +268,104 @@ def ring_surface(pl, name, OW, OD, IW, ID, z0, H, step=0.8, lift=1.35, mat=None,
     return _mesh_multi(pl, name, grids, mat, thick=thick)
 
 
+def _half_tube(verts, faces, pts, w_dir, n_dir, r, steps_side=4):
+    """沿 pts 扫一条半圆筒（筒瓦）：pts 已含 z；w_dir 为横向、n_dir 为法向。"""
+    ws = (-1.0, -0.62, 0.0, 0.62, 1.0)
+    hs = (0.0, 0.78, 1.0, 0.78, 0.0)
+    base = len(verts)
+    for p in pts:
+        for (w, h) in zip(ws, hs):
+            verts.append((p[0] + w_dir[0] * w * r + n_dir[0] * h * r,
+                          p[1] + w_dir[1] * w * r + n_dir[1] * h * r,
+                          p[2] + w_dir[2] * w * r + n_dir[2] * h * r))
+    n = len(ws)
+    for i in range(len(pts) - 1):
+        a = base + i * n
+        b = a + n
+        for k in range(n - 1):
+            faces.append((a + k, a + k + 1, b + k + 1, b + k))
+
+
+def tile_ribs(pl, name, W, D, z0, H, lift=1.35, t_max=0.55, r=0.085,
+              steps=9, mat=None, thick=0.0):
+    """檐口一带的**真实筒瓦垄**（lod2 用；更远处由着色器的瓦垄图案接管）。
+
+    垄位与 UV 完全对齐：u = (k+0.5)*TILE_U，所以几何与着色器花纹不会错位。
+    """
+    mat = mat or pl.MAT["tile"]
+    L = max(W - D, 0.5)
+    R = D / 2.0
+    verts, faces = [], []
+
+    def stations(coord, t_hi, n):
+        pts = []
+        for i in range(n + 1):
+            t = t_hi * i / n
+            x, y = coord(t)
+            pts.append((x, y, surf_z(x, y, W, D, z0, H, lift)))
+        return pts
+
+    # 南/北坡
+    nxs = max(3, int(W / TILE_U))
+    for sy in (-1, 1):
+        for k in range(nxs):
+            x = -W / 2 + (k + 0.5) * W / nxs
+            t_hi = min(t_max, 1.0 - max(0.0, abs(x) - L / 2) / R)
+            if t_hi < 0.04:
+                continue
+            pts = stations(lambda t: (x, sy * R * (1.0 - t)), t_hi, steps)
+            _half_tube(verts, faces, pts, (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), r)
+    # 东/西坡
+    nys = max(3, int(D / TILE_U))
+    for sx in (-1, 1):
+        for k in range(nys):
+            y = -R + (k + 0.5) * D / nys
+            t_hi = min(t_max, max(0.0, 1.0 - abs(y) / R))
+            if t_hi < 0.04:
+                continue
+            pts = stations(lambda t: (sx * (W / 2 - t * R), y), t_hi, steps)
+            _half_tube(verts, faces, pts, (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), r)
+    return pl.mesh_from(name + "·瓦垄", verts, faces, mat, merge=False)
+
+
+def ring_ribs(pl, name, OW, OD, IW, ID, z0, H, lift=1.2, t_max=0.55, r=0.085,
+              steps=8, mat=None):
+    """重檐下檐的筒瓦垄。"""
+    mat = mat or pl.MAT["tile"]
+    verts, faces = [], []
+    nxs = max(3, int(OW / TILE_U))
+    for sy in (-1, 1):
+        for k in range(nxs):
+            u = (k + 0.5) / nxs
+            xa = -OW / 2 + u * OW
+            xi = -IW / 2 + u * IW
+            ya, yi = sy * OD / 2, sy * ID / 2
+            pts = []
+            for i in range(steps + 1):
+                v = t_max * i / steps
+                x = xa + (xi - xa) * v
+                y = ya + (yi - ya) * v
+                z = z0 + H * profile(v) + lift * corner_w(xa, ya, OW, OD) * (1 - v) ** 2
+                pts.append((x, y, z))
+            _half_tube(verts, faces, pts, (1.0, 0.0, 0.0), (0.0, 0.0, 1.0), r)
+    nys = max(3, int(OD / TILE_U))
+    for sx in (-1, 1):
+        for k in range(nys):
+            u = (k + 0.5) / nys
+            ya = -OD / 2 + u * OD
+            yi = -ID / 2 + u * ID
+            xa, xi = sx * OW / 2, sx * IW / 2
+            pts = []
+            for i in range(steps + 1):
+                v = t_max * i / steps
+                x = xa + (xi - xa) * v
+                y = ya + (yi - ya) * v
+                z = z0 + H * profile(v) + lift * corner_w(xa, ya, OW, OD) * (1 - v) ** 2
+                pts.append((x, y, z))
+            _half_tube(verts, faces, pts, (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), r)
+    return pl.mesh_from(name + "·瓦垄", verts, faces, mat, merge=False)
+
+
 # ------------------------------------------------------------------ 檐口
 def _eave_segments(W, D, z0, H, lift, n=90):
     """四条檐口的采样点：[(x,y,z, 外法向)]"""
@@ -511,6 +609,15 @@ def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
     # 正脊下的当沟（一条略宽的压边）
     objs.append(sweep(pl, name + "·当沟", pts, 0.76, -0.20, 0.10,
                       pl.MAT.get("tile2") or mat))
+    # 盖脊瓦：沿正脊顶排一排小块，破掉"一根光板"
+    nseg = max(6, int(L / 0.42))
+    vv, ff = [], []
+    for i in range(nseg):
+        t = (i + 0.5) / nseg
+        x = -L / 2 + t * L
+        _box_t(vv, ff, (x, 0.0, zr + 1.34 - 0.05), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
+               (0.0, 0.0, 1.0), L / nseg - 0.02, 0.46, 0.16)
+    objs.append(pl.mesh_from(name + "·盖脊瓦", vv, ff, mat, merge=False))
     if kiss:
         for s in (-1, 1):
             objs.append(_chiwen(pl, f"{name}·鸱吻{s}", s * L / 2, zr, s, mat,
@@ -608,6 +715,8 @@ def roof(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, thick=0.36):
         a, b = eave_trim(pl, name, W, D, z0, H, lift=lift, lod=lod, mat_tile=fix)
         objs += [a, b]
     if lod >= 2:
+        objs.append(tile_ribs(pl, name, W, D, z0, H, lift=lift, t_max=0.985,
+                              steps=14, mat=fix))
         objs.append(rafters(pl, name, W, D, z0, H, lift=lift, lod=lod))
     objs += ridge_set(pl, name, W, D, z0, H, lift=lift, lod=lod, mat=fix_dark)
     return [o for o in objs if o]
@@ -619,6 +728,9 @@ def ring_roof(pl, name, OW, OD, IW, ID, z0, H, lift=1.2, lod=2, mat=None):
     fix_dark = pl.MAT.get("glaze_plain_dark") or pl.MAT.get("tile2") or fix
     objs = [ring_surface(pl, name, OW, OD, IW, ID, z0, H, step=0.9,
                          lift=lift, mat=mat)]
+    if lod >= 2:
+        objs.append(ring_ribs(pl, name, OW, OD, IW, ID, z0, H, lift=lift,
+                              t_max=0.985, steps=12, mat=fix))
     if lod >= 1:
         a, b = eave_trim(pl, name, OW, OD, z0, H, lift=lift, lod=lod, mat_tile=fix)
         objs += [a, b]

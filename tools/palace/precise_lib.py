@@ -255,14 +255,14 @@ def base_platform(w, d, h=3.2, stairs=True, balustrade=True, name="台基"):
         n = 9
         y0 = -D0 / 2
         for i in range(n):
-            top = h * (i + 1) / n
+            top = h * (n - i) / n          # 贴台身最高，向外出最低
             box(f"{name}·踏跺{i}", sw, 0.92, top, 0, y0 - 0.46 - i * 0.92, 0.0,
                 MAT["stone2"])
         # 垂带（两侧斜板）
         for sx in (-1, 1):
             x = sx * (sw / 2 + 0.55)
             for i in range(n):
-                box(f"{name}·垂带{sx}{i}", 1.1, 0.92, h * (i + 1) / n,
+                box(f"{name}·垂带{sx}{i}", 1.1, 0.92, h * (n - i) / n,
                     x, y0 - 0.46 - i * 0.92, 0.0, MAT["stone"])
         # 御路：从台面斜到地面的石坡（不做浮空平板）
         hw = sw * 0.13
@@ -631,6 +631,59 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
                max(1.4, (d if long_x else w) * 0.26), overhang=1.0)
 
 
+
+
+def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
+               mat_door=None, mat_dark=None):
+    """一樘敞开的板门：门洞（暗腔内衬）+ 门框 + 门槛 + 两扇门（绕门轴向内开）+ 门钉。"""
+    import math as _m
+    md = mat_door or MAT.get("door") or MAT["wall"]
+    mk = mat_dark or MAT.get("soffit") or MAT["wall"]
+    w = x1 - x0
+    jamb = 0.34
+    cx = (x0 + x1) / 2
+    # 门洞内衬：前脸略突出于隔扇，把里面的隔扇遮掉
+    box(f"{name}·门洞", w - 0.02, depth, h, cx, y_face + 0.22 + depth / 2, z0, mk)
+    # 门框
+    box(f"{name}·门框L", jamb, 0.52, h, x0 + jamb / 2, y_face + 0.10, z0, md)
+    box(f"{name}·门框R", jamb, 0.52, h, x1 - jamb / 2, y_face + 0.10, z0, md)
+    box(f"{name}·上槛", w, 0.52, 0.44, cx, y_face + 0.10, z0 + h - 0.44, md)
+    box(f"{name}·门槛", w - 2 * jamb, 0.46, 0.26, cx, y_face + 0.10, z0, md)
+    # 两扇门：angle=0 关闭（贴在门面），>0 向殿内（+y）旋开
+    lw = (w - 2 * jamb) / 2 - 0.02
+    th = 0.16
+    lh = h - 0.44 - 0.26
+    ang = _m.radians(angle)
+    ca, sa = _m.cos(ang), _m.sin(ang)
+    for s2 in (-1, 1):
+        hx = (x0 + jamb) if s2 < 0 else (x1 - jamb)
+        dirx = ca if s2 < 0 else -ca
+        diry = sa
+        nxy = (-diry, dirx)                 # 门扇法向（水平）
+        verts, faces = [], []
+        for dz in (0.0, lh):
+            for u in (0.0, lw):
+                for v in (-th / 2, th / 2):
+                    verts.append((hx + u * dirx + v * nxy[0],
+                                  y_face + 0.08 + u * diry + v * nxy[1],
+                                  z0 + 0.26 + dz))
+        faces.extend([(0, 1, 3, 2), (6, 7, 5, 4), (0, 4, 5, 1),
+                      (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)])
+        mesh_from(f"{name}·门扇{s2}", verts, faces, md, merge=True)
+        # 门钉：五路五钉（统一放在朝外 -y 一侧）
+        for ix in range(5):
+            for iz in range(5):
+                u = (ix + 1) / 6 * lw
+                dz = 0.30 + (iz + 1) / 6 * (lh - 0.5)
+                box(f"{name}·钉{s2}{ix}{iz}", 0.08, 0.06, 0.08,
+                    hx + u * dirx, y_face - 0.01, z0 + 0.26 + dz,
+                    MAT.get("gold") or md)
+        # 铺首（门环座）：靠门缝那一侧
+        px0 = hx + (lw - 0.32) * dirx
+        box(f"{name}·铺首{s2}", 0.34, 0.07, 0.34, px0, y_face - 0.02,
+            z0 + 0.26 + lh * 0.44, MAT.get("gold") or md)
+    return w
+
 # ------------------------------------------------------------------ 整殿
 def wall_tower(name, w, d, z=0.0, body_h=10.0):
     """角楼：城台 + 上层柱廊 + 斗拱 + 庑殿顶。"""
@@ -720,6 +773,12 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
     if lod >= 2:
         FC.bay_skin(_self(), name, xs, ys, w, d, z0, col_h, lod=LOD, col_r=col_r)
+    if lod >= 1 and len(xs) >= 5:            # 明间做敞开的板门
+        ci = len(xs) // 2 - 1
+        d_h = min(col_h - 1.4, col_h * 0.66)
+        great_door(f"{name}·大门", xs[ci] + 0.6, xs[ci + 1] - 0.6,
+                   ys[0] - 0.12, z0, d_h, angle=0.0,
+                   mat_door=MAT.get("red_lacquer") or MAT["column"])
     elif lod == 1:      # 中距离：一块隔扇板 + 槛墙，不做棂条
         dh = min(col_h * 0.72, col_h - 1.2)
         for i in range(len(xs) - 1):
