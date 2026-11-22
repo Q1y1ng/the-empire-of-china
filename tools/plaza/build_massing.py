@@ -717,7 +717,8 @@ if P:
                 keep.append(o)
         five_arch_gate(g)
         b3 = set(bpy.data.objects)
-        PL.hall("承天门·门楼", 64.0, 28.0, z=16.1, storeys=2,
+        PL.hall("承天门·门楼", 64.0, 28.0, bays=[64.0 / 9.0] * 9,
+                dbays=[28.0 / 5.0] * 5, z=16.1, storeys=2,
                 base_h=0.65, col_h=5.8, plaque=None, lod=2,
                 stairs=False, balustrade=False)
         hnew = [x for x in bpy.data.objects if x not in b3]
