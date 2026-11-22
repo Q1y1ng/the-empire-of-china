@@ -773,19 +773,27 @@ def bridge(name, w, d, z=0.0):
 
 
 def rockery(name, w, d, h, z=0.0):
-    """假山：几块不规则石头叠成。"""
+    """假山：一堆不规则石块叠涩起来。
+
+    原来把 ico 球压成 (0.62w, 0.62d, 0.75h) 的扁椭球，46 m 长的假山成了三块
+    二十米宽的白纸片。改为**七八块尺度和朝向各异的立体石块**，逐层收分。
+    """
     import math as _m
-    specs = [(0.0, -0.10, 0.00, 0.62), (-0.26, 0.10, 0.05, 0.44), (0.24, 0.14, 0.03, 0.40),
-             (0.05, 0.24, 0.10, 0.34), (-0.12, -0.22, 0.08, 0.30), (0.16, -0.16, 0.16, 0.26)]
-    for i, (dx, dy, dz, sc) in enumerate(specs):
+    mat = MAT.get("rock") or MAT.get("stone2") or MAT["stone"]
+    specs = [(0.00, 0.00, 0.00, 0.30, 0.34),
+             (-0.26, 0.12, 0.06, 0.26, 0.30), (0.24, -0.10, 0.04, 0.25, 0.28),
+             (-0.02, 0.22, 0.16, 0.22, 0.26), (-0.12, -0.20, 0.10, 0.21, 0.24),
+             (0.16, 0.14, 0.34, 0.17, 0.22), (-0.04, -0.04, 0.50, 0.14, 0.20),
+             (0.30, 0.02, 0.18, 0.13, 0.18)]
+    for i, (dx, dy, dz, sc, hz) in enumerate(specs):
         bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=1.0,
                                               location=(dx * w, dy * d, z + dz * h))
         ob = bpy.context.object
         ob.name = f"{name}·石{i}"
-        ob.scale = (sc * w * 0.62, sc * d * 0.62, sc * h * 0.75)
-        ob.rotation_euler = (_m.radians(18 * i), _m.radians(11 * i), _m.radians(37 * i))
-        ob.data.materials.append(MAT["stone2"])
-
+        ob.scale = (sc * w, sc * d, hz * h)
+        ob.rotation_euler = (_m.radians(23 * i + 7), _m.radians(17 * i),
+                             _m.radians(41 * i))
+        ob.data.materials.append(mat)
 
 def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
          base_h=3.2, col_h=12.0, plaque=None, lod=1, stairs=True, balustrade=True):
