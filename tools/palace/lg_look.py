@@ -879,7 +879,7 @@ def make_materials():
                                         grain=0.26, coat=0.12))
     add("lattice", "格心", lambda g: _wood(g, (0.215, 0.130, 0.062), rough=0.46,
                                            grain=0.28, coat=0.06))
-    add("soffit", "椽望", lambda g: _wood(g, (0.058, 0.043, 0.036), rough=0.80,
+    add("soffit", "椽望", lambda g: _wood(g, (0.115, 0.082, 0.058), rough=0.78,
                                           grain=0.35, coat=0.0))
     add("plaque", "匾", _plaque)
     add("dou", "斗拱", _dou)

@@ -961,88 +961,115 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
 
 
-def gate_house(name, w, d, z=0.0, h=9.0):
-    """宫门：砖城台（**券洞**门）＋ 门楼。
+def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1):
+    """宫门：砖城台（**多券洞**）＋ 重檐门楼 ＋ 两侧翼墙。
 
-    城台拆成左右墩台 + 拱背以上的上墙；门洞是一条券形（矩形＋半圆）的暗色棱柱，
-    嵌在墩台之间，读出来就是拱券洞口；两侧加石券脚。
+    n_arch=5 用于正门（承天门那种"中间高大、两侧递小"的五券洞）；3 / 1 用于侧门。
+    各券洞的**拱顶取同一标高**，城台就能统一拆成"墩台＋拱顶以上整片"，不必逐洞处理。
     """
+    ROOF, _, _ = _lg()
     mat_w = MAT["citywall"]
     mat_d = MAT.get("soffit") or MAT["wall"]
     mat_s = MAT.get("stone") or MAT["stone2"]
-    ow = min(max(6.5, w * 0.26), 11.0)        # 门洞净宽
-    r = ow / 2.0
-    spring = max(2.6, min(h * 0.42, h - r - 0.9))   # 起券高
-    top = spring + r
-    side = (w - ow) / 2.0
+    crown = z + 0.58 * h
+    if n_arch >= 5:
+        # 中间最高、向外递小（天安门实物：5.9 / 4.4 / 3.5 m on 66 m 城台）
+        specs = [(-0.262 * w, 0.055 * w), (-0.131 * w, 0.067 * w), (0.0, 0.090 * w),
+                 (0.131 * w, 0.067 * w), (0.262 * w, 0.055 * w)]
+    elif n_arch == 3:
+        specs = [(-0.235 * w, 0.080 * w), (0.0, 0.100 * w), (0.235 * w, 0.080 * w)]
+    else:
+        specs = [(0.0, min(max(6.5, w * 0.26), 11.0))]
+    arch = [(cx, rw / 2.0, crown - rw / 2.0) for cx, rw in specs]   # (cx, r, 起券标高)
     y0, y1 = -d / 2, d / 2
 
-    for sx in (-1, 1):
-        box(f"{name}·城台{'EW'[sx > 0]}", side, d, h,
-            sx * (ow / 2 + side / 2), 0, z, mat_w)
-    # 两侧翼墙：让门接进一道墙里，不再孤零零立在空场；墙顶加两坡瓦帽收头
-    ROOF, _, _ = _lg()
+    # 拱顶以上：整片上墙
+    if h - (crown - z) > 0.2:
+        box(f"{name}·城台上", w, d, h - (crown - z), 0, 0, crown, mat_w)
+    # 墩台：券洞之间与两端
+    edges, prev = [], -w / 2.0
+    for cx, r, _sp in arch:
+        edges.append((prev, cx - r))
+        prev = cx + r
+    edges.append((prev, w / 2.0))
+    for i, (x0, x1) in enumerate(edges):
+        if x1 - x0 < 0.15:
+            continue
+        box(f"{name}·墩台{i}", x1 - x0, d, crown - z, (x0 + x1) / 2, 0, z, mat_w)
+
+    # 拱肩：券背以上到拱顶之间是弧线，方盒子填不住，用 8 层薄板逼近弧边
+    # （少了这一层，券洞两上角会露出黑洞——五券洞第一次渲就是这么翻车的）
+    K = 8
+    for i, (cx, r, sp) in enumerate(arch):
+        for k in range(K):
+            y0k = r * k / K
+            y1k = r * (k + 1) / K
+            hw = math.sqrt(max(r * r - y0k * y0k, 0.0))
+            if r - hw < 0.02:
+                continue
+            for sx in (-1, 1):
+                box(f"{name}·拱肩{i}{k}{'EW'[sx > 0]}", r - hw, d, y1k - y0k,
+                    cx + sx * (hw + (r - hw) / 2), 0, sp + y0k, mat_w)
+
+    # 券洞：矩形＋半圆的暗色棱柱，加券脸石圈与券脚
+    seg = 14
+    for i, (cx, r, sp) in enumerate(arch):
+        prof = [(-r, 0.0), (r, 0.0)]
+        for k in range(1, seg):
+            a = math.pi * k / seg
+            prof.append((r * math.cos(a), (sp - z) + r * math.sin(a)))
+        prof.append((-r, (sp - z)))
+        n = len(prof)
+        verts, faces = [], []
+        for yy in (y0 - 0.05, y1 + 0.05):
+            for (px, pz) in prof:
+                verts.append((cx + px, yy, z + pz))
+        faces.append(tuple(range(n)))
+        faces.append(tuple(range(n, 2 * n))[::-1])
+        for k in range(n):
+            j = (k + 1) % n
+            faces.append((k, j, n + j, n + k))
+        mesh_from(f"{name}·券洞{i}", verts, faces, mat_d, merge=False)
+        for sx in (-1, 1):
+            box(f"{name}·券脚{i}{'EW'[sx > 0]}", 0.34, 0.30, sp - z + 0.05,
+                cx + sx * (r + 0.17), y0 - 0.06, z, mat_s)
+        for k in range(seg):
+            a0 = math.pi * k / seg
+            a1 = math.pi * (k + 1) / seg
+            p0 = ((r + 0.00) * math.cos(a0), (r + 0.00) * math.sin(a0))
+            p1 = ((r + 0.00) * math.cos(a1), (r + 0.00) * math.sin(a1))
+            q0 = ((r + 0.42) * math.cos(a0), (r + 0.42) * math.sin(a0))
+            q1 = ((r + 0.42) * math.cos(a1), (r + 0.42) * math.sin(a1))
+            vv = []
+            for yy in (y0 - 0.07, y0 - 0.01):
+                for (px, pz) in (p0, q0, q1, p1):
+                    vv.append((cx + px, yy, sp + pz))
+            ff = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+                  (2, 6, 7, 3), (3, 7, 4, 0)]
+            mesh_from(f"{name}·券脸{i}_{k}", vv, ff, mat_s, merge=False)
+
+    # 城台顶女墙（沿前后外沿）
+    for sy in (-1, 1):
+        box(f"{name}·女墙{'SN'[sy > 0]}", w - 1.2, 0.7, 1.15, 0,
+            sy * (d / 2 - 0.4), z + h, mat_w)
+
+    # 两侧翼墙：让门接进一道墙里；端头加墩收口
     sw, st, shh = 46.0, max(3.2, d * 0.42), h * 0.90
     for sx in (-1, 1):
-        cx = sx * (w / 2 + sw / 2)
-        box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cx, 0, z, mat_w)
+        cxw = sx * (w / 2 + sw / 2)
+        box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cxw, 0, z, mat_w)
         _cap = ROOF.two_slope(_self(), f"{name}·翼墙帽{'EW'[sx > 0]}",
                               sw + 0.8, st + 0.8, z + shh, 0.52,
                               mat=MAT.get("tile_gray") or MAT["tile_gray"])
-        _cap.location.x = cx
-        # 端头墩：墙到此为止是有收头的，不是被截断在半空
+        _cap.location.x = cxw
         box(f"{name}·墙端{'EW'[sx > 0]}", 2.4, st + 1.0, shh + 0.6,
             sx * (w / 2 + sw - 1.2), 0, z, mat_w)
-    if h - top > 0.25:
-        box(f"{name}·城台上", ow, d, h - top, 0, 0, z + top, mat_w)
 
-    seg = 14
-    prof = [(-r, 0.0), (r, 0.0)]
-    for i in range(1, seg):
-        a = math.pi * i / seg
-        prof.append((r * math.cos(a), spring + r * math.sin(a)))
-    prof.append((-r, spring))
-    n = len(prof)
-    verts, faces = [], []
-    for yy in (y0 - 0.05, y1 + 0.05):
-        for (px, pz) in prof:
-            verts.append((px, yy, z + pz))
-    faces.append(tuple(range(n)))
-    faces.append(tuple(range(n, 2 * n))[::-1])
-    for i in range(n):
-        j = (i + 1) % n
-        faces.append((i, j, n + j, n + i))
-    mesh_from(f"{name}·门洞", verts, faces, mat_d, merge=False)
-
-    # 券脚：洞口两侧的石活
-    for sx in (-1, 1):
-        box(f"{name}·券脚{'EW'[sx > 0]}", 0.34, 0.30, spring + 0.05,
-            sx * (r + 0.17), y0 - 0.06, z, mat_s)
-    # 券脸：贴在前脸的一道石圈（细长条拼，不做曲面）
-    for i in range(seg):
-        a0 = math.pi * i / seg
-        a1 = math.pi * (i + 1) / seg
-        am = (a0 + a1) / 2
-        cx = (r + 0.20) * math.cos(am)
-        cz = spring + (r + 0.20) * math.sin(am)
-        seglen = r * abs(a1 - a0) + 0.06
-        # 沿切向的薄条：用两个端点直接建四边形棱柱
-        p0 = ((r + 0.00) * math.cos(a0), (r + 0.00) * math.sin(a0))
-        p1 = ((r + 0.00) * math.cos(a1), (r + 0.00) * math.sin(a1))
-        q0 = ((r + 0.42) * math.cos(a0), (r + 0.42) * math.sin(a0))
-        q1 = ((r + 0.42) * math.cos(a1), (r + 0.42) * math.sin(a1))
-        vv = []
-        for yy in (y0 - 0.07, y0 - 0.01):
-            for (px, pz) in (p0, q0, q1, p1):
-                vv.append((px, yy, z + spring + pz))
-        ff = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
-              (2, 6, 7, 3), (3, 7, 4, 0)]
-        mesh_from(f"{name}·券脸{i}", vv, ff, mat_s, merge=False)
-
-    # 门楼：城台之上的柱廊、隔扇、斗拱与屋顶（复用 hall）
+    # 门楼：城台上复用 hall()
     tw, td = w * 0.56, d * 0.62
-    hall(name + "·门楼", tw, td, z=z + h, storeys=1, base_h=0.55,
-         col_h=min(6.2, tw * 0.16), plaque=None, lod=2,
+    hall(name + "·门楼", tw, td, z=z + h + 1.15, storeys=2, base_h=0.55,
+         col_h=min(6.4, tw * 0.16), plaque=None, lod=2,
          stairs=False, balustrade=False)
+
 
 

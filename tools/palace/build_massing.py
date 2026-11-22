@@ -461,8 +461,12 @@ box("御道", 18, 900, 0.22, 0, -20, 0.02, MAT["path"])
 
 # ------------------------------------------------------------------ 琼苑 / 值房 / 树
 g = next(c for c in D.COMPOUNDS if c["name"] == "琼苑")
-box("琼苑地面", g["x1"] - g["x0"] - 4, g["y1"] - g["y0"] - 4, 0.5,
-    (g["x0"] + g["x1"]) / 2, (g["y0"] + g["y1"]) / 2, 0.25, MAT["green"])
+_gx, _gy = (g["x0"] + g["x1"]) / 2, (g["y0"] + g["y1"]) / 2
+_gw, _gd = g["x1"] - g["x0"] - 4, g["y1"] - g["y0"] - 4
+box("琼苑地面", _gw, _gd, 0.5, _gx, _gy, 0.25, MAT["green"])
+# 十字园路 + 一圈小径：卫星图里御花园是被路径切开的，不是一整块绿
+box("琼苑·中路", 4.0, _gd - 6, 0.10, _gx, _gy, 0.68, MAT["path"])
+box("琼苑·横路", _gw - 6, 4.0, 0.10, _gx, _gy, 0.68, MAT["path"])
 
 for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
     if args.precise:
@@ -566,7 +570,8 @@ def add_struct_precise(st):
     x, y = st["cx"], st["cy"]
     if k == "gate":
         before = set(col.objects)
-        PL.gate_house(st["name"], w, d, z=z, h=h)
+        _na = 5 if w >= 78 else (3 if w >= 40 else 1)
+        PL.gate_house(st["name"], w, d, z=z, h=h, n_arch=_na)
         new = set(col.objects) - before
         if d > w:            # 东西宫门：整体绕自身原点转 90°，让券洞朝东西
             for ob in new:
