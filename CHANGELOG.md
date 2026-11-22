@@ -11,6 +11,10 @@
 
 ### 变更
 
+- **2026-11-22 广场出图改 WebP、glb 开 Draco**：①渲染默认输出 **WebP q92**，11 张 1920×1080 合计 **888 KB**（同图 PNG 是 23 MB）；README 11 处图片链接改 `.webp`，旧 PNG 从仓库移除（要 PNG 改 `image_settings.file_format` 即可）。②新增 `--draco`：glb **58.91 → 14.74 MB**（4 倍），`KHR_draco_mesh_compression` 进 `extensionsRequired`，查看器需解码器（three.js/Babylon 内置，Blender 可直接导入）。③以后每轮提交的二进制增量由约 82 MB 降到约 16 MB。
+
+- **2026-11-22 仓库 gc**：`git gc --prune=now` 把 862 个松散对象并入单个 pack，`.git` **1,004 → 904 MiB**（省 100 MiB）。此前估的"回收 800 MB"是误读——`git count-objects` 的 `size` 是松散对象本体（已 zlib 压缩）而非浪费空间。仓库大头确实在历史里的 PNG/GLB 版本（历史 blob 合计 2.5 GB 原始数据），要真正瘦身只能重写历史，或今后大件不进库。
+
 - **2026-11-23 交付件优化：glb 按材质 Join＋Draco、翼墙端头墩（第二十四轮）**：①**对象数**——整宫 28,707 个网格对象 = 28,707 个 draw call，任何网页查看器拿到都会卡死；导出前新增 `_join_by_material()`，按材质合并，**28,707 → 492 个**（轻量版 326 个）。只作用于导出，不影响出图。②**体积**——glb 开 `export_draco_mesh_compression_enable`（level 4），**223 MB → 37.7 MB**（轻量版 6.9 MB），`KHR_draco_mesh_compression` 已进 extensionsUsed。③**翼墙端头**——两侧翼墙原来直接截断在半空，加 2.4 m 端头墩收口。④**排查结论**：本工程的 GPU 一直是真启用（`lg_look._gpu_device_type()` 显式设 OPTIX 并 `use=True`，实测设备表里 OPTIX/CUDA 均在列），不存在"静默回落 CPU"的问题；但 **glb 里 images=0 / textures=0** 这一点与广场那边一致——材质是程序化 Brick/Wave，glTF 不认，交付文件里材质细节确实丢失，待烘焙。
 
 - **2026-11-22 广场精模重出（OptiX GPU）**：11 张图全部按新流程重渲染，1920×1080、48 spp，单张 8~13 s，全轮 2 分 20 秒；glb 53.46→58.91 MB（贴图 2.7 MB＋UV 约 3 MB）。`tools/plaza/README.md` 补「贴图与渲染设备」小节并更新实测数据。
