@@ -418,7 +418,8 @@ def _eave_segments(W, D, z0, H, lift, n=90):
 def eave_trim(pl, name, W, D, z0, H, lift=1.35, lod=2, mat_tile=None, mat_wood=None):
     """檐口：连檐 + 飞椽（木）+ 瓦当 + 滴水（瓦）。近看全靠这一圈。"""
     mat_tile = mat_tile or pl.MAT["tile"]
-    mat_wood = mat_wood or pl.MAT.get("door") or pl.MAT["column"]
+    # 连檐/飞椽用深色木：原来用"隔扇"材质，掠射角高光把檐口拉成一条白边
+    mat_wood = mat_wood or pl.MAT.get("wood_dark") or pl.MAT["column"]
     tv, tf = [], []          # 瓦件
     wv, wf = [], []          # 木件
     s0 = slope_at(0.02) * H / (D / 2)
@@ -734,11 +735,11 @@ def ridge_ring(pl, name, OW, OD, z0, H, lift=1.35, mat=None):
     for sy in (-1, 1):
         sweep(pl, f"{name}·围脊{sy}", [(-OW / 2, sy * OD / 2, zz - 0.05),
                                        (OW / 2, sy * OD / 2, zz - 0.05)],
-              0.34, -0.12, 0.55, mat)
+              0.58, -0.34, 0.80, mat)
     for sx in (-1, 1):
         sweep(pl, f"{name}·围脊x{sx}", [(sx * OW / 2, -OD / 2, zz - 0.05),
                                         (sx * OW / 2, OD / 2, zz - 0.05)],
-              0.34, -0.12, 0.55, mat)
+              0.58, -0.34, 0.80, mat)
 
 
 def ridge_xie(pl, name, OW, OD, IW, ID, z0, H, lift=1.35, mat=None):
