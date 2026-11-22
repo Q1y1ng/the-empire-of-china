@@ -429,13 +429,19 @@ for w in D.inner_line_walls():
 for c in D.COMPOUNDS:
     for w in D.compound_walls(c):
         add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"], h=WH)
-if args.precise:          # 每座院落南墙正中一樘随墙门
+if args.precise:
+    # 院门必须建在数据给定的门洞位置：compound_walls() 是按 c["gates"] 把墙断开的，
+    # 之前却在"南墙正中"另起一樘门——于是墙上留着 14 m 的断口没人填（作者看到的"城墙断开"）
     for c in D.COMPOUNDS:
-        if c["name"] in ("琼苑",):
+        if c["name"] == "琼苑":
             continue
-        _w = min(4.6, (c["x1"] - c["x0"]) * 0.22)
-        PL.court_gate(f"{c['name']}·院门", (c["x0"] + c["x1"]) / 2, c["y0"],
-                      z=0.0, w=max(3.4, _w), h=min(4.4, WH - 0.2))
+        for _i, (_side, _c0, _gw) in enumerate(c.get("gates") or []):
+            if _side not in ("S", "N"):
+                continue
+            _y = c["y0"] if _side == "S" else c["y1"]
+            PL.court_gate(f"{c['name']}·院门{_i}", _c0, _y, z=0.0,
+                          w=max(3.4, _gw * 0.86), h=min(4.6, WH - 0.15),
+                          face=(-1 if _side == "S" else 1))
 
 R = D.RIVER
 pts = R["points"]
