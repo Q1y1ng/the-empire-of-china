@@ -751,14 +751,14 @@ def _caihua_uv(g, heart, zhaotou, kuto, edge_v=0.12, kuto_u=0.07, gline=0.006):
     # 和玺彩画的枋心本来就是「青地金龙」，之前只有一块平色，远看像没画完。
     uu = M(g, "MULTIPLY", M(g, "SUBTRACT", u, 0.26), 1.0 / 0.48)
     vv = M(g, "MULTIPLY", M(g, "SUBTRACT", v, 0.18), 1.0 / 0.64)
-    sp = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", uu, 8.80)), 0.150, 0.50)
+    sp = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", uu, 6.60)), 0.135, 0.50)
     dv = M(g, "ABSOLUTE", M(g, "SUBTRACT", vv, sp))
-    dbody = M(g, "SUBTRACT", 1.0, STEP(g, dv, 0.046, 0.080))
-    hdu = M(g, "SUBTRACT", uu, 0.135)
+    dbody = M(g, "SUBTRACT", 1.0, STEP(g, dv, 0.150, 0.215))
+    hdu = M(g, "SUBTRACT", uu, 0.150)
     hdv = M(g, "SUBTRACT", vv, 0.500)
     hd = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", hdu, hdu),
                        M(g, "MULTIPLY", hdv, hdv)))
-    dhead = M(g, "SUBTRACT", 1.0, STEP(g, hd, 0.068, 0.100))
+    dhead = M(g, "SUBTRACT", 1.0, STEP(g, hd, 0.230, 0.300))
     dragon = M(g, "MULTIPLY", M(g, "MAXIMUM", dbody, dhead), inner)
     gold = M(g, "MAXIMUM",
              M(g, "MAXIMUM", M(g, "MAXIMUM", gold_line, v_gold),
