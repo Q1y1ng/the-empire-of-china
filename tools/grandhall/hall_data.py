@@ -75,6 +75,11 @@ TIERS = [
 
 STAGE_SEATS = 400        # 主席台（不计入万人席）
 
+# 【作者·2026-11-23】三项裁决
+EMBLEM = {"d": 6.4}             # ① 国徽直径 6.4 m（"可以"）
+FLAGS_AT_PROSCENIUM = False     # ② 台口两侧不设红底金龙旗（"不必"）
+REP_DESKS = True                # ③ 池座（及各层）设代表席小桌（"设"）
+
 # ---------------------------------------------------------------- 色彩
 # 依《国家象征物（2026）》：帝国红 C0 M100 Y100 K10 ≈ #C8102E，金 ≈ #C9A227
 SRGB = {
@@ -324,6 +329,9 @@ def check():
         f'最远观众距台口 {max(t["r1"] for t in TIERS) - 36.06:.1f} m（台口对角线距离）',
         f'中央前厅 {FOYER["x1"] - FOYER["x0"]:.0f} m 深 × '
         f'{FOYER["y1"] - FOYER["y0"]:.0f} m 宽，{FOYER["n_col"]} 根明柱，净高 {FOYER["h"]:.0f} m',
+        f'国徽直径 {EMBLEM["d"]:.1f} m；台口旗：'
+        f'{"设" if FLAGS_AT_PROSCENIUM else "不设"}；代表席小桌：'
+        f'{"设" if REP_DESKS else "不设"}（作者 2026-11-23 裁决）',
     ]
     return "\n".join(lines)
 

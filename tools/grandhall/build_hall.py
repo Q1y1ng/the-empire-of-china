@@ -353,7 +353,7 @@ def build_stage():
     if P:
         E = Mesh("国徽", MAT["gold"], "stage")
         cx, cz = S["x0"] + 0.9, 12.5
-        R = 3.2
+        R = D.EMBLEM["d"] / 2.0
         E.cyl(cx, AX, cz - 0.18, cz + 0.18, R, n=40)
         # 蟠龙浮雕：S 形盘绕的简化卷
         for k in range(18):
@@ -364,12 +364,13 @@ def build_stage():
         E.box(cx + 0.2, AX, cz - 2.55, 0.5, 3.0, 0.55)
         emit(E)
 
-        F = Mesh("红底金龙旗", MAT["red"], "stage")
-        for i, dy in enumerate((-16.5, -11.0, -5.5, 5.5, 11.0, 16.5,
-                                -22.0, 22.0, -27.5, 27.5)):
-            x = S["x0"] + 1.4 + (0.35 if abs(dy) > 17 else 0.0)
-            F.box(x, AX + dy, 6.2 + (0.6 if abs(dy) > 20 else 0.0), 0.16, 3.0, 6.2)
-        emit(F)
+        if D.FLAGS_AT_PROSCENIUM:
+            F = Mesh("红底金龙旗", MAT["red"], "stage")
+            for dy in (-16.5, -11.0, -5.5, 5.5, 11.0, 16.5,
+                       -22.0, 22.0, -27.5, 27.5):
+                x = S["x0"] + 1.4 + (0.35 if abs(dy) > 17 else 0.0)
+                F.box(x, AX + dy, 6.2 + (0.6 if abs(dy) > 20 else 0.0), 0.16, 3.0, 6.2)
+            emit(F)
 
 
 # ------------------------------------------------------------------ 3 挑台
@@ -832,12 +833,8 @@ build_balcony(D.TIERS[2], 2)
 build_rear()
 build_dome()
 build_foyer()
-if P:
-    for i, t in enumerate(D.TIERS):
-        build_seats(t, i, desks=True)
-else:
-    for i, t in enumerate(D.TIERS):
-        build_seats(t, i, desks=False)
+for i, t in enumerate(D.TIERS):
+    build_seats(t, i, desks=D.REP_DESKS)
 print("BUILD DONE", round(time.time() - t0, 1), "s", flush=True)
 
 if args.cut:
