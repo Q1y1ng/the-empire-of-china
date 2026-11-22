@@ -717,14 +717,24 @@ if P:
                 keep.append(o)
         five_arch_gate(g)
         b3 = set(bpy.data.objects)
-        PL.hall("承天门·门楼", 72.0, 31.5, z=16.1, storeys=2,
-                base_h=0.65, col_h=6.5, plaque=None, lod=2,
+        PL.hall("承天门·门楼", 64.0, 28.0, z=16.1, storeys=2,
+                base_h=0.65, col_h=5.8, plaque=None, lod=2,
                 stairs=False, balustrade=False)
-        for o in [x for x in bpy.data.objects if x not in b3]:
+        hnew = [x for x in bpy.data.objects if x not in b3]
+        for o in hnew:
             o.location.y += g["cy"]
+        emp2 = bpy.data.objects.new("承天门·门楼压低", None)
+        col.objects.link(emp2)
+        emp2.location = (0.0, g["cy"], 16.1)
+        emp2.hide_render = True
+        emp2.matrix_parent_inverse = Matrix.Translation((0.0, -g["cy"], -16.1))
+        for o in hnew:
+            o.parent = emp2
+            o.matrix_parent_inverse = emp2.matrix_parent_inverse
+        emp2.scale = (1.0, 1.0, 0.85)
         for sx in (-1, 1):
             b2 = set(bpy.data.objects)
-            PL.wall_tower("承天门·雁翅楼" + ("东" if sx > 0 else "西"), 38, 20, z=0.1, body_h=11)
+            PL.wall_tower("承天门·雁翅楼" + ("东" if sx > 0 else "西"), 32, 17, z=0.1, body_h=9.5)
             for o in [x for x in bpy.data.objects if x not in b2]:
                 o.location.x += sx * 62
                 o.location.y += -497
