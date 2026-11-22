@@ -867,7 +867,9 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
             for x in (xs[0], xs[-1]):
                 FC.column_base(_self(), x, y, z0, col_r)
 
-    box(f"{name}·墙身", w - 0.6, d - 0.6, col_h - 0.2, 0, 0, z0, MAT["wall"])
+    # 墙身要顶到柱网线：原来内收 0.3 m，四个转角处隔扇外皮之间就露出缝
+    # （作者看到"楼的墙没有拼合"就是这四个角）
+    box(f"{name}·墙身", w - 0.05, d - 0.05, col_h - 0.2, 0, 0, z0, MAT["wall"])
     beams(xs, ys, z0 + col_h, beam_h)
     z_ping = z0 + col_h + beam_h
     ring_beam(f"{name}·平板枋", w + 0.4, d + 0.4, z_ping, 0.26, 0.66, MAT["wall"])
