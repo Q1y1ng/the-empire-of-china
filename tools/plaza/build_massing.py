@@ -654,15 +654,15 @@ def arch_prism(name, cx, y, r, spring, z0=0.1, depth=0.6, material=None, seg=24)
 
 def five_arch_gate(g):
     """承天门五券门城台：六墩、中央 16 m、两侧 9.5 m，真券洞。"""
-    CY, Z0, H, DEP = g["cy"], 0.1, 12.0, g["d"]
+    CY, Z0, H, DEP = g["cy"], 0.1, 16.0, g["d"]
     TOP = Z0 + H
     Y0, Y1 = CY - DEP / 2, CY + DEP / 2
-    piers = [(-48, -39.8333), (-30.8333, -22.6667), (-13.6667, -5.5),
-             (5.5, 13.6667), (22.6667, 30.8333), (39.8333, 48)]
+    piers = [(-48, -37.6), (-31.2, -20.8), (-14.4, -4.0),
+             (4.0, 14.4), (20.8, 31.2), (37.6, 48)]
     for i, (a, b) in enumerate(piers):
         box(f"承天门·墩台{i}", b - a, DEP, H, (a + b) / 2, CY, Z0, MAT["wall_red"])
-    ops = [(-35.3333, 9.0, 4.2), (-18.1667, 9.0, 4.2), (0.0, 11.0, 4.0),
-           (18.1667, 9.0, 4.2), (35.3333, 9.0, 4.2)]
+    ops = [(-34.4, 6.4, 8.0), (-17.6, 6.4, 8.0), (0.0, 8.0, 8.5),
+           (17.6, 6.4, 8.0), (34.4, 6.4, 8.0)]
     for k, (cx, ow, spring) in enumerate(ops):
         r = ow / 2.0
         n = 36
@@ -706,7 +706,7 @@ if P:
         PL.set_collection(col)
         PL.make_materials()
         before = set(bpy.data.objects)
-        PL.gate_house("承天门·精模", g["w"], g["d"], z=0.1, h=12.0)
+        PL.gate_house("承天门·精模", g["w"], g["d"], z=0.1, h=16.0)
         new = [o for o in bpy.data.objects if o not in before]
         keep = []
         for o in new:
@@ -718,13 +718,13 @@ if P:
         tower = [o for o in keep if "门楼" in o.name]
         emp = bpy.data.objects.new("承天门·门楼比例", None)
         col.objects.link(emp)
-        emp.location = (0.0, g["cy"], 12.1)
+        emp.location = (0.0, g["cy"], 16.1)
         emp.hide_render = True
-        emp.matrix_parent_inverse = Matrix.Translation((0.0, -g["cy"], -12.1))
+        emp.matrix_parent_inverse = Matrix.Translation((0.0, -g["cy"], -16.1))
         for o in tower:
             o.parent = emp
             o.matrix_parent_inverse = emp.matrix_parent_inverse
-        emp.scale = (1.25, 1.15, 1.35)
+        emp.scale = (1.35, 1.15, 1.15)
         five_arch_gate(g)
         for sx in (-1, 1):
             b2 = set(bpy.data.objects)
