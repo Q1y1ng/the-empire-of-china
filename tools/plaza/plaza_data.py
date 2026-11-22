@@ -103,13 +103,13 @@ MASSES = [
     # ── 国家大会堂：230 × 600 m，两层，南北三厅，面东（朝广场）
     {"key": "hall-n", "parent": "hall", "name": "右厅（宴会厅）",
      "x0": -540.0, "x1": -310.0, "y0": -915.5, "y1": -735.5,
-     "h": 27.0, "floors": 2, "kind": "wing"},
+     "h": 34.0, "floors": 2, "kind": "wing"},
     {"key": "hall-c", "parent": "hall", "name": "中厅（万人大礼堂）",
      "x0": -540.0, "x1": -310.0, "y0": -1155.5, "y1": -915.5,
-     "h": 34.0, "floors": 2, "kind": "chamber"},
+     "h": 44.0, "floors": 2, "kind": "chamber"},
     {"key": "hall-s", "parent": "hall", "name": "左厅（八州厅＋宣政厅）",
      "x0": -540.0, "x1": -310.0, "y0": -1335.5, "y1": -1155.5,
-     "h": 27.0, "floors": 2, "kind": "wing"},
+     "h": 34.0, "floors": 2, "kind": "wing"},
     *[{"key": f"hall-portico-{t}", "parent": "hall", "name": "门廊",
        "x0": -310.0, "x1": -296.0, "y0": cy - 40.0, "y1": cy + 40.0,
        "h": 20.0, "floors": 1, "kind": "portico"}
@@ -119,10 +119,10 @@ MASSES = [
     #    一整块两层基座 + 中央 160×160 m 议事厅高体量 + 一主两副门廊
     {"key": "council-main", "parent": "council", "name": "国家议会议事大楼",
      "x0": 310.0, "x1": 540.0, "y0": -1335.5, "y1": -735.5,
-     "h": 26.0, "floors": 2, "kind": "main"},
+     "h": 32.0, "floors": 2, "kind": "main"},
     {"key": "council-chamber", "parent": "council", "name": "议事厅（1,100 席）",
      "x0": 345.0, "x1": 505.0, "y0": -1115.5, "y1": -955.5,
-     "h": 34.0, "floors": 2, "kind": "chamber"},
+     "h": 44.0, "floors": 2, "kind": "chamber"},
     {"key": "council-portico-c", "parent": "council", "name": "中央门廊",
      "x0": 296.0, "x1": 310.0, "y0": -1085.5, "y1": -985.5,
      "h": 22.0, "floors": 1, "kind": "portico"},
@@ -136,7 +136,7 @@ MASSES = [
     # ── 国家政治博物馆：560 × 170 m，两层，面北（朝广场）；东段为大革命主题馆
     {"key": "museum-main", "parent": "museum", "name": "国家政治博物馆",
      "x0": -280.0, "x1": 280.0, "y0": -1620.5, "y1": -1450.5,
-     "h": 24.0, "floors": 2, "kind": "main"},
+     "h": 28.0, "floors": 2, "kind": "main"},
     {"key": "museum-portico", "parent": "museum", "name": "门廊",
      "x0": -70.0, "x1": 70.0, "y0": -1450.5, "y1": -1435.5,
      "h": 18.0, "floors": 1, "kind": "portico"},

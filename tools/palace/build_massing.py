@@ -270,10 +270,24 @@ def add_struct(s):
 
 
 def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
+    """院墙：朱红墙身 + **两坡瓦帽**（出檐 0.4 m、脊高 0.55 m）。"""
     mat = mat or MAT["wall"]
-    box(name, x1 - x0, y1 - y0, h, (x0 + x1) / 2, (y0 + y1) / 2, 0.0, mat)
-    box(name + "_瓦", (x1 - x0) + 0.6, (y1 - y0) + 0.6, 0.5,
-        (x0 + x1) / 2, (y0 + y1) / 2, h, MAT["ridge"])
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    Lx, Ly = x1 - x0, y1 - y0
+    box(name, Lx, Ly, h, cx, cy, 0.0, mat)
+    H = 0.55
+    if Lx >= Ly:
+        a, b = Lx + 0.8, Ly + 0.8
+        v = [(-a / 2, -b / 2, 0), (a / 2, -b / 2, 0), (a / 2, b / 2, 0),
+             (-a / 2, b / 2, 0), (-a / 2, 0, H), (a / 2, 0, H)]
+    else:
+        a, b = Ly + 0.8, Lx + 0.8
+        v = [(-a / 2, -b / 2, 0), (a / 2, -b / 2, 0), (a / 2, b / 2, 0),
+             (-a / 2, b / 2, 0), (-a / 2, 0, H), (a / 2, 0, H)]
+        v = [(y, x, z) for (x, y, z) in v]
+    f = [(0, 1, 5, 4), (3, 2, 5, 4), (0, 4, 3), (1, 2, 5)]
+    mesh_from(name + "_瓦", [(cx + a, cy + b, h + c) for (a, b, c) in v], f,
+              MAT.get("glaze_plain_dark") or MAT["ridge"])
 
 
 # ------------------------------------------------------------------ 地面 / 护城河
@@ -357,15 +371,6 @@ if args.precise:
     for _sx in (-1, 1):
         box("三台·垂带%+d" % _sx, 1.6, _dep + 1.2, D.PLATFORM_H,
             _sx * (_hw + 0.8), _y_edge - 0.5 - _dep / 2, 0.0, PL.MAT["stone"])
-    vv, ff = [], []
-    for _yy in (_y_edge - 0.5, _y_edge - 0.5 - _dep):
-        _zz = D.PLATFORM_H * (1.0 - abs(_yy - (_y_edge - 0.5)) / _dep) - 0.25
-        vv += [(-_hw * 0.30, _yy, _zz), (_hw * 0.30, _yy, _zz),
-               (_hw * 0.30, _yy, _zz - 0.22), (-_hw * 0.30, _yy, _zz - 0.22)]
-    ff = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
-          (2, 6, 7, 3), (3, 7, 4, 0)]
-    PL.mesh_from("三台·御路", vv, ff, PL.MAT.get("marble_carved") or PL.MAT["stone"],
-                 merge=False)
 else:
     PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
     PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
