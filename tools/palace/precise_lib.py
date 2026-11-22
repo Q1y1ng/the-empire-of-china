@@ -693,8 +693,9 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
               MAT.get("wood_dark") or MAT["cai_blue"])
     # 墙身要顶到阑额下皮：原来 h-0.28，阑额与墙之间空 0.28 m，整条廊庑像悬着的
     box(name + "·墙", w - 0.7, d - 0.7, h + 0.02, 0, 0, zz, MAT["wall"])
+    # 出檐收到 0.35：原来 1.0，廊庑两端露出 0.65 m 空当，俯视看就是"屋顶浮在墙外"
     gable_roof(name + "·顶", w + 0.6, d + 0.6, zz + h + 0.34,
-               max(1.4, (d if long_x else w) * 0.26), overhang=1.0)
+               max(1.4, (d if long_x else w) * 0.26), overhang=0.35)
 
 
 def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,

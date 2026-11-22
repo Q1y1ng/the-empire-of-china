@@ -447,9 +447,55 @@ for p in D.PLATFORMS:
 
 for w in D.inner_line_walls():
     add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"])
+# 廊庑占地：院墙遇到它要让开，否则墙会横穿屋顶（近景看就是"墙从屋顶里长出来"）
+_CORR = [(s["cx"], s["cy"], s["w"] / 2 + 2.0, s["d"] / 2 + 2.0)
+         for s in D.STRUCTS if s["kind"] == "corridor"]
+
+
+def _wall_pieces(name, x0, x1, y0, y1):
+    """把一段轴对齐的墙按廊庑占地切开，返回若干可建段。"""
+    along_x = (x1 - x0) >= (y1 - y0)
+    a0, a1 = (x0, x1) if along_x else (y0, y1)
+    b0, b1 = (y0, y1) if along_x else (x0, x1)
+    cuts = []
+    for (cx, cy, hw, hd) in _CORR:
+        ca0, ca1 = (cx - hw, cx + hw) if along_x else (cy - hd, cy + hd)
+        cb0, cb1 = (cy - hd, cy + hd) if along_x else (cx - hw, cx + hw)
+        if cb1 < b0 or cb0 > b1:
+            continue
+        if ca1 <= a0 or ca0 >= a1:
+            continue
+        cuts.append((max(ca0, a0), min(ca1, a1)))
+    if not cuts:
+        return [(name, x0, x1, y0, y1)]
+    cuts.sort()
+    merged = []
+    for a, b in cuts:
+        if merged and a <= merged[-1][1] + 0.5:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], b))
+        else:
+            merged.append((a, b))
+    out, cur = [], a0
+    for a, b in merged:
+        if a > cur + 0.5:
+            out.append((cur, a))
+        cur = max(cur, b)
+    if cur < a1 - 0.5:
+        out.append((cur, a1))
+    pieces = []
+    for i, (a, b) in enumerate(out):
+        nm = name if len(out) == 1 else "%s_%d" % (name, i)
+        if along_x:
+            pieces.append((nm, a, b, b0, b1))
+        else:
+            pieces.append((nm, b0, b1, a, b))
+    return pieces
+
+
 for c in D.COMPOUNDS:
     for w in D.compound_walls(c):
-        add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"], h=WH)
+        for _pc in _wall_pieces(w["name"], w["x0"], w["x1"], w["y0"], w["y1"]):
+            add_wall(_pc[0], _pc[1], _pc[2], _pc[3], _pc[4], h=WH)
 if args.precise:
     # 院门必须建在数据给定的门洞位置：compound_walls() 是按 c["gates"] 把墙断开的，
     # 之前却在"南墙正中"另起一樘门——于是墙上留着 14 m 的断口没人填（作者看到的"城墙断开"）
