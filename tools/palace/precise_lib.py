@@ -341,8 +341,10 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None):
             t0 = (j + 0.5) / k
             cx = x0 + (x1 - x0) * t0
             cy = y0 + (y1 - y0) * t0
-            obb(cx, cy, z + 0.06, seg - post - 0.06, t, h - 0.34 + 0.02, rot)   # 栏板
-            obb(cx, cy, z + h - 0.20, seg - post + 0.10, t + 0.10, 0.14, rot)   # 寻杖
+            # 地栿 → 栏板 → 寻杖，三层连续（原来栏板顶到 0.76、寻杖悬在 0.82，中间空一道缝）
+            obb(cx, cy, z + 0.00, seg - post - 0.04, t * 1.45, 0.16, rot)        # 地栿
+            obb(cx, cy, z + 0.16, seg - post - 0.04, t * 1.15, h - 0.44, rot)    # 栏板
+            obb(cx, cy, z + h - 0.28, seg - post + 0.06, t * 1.55, 0.16, rot)    # 寻杖
         for j in range(k + 1):
             t0 = j / k
             cx = x0 + (x1 - x0) * t0

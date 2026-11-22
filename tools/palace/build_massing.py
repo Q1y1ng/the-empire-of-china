@@ -392,7 +392,7 @@ if args.precise:
     _y_b = _y_edge - 0.5 - _dep
     for _sx in (-1, 1):
         _cx, _w, _t = _sx * (_hw + 0.85), 1.7, 0.42
-        _zf, _zb = D.PLATFORM_H + 0.22, 0.30      # 靠台身高、外端低
+        _zf, _zb = D.PLATFORM_H + 0.22, -0.30     # 靠台身高、外端落地（-0.3 埋进地坪）
         _v = [(_cx - _w / 2, _y_f, _zf), (_cx + _w / 2, _y_f, _zf),
               (_cx + _w / 2, _y_b, _zb), (_cx - _w / 2, _y_b, _zb)]
         _v += [(a, b, c - _t) for (a, b, c) in _v]
