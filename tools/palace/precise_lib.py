@@ -603,7 +603,7 @@ def small_house(name, w, d, z=0.0, h=4.5, tile=None):
     mk = MAT.get("soffit") or MAT["wall"]
     ms = MAT.get("stone") or MAT["stone2"]
     # 台明两级
-    box(f"{name}·台身", w + 1.10, d + 1.10, 0.28, 0, 0, z, MAT["stone2"])
+    box(f"{name}·台身", w + 1.10, d + 1.10, 0.42, 0, 0, z - 0.12, MAT["stone2"])
     box(f"{name}·阶条", w + 0.72, d + 0.72, 0.24, 0, 0, z + 0.28, ms)
     zt = z + 0.52
     # 墙身 + 下碱
@@ -676,7 +676,7 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
     long_x = w >= d
     span = w if long_x else d
     n = bays or max(3, int(span / 4.5))
-    box(f"{name}·台明", w + 0.9, d + 0.9, 0.30, 0, 0, z,
+    box(f"{name}·台明", w + 0.9, d + 0.9, 0.42, 0, 0, z - 0.12,
         MAT.get("stone2") or MAT["stone"])
     zz = z + 0.30
     for i in range(n + 1):
@@ -689,7 +689,8 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
             column(w / 2 - 0.7, t, zz, zz + h, 0.20)
     ring_beam(name + "·阑额", w, d, zz + h, 0.34, 0.30,
               MAT.get("wood_dark") or MAT["cai_blue"])
-    box(name + "·墙", w - 0.7, d - 0.7, h - 0.28, 0, 0, zz, MAT["wall"])
+    # 墙身要顶到阑额下皮：原来 h-0.28，阑额与墙之间空 0.28 m，整条廊庑像悬着的
+    box(name + "·墙", w - 0.7, d - 0.7, h + 0.02, 0, 0, zz, MAT["wall"])
     gable_roof(name + "·顶", w + 0.6, d + 0.6, zz + h + 0.34,
                max(1.4, (d if long_x else w) * 0.26), overhang=1.0)
 
@@ -848,7 +849,9 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     col_r = max(0.26, min(0.48, w / 210.0))
     unit = unit_for(w)
     dou_h = 11.0 * unit
-    ov = 10.5 * unit + 1.15                  # 出檐 = 挑檐桁出挑 + 飞椽
+    # 出檐 = 挑檐桁出挑（9 斗口）+ 飞椽 + 檐椽出挑。原来只有 10.5 斗口 + 1.15 m，
+    # 90 m 的大殿出檐不足 3 m，比故宫实物短一截，檐下阴影也做得不够深。
+    ov = 15.5 * unit + 1.90
     beam_h = min(1.10, max(0.62, 0.085 * col_h))
     LOD = min(lod, 2)
 

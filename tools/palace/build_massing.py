@@ -159,9 +159,12 @@ def paving_mat(name, rgb, bw=0.48, rh=0.24, mortar=(0.085, 0.078, 0.070),
     return m
 
 
-MAT["plaza"] = paving_mat("宫城地坪·铺砖", (0.072, 0.066, 0.056))
-MAT["path"] = paving_mat("御道·石板", (0.150, 0.144, 0.128), bw=0.90, rh=0.45,
-                         mortar=(0.14, 0.13, 0.11), mortar_w=0.010, rough=0.80)
+# 广场是 1.2×0.6 m 的大石条（照片里一眼能数出缝），不是 480 mm 青砖
+MAT["plaza"] = paving_mat("宫城地坪·石板", (0.092, 0.086, 0.074),
+                          bw=1.20, rh=0.60, mortar=(0.058, 0.052, 0.045),
+                          mortar_w=0.018, rough=0.86)
+MAT["path"] = paving_mat("御道·石板", (0.168, 0.160, 0.142), bw=1.55, rh=0.78,
+                         mortar=(0.15, 0.14, 0.12), mortar_w=0.014, rough=0.78)
 MAT["ground"] = paving_mat("城外地面·土路", (0.070, 0.066, 0.058), bw=1.6, rh=0.8,
                            mortar=(0.16, 0.15, 0.13), mortar_w=0.02, rough=0.95)
 
