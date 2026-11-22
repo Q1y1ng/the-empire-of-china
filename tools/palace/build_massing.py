@@ -83,7 +83,7 @@ MAT = {
     "plaza": material("宫城地坪", (0.50, 0.47, 0.41), 0.95),
     "water": material("水面", (0.025, 0.09, 0.15), 0.06, 0.2),
     "green": material("绿地", (0.17, 0.27, 0.12), 0.95),
-    "tree": material("树冠", (0.18, 0.30, 0.14), 0.9),
+    "tree": material("树冠", (0.105, 0.170, 0.085), 0.92),
     "trunk": material("树干", (0.20, 0.14, 0.10), 0.9),
     "service": material("值房灰", (0.68, 0.66, 0.60), 0.9),
     "path": material("御道", (0.76, 0.73, 0.66), 0.9),
@@ -470,13 +470,25 @@ for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
         gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
 
 for i, (x, y) in enumerate(D.trees()):
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.45, depth=2.2, location=(x, y, 1.35))
+    # 每棵按序号取一个确定性的"随机"尺度，避免一片棒棒糖
+    sv = 0.78 + 0.50 * ((i * 37) % 11) / 10.0
+    bpy.ops.mesh.primitive_cylinder_add(radius=0.34 * sv, depth=2.8 * sv,
+                                        location=(x, y, 1.4 * sv))
     tr = bpy.context.object
+    tr.name = "树%d·干" % i
     tr.data.materials.append(MAT["trunk"])
-    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=3.4, location=(x, y, 4.6))
-    cr = bpy.context.object
-    cr.scale = (1.0, 1.0, 0.85)
-    cr.data.materials.append(MAT["tree"])
+    # 树冠用 3 个错位的球叠出轮廓，单个球在鸟瞰里就是一个糖果
+    for k, (dx, dy, dz, rr) in enumerate(((0.0, 0.0, 0.0, 3.1),
+                                          (1.5, -1.0, 0.8, 2.1),
+                                          (-1.3, 1.2, 0.5, 1.9))):
+        bpy.ops.mesh.primitive_ico_sphere_add(
+            subdivisions=1, radius=rr * sv,
+            location=(x + dx * sv, y + dy * sv, 4.3 * sv + dz * sv))
+        cr = bpy.context.object
+        cr.name = "树%d·冠%d" % (i, k)
+        cr.scale = (1.0, 0.95, 0.80)
+        cr.rotation_euler = (0, 0, math.radians(47 * k + 23 * i))
+        cr.data.materials.append(MAT["tree"])
 
 # ------------------------------------------------------------------ 单体
 def add_struct_precise(st):
@@ -534,7 +546,7 @@ for _i, s in enumerate(D.STRUCTS):
     if s["kind"] == "rock":
         if args.precise:
             before = set(col.objects)
-            PL.rockery(s["name"], s["w"], s["d"], s["h"], z=0.0)
+            PL.rockery(s["name"], s["w"], s["d"], s["h"], z=0.0, mat=MAT["rock"])
             for ob in set(col.objects) - before:
                 ob.location.x += s["cx"]
                 ob.location.y += s["cy"]

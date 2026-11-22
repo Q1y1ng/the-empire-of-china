@@ -772,14 +772,14 @@ def bridge(name, w, d, z=0.0):
         box(name + "·栏板", w, 0.18, 0.5, 0, sx * (d / 2 - 0.28), z + 1.1, MAT["stone"])
 
 
-def rockery(name, w, d, h, z=0.0):
+def rockery(name, w, d, h, z=0.0, mat=None):
     """假山：一堆不规则石块叠涩起来。
 
     原来把 ico 球压成 (0.62w, 0.62d, 0.75h) 的扁椭球，46 m 长的假山成了三块
     二十米宽的白纸片。改为**七八块尺度和朝向各异的立体石块**，逐层收分。
     """
     import math as _m
-    mat = MAT.get("rock") or MAT.get("stone2") or MAT["stone"]
+    mat = mat or MAT.get("rock") or MAT.get("stone2") or MAT["stone"]
     specs = [(0.00, 0.00, 0.00, 0.30, 0.34),
              (-0.26, 0.12, 0.06, 0.26, 0.30), (0.24, -0.10, 0.04, 0.25, 0.28),
              (-0.02, 0.22, 0.16, 0.22, 0.26), (-0.12, -0.20, 0.10, 0.21, 0.24),
