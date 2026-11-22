@@ -742,18 +742,23 @@ def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1):
 
 # ------------------------------------------------------------------ 整殿
 def wall_tower(name, w, d, z=0.0, body_h=10.0):
-    """角楼：城台 + 上层柱廊 + 斗拱 + 庑殿顶。"""
-    box(name + "·台", w, d, body_h, 0, 0, z, MAT["citywall"])
-    zt = z + body_h
+    """角楼：砖城台（带垛口）+ 台上重檐楼（台基/隔扇/斗拱/脊吻全部复用 hall()）。"""
+    box(name + "·城台", w, d, body_h, 0, 0, z, MAT["citywall"])
+    box(name + "·压顶", w + 1.0, d + 1.0, 0.34, 0, 0, z + body_h, MAT.get("ridge") or MAT["stone2"])
+    # 城台顶一圈垛口
+    hb = 0.9
+    for sy in (-1, 1):
+        crenel_band(f"{name}·垛{'S' if sy < 0 else 'N'}", -w / 2 + 1.2, w / 2 - 1.2,
+                    sy * (d / 2 - 0.45), z + body_h + 0.34, h=hb, along_x=True)
     for sx in (-1, 1):
-        for sy in (-1, 1):
-            column(sx * (w / 2 - 1.4), sy * (d / 2 - 1.4), zt, zt + 2.8, 0.28)
-    ring_beam(name + "·额", w - 1.6, d - 1.6, zt + 2.8, 0.42, 0.34, MAT["cai_blue"])
-    box(name + "·窗", w - 3.2, 0.14, 1.5, 0, -d / 2 + 1.2, zt + 0.9, MAT["lattice"])
-    dougong_ring(w - 1.2, d - 1.2, zt + 3.3, spacing=1.4, lod=1)
-    hip_roof(name + "·顶", w + 3.4, d + 3.4, zt + 3.9, max(3.4, w * 0.30), step=0.5)
-    ridges(w + 3.4, d + 3.4, zt + 3.9, max(3.4, w * 0.30), (w + 3.4) - (d + 3.4),
-           with_kiss=False)
+        crenel_band(f"{name}·垛{'W' if sx < 0 else 'E'}", -d / 2 + 1.2, d / 2 - 1.2,
+                    sx * (w / 2 - 0.45), z + body_h + 0.34, h=hb, along_x=False)
+    # 台上重檐楼
+    tw, td = w * 0.66, d * 0.66
+    hall(name + "·楼", tw, td, z=z + body_h + 0.34, storeys=2,
+         base_h=0.85, col_h=min(5.6, tw * 0.24), plaque=None, lod=2,
+         stairs=False, balustrade=False)
+
 
 
 def bridge(name, w, d, z=0.0):
