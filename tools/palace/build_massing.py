@@ -537,6 +537,22 @@ for _y in range(int(-HD + 46), int(HD - 45), 15):
         _plant(_planted, _xx, _y)
         _planted += 1
 
+# 各院落沿墙内一圈行道树（卫星图里六宫/五所的院子里都有）
+for _c in D.COMPOUNDS:
+    if _c["name"] == "琼苑":
+        continue
+    _x0, _x1, _y0, _y1 = _c["x0"] + 3.5, _c["x1"] - 3.5, _c["y0"] + 3.5, _c["y1"] - 3.5
+    if (_x1 - _x0) < 12 or (_y1 - _y0) < 12:
+        continue
+    for _x in range(int(_x0), int(_x1) + 1, 13):
+        _plant(_planted, _x, _y1)
+        _planted += 1
+    for _y in range(int(_y0) + 13, int(_y1), 13):
+        _plant(_planted, _x0, _y)
+        _planted += 1
+        _plant(_planted, _x1, _y)
+        _planted += 1
+
 mesh_from("树·干", _TV, _TF, MAT["trunk"])
 mesh_from("树·冠", _LV, _LF, MAT["tree"])
 print("TREES", _planted, "trunk_tris", len(_TF), "leaf_tris", len(_LF))
