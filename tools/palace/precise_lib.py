@@ -311,9 +311,20 @@ def base_platform(w, d, h=3.2, stairs=True, balustrade=True, name="台基"):
 
 
 
-def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None):
-    """沿闭合多边形铺一圈汉白玉栏板：望柱 + 栏板 + 寻杖。合成一个网格。"""
+def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None,
+                 gap=None):
+    """沿闭合多边形铺一圈汉白玉栏板：望柱 + 栏板 + 寻杖。合成一个网格。
+
+    gap=((x0,x1),(y0,y1)) 的矩形范围内不排栏板——三台前陛要留出踏跺口，
+    否则一圈栏杆会横着把台阶挡死。
+    """
     mat = mat or MAT["stone"]
+
+    def _skip(cx, cy):
+        if not gap:
+            return False
+        (gx0, gx1), (gy0, gy1) = gap
+        return gx0 <= cx <= gx1 and gy0 <= cy <= gy1
     verts, faces = [], []
 
     def obb(cx, cy, cz, sx, sy, sz, rot):
@@ -341,6 +352,8 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None):
             t0 = (j + 0.5) / k
             cx = x0 + (x1 - x0) * t0
             cy = y0 + (y1 - y0) * t0
+            if _skip(cx, cy):
+                continue
             # 地栿 → 栏板 → 寻杖，三层连续（原来栏板顶到 0.76、寻杖悬在 0.82，中间空一道缝）
             obb(cx, cy, z + 0.00, seg - post - 0.04, t * 1.45, 0.16, rot)        # 地栿
             obb(cx, cy, z + 0.16, seg - post - 0.04, t * 1.15, h - 0.44, rot)    # 栏板
@@ -349,6 +362,8 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None):
             t0 = j / k
             cx = x0 + (x1 - x0) * t0
             cy = y0 + (y1 - y0) * t0
+            if _skip(cx, cy):
+                continue
             obb(cx, cy, z, post, post, h, rot)                                  # 望柱
             obb(cx, cy, z + h, post * 0.86, post * 0.86, 0.12, rot)             # 柱头
     return mesh_from(name + "·栏板", verts, faces, mat, merge=False)

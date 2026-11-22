@@ -381,10 +381,11 @@ PL.make_materials()
 prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0,
       PL.MAT["stone"] if args.precise else MAT["platform"])
 if args.precise:
-    PL.railing_poly("三台", D.PLATFORM_POLY, D.PLATFORM_H, step=2.4, h=1.02)
-    # 三台前陛（南面正中踏跺）：26 级 + 御路 + 两侧垂带
     _ys = [b for a, b in D.PLATFORM_POLY]
     _y_edge = min(_ys)
+    # 栏板在南面前陛处留口，否则一圈栏杆会把台阶挡死
+    PL.railing_poly("三台", D.PLATFORM_POLY, D.PLATFORM_H, step=2.4, h=1.02,
+                    gap=((-24.5, 24.5), (_y_edge - 4.0, _y_edge + 4.0)))
     _n, _dep, _hw = 30, 22.0, 23.0
     _sd = _dep / _n
     # 垂带：两侧各一条通长斜面石带（逐级小方块会露出锯齿状侧面）
