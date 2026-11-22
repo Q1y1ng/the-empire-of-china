@@ -661,19 +661,26 @@ for _i, s in enumerate(D.STRUCTS):
             PL.bridge(s["name"], s["w"], s["d"], z=-0.4)
             new = set(col.objects) - before
             # 桥面要垂直于河道：取离桥心最近的河段，按其法向旋转
+            # 桥要落在河心上：取河道折线上离桥最近的点，投影过去（原来只用数据坐标，
+            # 桥就摆在了河边的空地上——作者看到的"桥没在水面上"）
             _pts = D.RIVER["points"]
-            _best, _bd = (1.0, 0.0), 1e18
+            _best, _bd = None, 1e18
             for _i in range(len(_pts) - 1):
                 (_x0, _y0), (_x1, _y1) = _pts[_i], _pts[_i + 1]
-                _mx, _my = (_x0 + _x1) / 2, (_y0 + _y1) / 2
-                _dd = (_mx - s["cx"]) ** 2 + (_my - s["cy"]) ** 2
+                _vx, _vy = _x1 - _x0, _y1 - _y0
+                _L2 = _vx * _vx + _vy * _vy or 1.0
+                _t = max(0.0, min(1.0, ((s["cx"] - _x0) * _vx
+                                        + (s["cy"] - _y0) * _vy) / _L2))
+                _px, _py = _x0 + _vx * _t, _y0 + _vy * _t
+                _dd = (_px - s["cx"]) ** 2 + (_py - s["cy"]) ** 2
                 if _dd < _bd:
-                    _bd, _best = _dd, (_x1 - _x0, _y1 - _y0)
-            _ang = math.atan2(_best[0], -_best[1])
+                    _bd, _best = _dd, (_px, _py, _vx, _vy)
+            _px, _py, _vx, _vy = _best
+            _ang = math.atan2(_vx, -_vy)
             for ob in new:
                 ob.rotation_euler[2] = _ang
-                ob.location.x += s["cx"]
-                ob.location.y += s["cy"]
+                ob.location.x += _px
+                ob.location.y += _py
         else:
             box(s["name"], s["w"], s["d"], s["h"], s["cx"], s["cy"], -0.4, MAT["stone"])
         continue
