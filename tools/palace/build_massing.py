@@ -346,6 +346,26 @@ prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0,
       PL.MAT["stone"] if args.precise else MAT["platform"])
 if args.precise:
     PL.railing_poly("三台", D.PLATFORM_POLY, D.PLATFORM_H, step=2.4, h=1.02)
+    # 三台前陛（南面正中踏跺）：26 级 + 御路 + 两侧垂带
+    _ys = [b for a, b in D.PLATFORM_POLY]
+    _y_edge = min(_ys)
+    _n, _dep, _hw = 26, 18.0, 15.0
+    _sd = _dep / _n
+    for _i in range(_n):
+        box("三台·踏跺%02d" % _i, 2 * _hw, _sd + 0.02, D.PLATFORM_H * (_n - _i) / _n,
+            0, _y_edge - 0.5 - _i * _sd, 0.0, PL.MAT["stone"])
+    for _sx in (-1, 1):
+        box("三台·垂带%+d" % _sx, 1.6, _dep + 1.2, D.PLATFORM_H,
+            _sx * (_hw + 0.8), _y_edge - 0.5 - _dep / 2, 0.0, PL.MAT["stone"])
+    vv, ff = [], []
+    for _yy in (_y_edge - 0.5, _y_edge - 0.5 - _dep):
+        _zz = D.PLATFORM_H * (1.0 - abs(_yy - (_y_edge - 0.5)) / _dep) - 0.25
+        vv += [(-_hw * 0.30, _yy, _zz), (_hw * 0.30, _yy, _zz),
+               (_hw * 0.30, _yy, _zz - 0.22), (-_hw * 0.30, _yy, _zz - 0.22)]
+    ff = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+          (2, 6, 7, 3), (3, 7, 4, 0)]
+    PL.mesh_from("三台·御路", vv, ff, PL.MAT.get("marble_carved") or PL.MAT["stone"],
+                 merge=False)
 else:
     PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
     PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
@@ -549,7 +569,7 @@ shots = [
     ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
     ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
     ("细部·外朝", dict(loc=(86, -320, 62), target=(0, -120, 20), lens=52)),
-    ("正立面·正射", dict(loc=(0, -420, 34), target=(0, 0, 30), lens=0, ortho=108)),
+    ("正立面·正射", dict(loc=(0, -520, 46), target=(0, 0, 24), lens=0, ortho=150)),
 ]
 
 results = {}
