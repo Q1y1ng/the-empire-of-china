@@ -343,6 +343,11 @@ def _glaze_tile(g, base, dark, r_lo=0.28, r_hi=0.42, coat=0.12, bump=TILE_BUMP,
     shade = MR(g, height, -0.18, 1.0, 0.85, 1.12, "SMOOTHSTEP")
     shade = M(g, "MULTIPLY_ADD", M(g, "SUBTRACT", shade, 1.0), fade, 1.0)
     col = MIXC(g, 1.0, col, shade, "MULTIPLY")
+    # 大尺度风化：十几米一档的明度起伏。每片瓦的随机只到 0.5 m 尺度，
+    # 两百米外全被平均成一块"塑料金"，得靠低频把成片的深浅做出来。
+    big = NOISE(g, obj, scale=0.055, detail=3.0, rough=0.5, distortion=0.12)
+    col = MIXC(g, M(g, "MULTIPLY", STEP(g, big, 0.34, 0.70), 0.42), col,
+               MIXC(g, 1.0, col, (0.58, 0.55, 0.50), "MULTIPLY"), "MIX")
     # 瓦缝：深色 + 高粗糙；远距离把对比压下去，免得整片屋面条纹闪烁
     seam_c = M(g, "MULTIPLY", seam, M(g, "MULTIPLY_ADD", fade, 0.42, 0.05))
     col = MIXC(g, seam_c, col, (0.075, 0.068, 0.055), "MULTIPLY")

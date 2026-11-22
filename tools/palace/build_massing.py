@@ -119,7 +119,29 @@ def paving_mat(name, rgb, bw=0.48, rh=0.24, mortar=(0.085, 0.078, 0.070),
     br.inputs["Color2"].default_value = (rgb[0] * 0.84, rgb[1] * 0.84, rgb[2] * 0.84, 1.0)
     br.inputs["Mortar"].default_value = (*mortar, 1.0)
     L.new(tc.outputs["Object"], br.inputs["Vector"])
-    L.new(br.outputs["Color"], bsdf.inputs["Base Color"])
+    # 大尺度色差：二十来米一档。几百米的铺装在 480 mm 砖尺度上会平均成一块死灰，
+    # 必须靠低频噪声把明暗块做出来，否则鸟瞰里广场就是一张灰纸。
+    nb = N.new("ShaderNodeTexNoise")
+    nb.inputs["Scale"].default_value = 0.042
+    nb.inputs["Detail"].default_value = 4.0
+    nb.inputs["Roughness"].default_value = 0.55
+    L.new(tc.outputs["Object"], nb.inputs["Vector"])
+    mr2 = N.new("ShaderNodeMapRange")
+    mr2.inputs[1].default_value = 0.32
+    mr2.inputs[2].default_value = 0.68
+    mr2.inputs[3].default_value = 0.87
+    mr2.inputs[4].default_value = 1.11
+    L.new(nb.outputs["Fac"], mr2.inputs[0])
+    cc = N.new("ShaderNodeCombineColor")
+    for _i in range(3):
+        L.new(mr2.outputs[0], cc.inputs[_i])
+    mx = N.new("ShaderNodeMix")
+    mx.data_type = "RGBA"
+    mx.blend_type = "MULTIPLY"
+    mx.inputs[0].default_value = 1.0
+    L.new(br.outputs["Color"], mx.inputs[6])
+    L.new(cc.outputs[0], mx.inputs[7])
+    L.new(mx.outputs[2], bsdf.inputs["Base Color"])
     n = N.new("ShaderNodeTexNoise")
     n.inputs["Scale"].default_value = 0.35
     n.inputs["Detail"].default_value = 6.0
