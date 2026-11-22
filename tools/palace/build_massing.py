@@ -396,6 +396,14 @@ if args.precise:
     # 垂带：两侧各一条通长斜面石带（逐级小方块会露出锯齿状侧面）
     _y_f = _y_edge - 0.5
     _y_b = _y_edge - 0.5 - _dep
+    # 抱鼓石：踏跺脚下两侧各一座（汉白玉鼓状石，收住台阶的起头）
+    for _sx in (-1, 1):
+        _bx = _sx * (_hw + 0.85)
+        _by = _y_edge - 0.5 - _dep - 0.9
+        box("三台·抱鼓石%+d" % _sx, 1.3, 1.9, 0.95, _bx, _by, 0.0,
+            PL.MAT.get("marble_carved") or PL.MAT["stone"])
+        box("三台·鼓顶%+d" % _sx, 0.9, 1.3, 0.45, _bx, _by, 0.95,
+            PL.MAT.get("marble_carved") or PL.MAT["stone"])
     for _sx in (-1, 1):
         _cx, _w, _t = _sx * (_hw + 0.85), 1.7, 0.42
         _zf, _zb = D.PLATFORM_H + 0.22, -0.30     # 靠台身高、外端落地（-0.3 埋进地坪）
