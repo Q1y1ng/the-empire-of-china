@@ -389,6 +389,11 @@ def build_shell():
         for (y0, y1) in ((AX - pw - 1.6, AX - pw), (AX + pw, AX + pw + 1.6)):
             G.box(px + 0.7, (y0 + y1) / 2, 0, 0.36, 1.6, h, 0)
         G.box(px + 0.7, AX, h, 0.36, 2 * pw + 3.2, 1.6)
+        # 台口门套：两侧壁柱 + 上口横梁（出挑 0.7 m）
+        for sgn in (1, -1):
+            G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.70, 0.70, h)
+            G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.90, 0.90, 0.55)
+        G.box(px + 0.55, AX, h - 0.75, 0.70, 2 * pw, 0.75)
         emit(G)
 
 
