@@ -921,9 +921,20 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         up_w, up_d = IW - 0.7, ID - 0.7
         ROOF.ring_roof(_self(), name + "·下檐", Wr, Dr, IW, ID, eave_lo, H_lo,
                        lift=max(0.9, 0.014 * w), lod=LOD)
-        z_wall = max(3.4, 0.045 * w)
+        # 重檐上层墙身：原来只有 4.05 m，两重檐之间几乎贴着，不像重檐；故宫实物约 8~10 m
+        z_wall = max(5.2, 0.082 * w)
         box(f"{name}·上层墙身", up_w - 1.4, up_d - 1.4, z_wall, 0, 0, ring_z,
             MAT["wall"])
+        # 上层槛窗一圈：重檐上层的墙身本该是一排窗，否则就是一整片朱红
+        _wh = min(3.4, z_wall * 0.52)
+        _wz = ring_z + z_wall * 0.26
+        _ml = MAT.get("door") or MAT.get("lattice") or MAT["wall"]
+        for _sy in (-1, 1):
+            box(f"{name}·上窗{'SN'[_sy > 0]}", up_w - 1.8, 0.14, _wh, 0,
+                _sy * (up_d - 1.4) / 2, _wz, _ml)
+        for _sx in (-1, 1):
+            box(f"{name}·上窗{'WE'[_sx > 0]}", 0.14, up_d - 1.8, _wh,
+                _sx * (up_w - 1.4) / 2, 0, _wz, _ml)
         unit2 = unit_for(up_w)
         n2 = max(3, int(round(up_w / 7)))
         m2 = max(3, int(round(up_d / 8)))
