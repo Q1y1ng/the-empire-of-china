@@ -774,12 +774,14 @@ bg.inputs[1].default_value = 0.32
 if args.precise:
     try:
         import lg_look as _LK2
-        _LK2.setup_world(sc, "hdri_sky_sunny_2k.hdr", strength=1.0, az=228, elev=36,
+        # 光比：太阳与环境光从 3.0:1.0 调到 2.6:1.3。原来深色墙身进了阴影就"消失"，
+        # 远看像墙缺了一段；提环境光、压一点太阳，阴影里的墙面才留得住信息。
+        _LK2.setup_world(sc, "hdri_sky_sunny_2k.hdr", strength=1.30, az=228, elev=36,
                          fallback_sky=True)
-        _LK2.setup_sun(sc, energy=3.0, az=228, elev=36)
+        _LK2.setup_sun(sc, energy=2.60, az=228, elev=36)
         sun = bpy.data.objects.get("LG_Sun") or sun
-        _LK2.setup_render(sc, res=args.res, samples=args.samples, exposure=-0.42)
-        sc.view_settings.exposure = -0.42
+        _LK2.setup_render(sc, res=args.res, samples=args.samples, exposure=-0.50)
+        sc.view_settings.exposure = -0.50
     except Exception as _e2:
         print("LOOK setup failed:", _e2, flush=True)
 
