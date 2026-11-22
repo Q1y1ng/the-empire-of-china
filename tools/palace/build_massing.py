@@ -741,34 +741,61 @@ if not args.only:
 # ------------------------------------------------------------------ 导出
 blend = os.path.join(WORK, "palace_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
-def _join_by_material(target, max_verts=400):
-    """按材质合并**小件**（瓦当/檐椽/门钉/望柱这类 ≤400 顶点的盒子）。
+def _join_by_material(target, max_verts=None):
+    """按材质把对象合并成一个网格（导出用）。
 
-    网页卡顿的来源是几万个 draw call，而 draw call 几乎全是小件；大件（屋面、
-    墙体）本来就少，合并收益低、耗时高。所以只合并小件：
-      * `bpy.ops.object.join()` 对 2.8 万个对象要 15 分钟，这里限到小件后约 1 分钟。
+    三次失败的教训：
+      1. `bpy.ops.object.join()` 合 2.8 万对象要 15 分钟——每次调用都重算 depsgraph；
+      2. 合并时逐个 `bpy.data.objects.remove()` 同样慢（8 分钟），
+      3. 逐个 `bpy.data.meshes.remove()` 也是同样的问题。
+    所以这里**先把所有组的数据读出来（纯 numpy，不碰场景）**，全部读完再一次性
+    建对象、一次性 batch_remove 旧对象与旧网格——把 depsgraph 更新次数压到常数级。
     """
     import numpy as np
     groups = {}
     for ob in list(target.objects):
         if ob.type != "MESH" or len(ob.data.materials) != 1:
             continue
-        if len(ob.data.vertices) > max_verts:
+        if max_verts and len(ob.data.vertices) > max_verts:
             continue
         groups.setdefault(ob.data.materials[0].name, []).append(ob)
-    merged = 0
+    jobs = []                       # (mat_name, verts, faces, mat, old_objects)
     for mat_name, obs in groups.items():
-        if len(obs) < 8:
+        if len(obs) < 2:
             continue
-        bpy.ops.object.select_all(action="DESELECT")
+        vs, fs, off = [], [], 0
         for ob in obs:
-            ob.select_set(True)
-        bpy.context.view_layer.objects.active = obs[0]
-        try:
-            bpy.ops.object.join()
-            merged += len(obs) - 1
-        except RuntimeError:
-            pass
+            me = ob.data
+            n = len(me.vertices)
+            co = np.empty(n * 3, dtype=np.float64)
+            me.vertices.foreach_get("co", co)
+            co = co.reshape(-1, 3)
+            mw = np.array(ob.matrix_world)
+            vs.append(co @ mw[:3, :3].T + mw[:3, 3])
+            lv = np.empty(len(me.loops), dtype=np.int32)
+            me.loops.foreach_get("vertex_index", lv)
+            lt = np.empty(len(me.polygons), dtype=np.int32)
+            me.polygons.foreach_get("loop_total", lt)
+            idx = (lv + off).tolist()
+            p_ = 0
+            for c in lt.tolist():
+                fs.append(tuple(idx[p_:p_ + c]))
+                p_ += c
+            off += n
+        jobs.append((mat_name, np.concatenate(vs, axis=0), fs,
+                     obs[0].data.materials[0], obs))
+    merged = 0
+    old_obs, old_me = [], []
+    for mat_name, allv, fs, mat, obs in jobs:
+        new_me = bpy.data.meshes.new("M·" + mat_name)
+        new_me.from_pydata(allv.tolist(), [], fs)
+        new_me.materials.append(mat)
+        target.objects.link(bpy.data.objects.new("M·" + mat_name, new_me))
+        old_obs.extend(obs)
+        old_me.extend(ob.data for ob in obs)
+        merged += len(obs) - 1
+    bpy.data.batch_remove(ids=old_obs)
+    bpy.data.batch_remove(ids=[m for m in old_me if m.users == 0])
     return merged
 
 
@@ -869,8 +896,11 @@ def _texturize(target):
 
 glb = os.path.join(WORK, "palace_massing.glb")
 if not args.no_glb:
+    import time as _tm
+    _t0 = _tm.time()
     _n_merged = _join_by_material(col)
-    print("JOINED", _n_merged, "objects ->", len(col.objects))
+    print("JOINED", _n_merged, "objects ->", len(col.objects),
+          "in %.1fs" % (_tm.time() - _t0))
     if args.glb_textures:
         _u, _m = _texturize(col)
         print("TEXTURIZED uv_added=%d mats=%d" % (_u, _m))
