@@ -89,44 +89,41 @@ SITES = [
 # 单体体块：kind 决定 2D 填充与 3D 以后的做法
 #   main 主体 / wing 侧厅或配楼 / portico 门廊 / chamber 会议厅 / attic 屋顶层
 MASSES = [
-    # ── 国家大会堂：200 × 340 m，南北三厅，面东（朝广场）
-    {"key": "hall-main", "parent": "hall", "name": "国家大会堂",
-     "x0": -540.0, "x1": -340.0, "y0": -1105.5, "y1": -765.5,
-     "h": 26.0, "floors": 3, "kind": "main"},
+    # ── 国家大会堂：200 × 330 m，南北三厅，面东（朝广场）
     {"key": "hall-s", "parent": "hall", "name": "左厅（八州厅＋宣政厅）",
-     "x0": -540.0, "x1": -340.0, "y0": -1105.5, "y1": -1005.5,
+     "x0": -540.0, "x1": -340.0, "y0": -1100.5, "y1": -1000.5,
      "h": 22.0, "floors": 3, "kind": "wing"},
     {"key": "hall-c", "parent": "hall", "name": "中厅（万人大礼堂）",
-     "x0": -540.0, "x1": -340.0, "y0": -1005.5, "y1": -865.5,
-     "h": 34.0, "floors": 2, "kind": "chamber"},
+     "x0": -540.0, "x1": -340.0, "y0": -1000.5, "y1": -870.5,
+     "h": 34.0, "floors": 3, "kind": "chamber"},
     {"key": "hall-n", "parent": "hall", "name": "右厅（宴会厅）",
-     "x0": -540.0, "x1": -340.0, "y0": -865.5, "y1": -765.5,
+     "x0": -540.0, "x1": -340.0, "y0": -870.5, "y1": -770.5,
      "h": 22.0, "floors": 3, "kind": "wing"},
     *[{"key": f"hall-portico-{t}", "parent": "hall", "name": "门廊",
        "x0": -340.0, "x1": -326.0, "y0": cy - 30.0, "y1": cy + 30.0,
        "h": 18.0, "floors": 1, "kind": "portico"}
-      for t, cy in (("n", -815.5), ("c", -935.5), ("s", -1055.5))],
+      for t, cy in (("n", -820.5), ("c", -935.5), ("s", -1050.5))],
 
-    # ── 国家议会议事大楼：80 × 300 m，面西（朝广场）
+    # ── 国家议会议事大楼：80 × 330 m，面西（朝广场）；议事厅是主体中部的高体量
     {"key": "council-main", "parent": "council", "name": "国家议会议事大楼",
-     "x0": 310.0, "x1": 390.0, "y0": -1085.5, "y1": -785.5,
+     "x0": 310.0, "x1": 390.0, "y0": -1100.5, "y1": -770.5,
      "h": 24.0, "floors": 3, "kind": "main"},
     {"key": "council-chamber", "parent": "council", "name": "议事厅（1,100 席）",
-     "x0": 322.0, "x1": 378.0, "y0": -981.5, "y1": -889.5,
-     "h": 30.0, "floors": 1, "kind": "chamber"},
+     "x0": 322.0, "x1": 378.0, "y0": -985.5, "y1": -885.5,
+     "h": 30.0, "floors": 3, "kind": "chamber"},
     {"key": "council-portico", "parent": "council", "name": "门廊",
      "x0": 300.0, "x1": 312.0, "y0": -965.5, "y1": -905.5,
      "h": 16.0, "floors": 1, "kind": "portico"},
 
-    # ── 国家政治博物馆：360 × 110 m，面北（朝广场）
+    # ── 国家政治博物馆：320 × 110 m，面北（朝广场）；主题馆为东翼
     {"key": "museum-main", "parent": "museum", "name": "国家政治博物馆",
-     "x0": -180.0, "x1": 180.0, "y0": -1500.5, "y1": -1390.5,
+     "x0": -160.0, "x1": 160.0, "y0": -1500.5, "y1": -1390.5,
      "h": 21.0, "floors": 3, "kind": "main"},
     {"key": "museum-portico", "parent": "museum", "name": "门廊",
      "x0": -60.0, "x1": 60.0, "y0": -1390.5, "y1": -1372.5,
      "h": 15.0, "floors": 1, "kind": "portico"},
     {"key": "museum-wing", "parent": "museum", "name": "大革命主题馆",
-     "x0": 184.0, "x1": 260.0, "y0": -1490.5, "y1": -1396.5,
+     "x0": 164.0, "x1": 240.0, "y0": -1490.5, "y1": -1396.5,
      "h": 17.0, "floors": 2, "kind": "wing"},
 ]
 
@@ -135,8 +132,8 @@ WALL_T = 1.5
 WALL_H = 3.5
 # 每段墙开口：东侧三厅各一门、西侧一座安检院门；议事与博物馆各一座正门
 GATES = {
-    "hall": [("E", -815.5, 18.0), ("E", -935.5, 26.0), ("E", -1055.5, 18.0)],
-    "council": [("W", -935.5, 30.0), ("N", 350.0, 0.0), ("S", 350.0, 0.0)],
+    "hall": [("E", -820.5, 18.0), ("E", -935.5, 26.0), ("E", -1050.5, 18.0)],
+    "council": [("W", -935.5, 30.0)],
     "museum": [("N", 0.0, 40.0)],
 }
 
@@ -174,15 +171,24 @@ def stats():
         "footprints": {},
         "floor_ha": {},
     }
+    # 占地取互不重叠的外框；建筑积只算有楼板的体量（门廊、骑楼不计）
+    footprint_keys = {
+        "hall": ("hall-s", "hall-c", "hall-n"),
+        "council": ("council-main",),
+        "museum": ("museum-main", "museum-wing"),
+    }
+    floor_keys = {
+        "hall": ("hall-s", "hall-c", "hall-n"),
+        "council": ("council-main",),
+        "museum": ("museum-main", "museum-wing"),
+    }
     for k in ("hall", "council", "museum"):
-        f = 0.0
-        for m in MASSES:
-            if m["parent"] == k and m["key"] not in ("museum-wing",):
-                f += rect_ha(m["x0"], m["x1"], m["y0"], m["y1"])
-        s["footprints"][k] = f
+        s["footprints"][k] = sum(
+            rect_ha(*(mass_by_key(x)[p] for p in ("x0", "x1", "y0", "y1")))
+            for x in footprint_keys[k])
         s["floor_ha"][k] = sum(
-            rect_ha(m["x0"], m["x1"], m["y0"], m["y1"]) * m["floors"]
-            for m in MASSES if m["parent"] == k and m["kind"] != "portico")
+            rect_ha(*(mass_by_key(x)[p] for p in ("x0", "x1", "y0", "y1"))) * mass_by_key(x)["floors"]
+            for x in floor_keys[k])
     return s
 
 
@@ -199,7 +205,7 @@ def check():
         f' / 建筑面积 {st["floor_ha"]["council"]:.2f} ha（表列 8）',
         f'博物馆 用地 {st["sites"]["museum"]:.2f} ha / 建筑占地 {st["footprints"]["museum"]:.2f} ha'
         f' / 建筑面积 {st["floor_ha"]["museum"]:.2f} ha（表列 12）',
-        f'广场南北 800 m 与中轴里程（承天门 6.45 − 永宁门 5.70 = 750 m）差 50 m，'
+        f'广场南北 800 m 与中轴里程（承天门 6.45 - 永宁门 5.70 = 750 m）差 50 m，'
         f'内城 2,700 m 另与广场+博物馆 1,000 m 不相容；本模型只做广场建筑群，不含内城城墙。',
     ]
     return "\n".join(lines)

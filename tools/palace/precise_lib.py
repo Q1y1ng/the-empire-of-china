@@ -736,7 +736,11 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     if dbays is None:
         m = max(3, int(round(d / 10)))
         dbays = [d / m] * m
+    _before = set(_col().objects)
     base_platform(w, d, base_h, stairs=stairs, balustrade=balustrade)
+    if z:                       # 台基是按原点建的，抬到院落/三台标高
+        for _ob in set(_col().objects) - _before:
+            _ob.location.z += z
     z0 = z + base_h
     xs, ys = edges(bays), edges(dbays)
     col_h = min(col_h, max(7.0, w * 0.13))
