@@ -436,12 +436,34 @@ def _marble(g, base=BAI_YU, veins=0.85, bump=0.0005, carve=False):
     dirt = M(g, "ADD", M(g, "MULTIPLY", M(g, "SUBTRACT", 1.0, ao), 0.55),
              M(g, "MULTIPLY", side, 0.30))
     col = MIXC(g, M(g, "MULTIPLY", dirt, 0.55), col, (0.235, 0.225, 0.195))
+    # 大尺度色差：3~20 m 一档，远看（八米高台、两百米外）才有东西
+    big = NOISE(g, obj, scale=0.11, detail=4.0, rough=0.5, distortion=0.2)
+    col = MIXC(g, M(g, "MULTIPLY", STEP(g, big, 0.42, 0.72), 0.55), col,
+               MIXC(g, 1.0, base, (0.80, 0.79, 0.76), "MULTIPLY"), "MIX")
+    # 石活拼缝：1.2×0.6 m 石板，只落在竖向面上（顶面被铺装盖住，做上去反而乱）
+    br = g.node("ShaderNodeTexBrick")
+    br.offset = 0.5
+    br.squash = 1.0
+    br.inputs["Scale"].default_value = 1.0
+    br.inputs["Brick Width"].default_value = 1.20
+    br.inputs["Row Height"].default_value = 0.60
+    br.inputs["Mortar Size"].default_value = 0.014
+    br.inputs["Mortar Smooth"].default_value = 0.3
+    g.link(M(g, "ADD", sn.outputs["X"], sn.outputs["Y"]) if False else obj, br.inputs["Vector"])
+    br.inputs["Color1"].default_value = (1, 1, 1, 1)
+    br.inputs["Color2"].default_value = (0.9, 0.9, 0.9, 1)
+    br.inputs["Mortar"].default_value = (0, 0, 0, 1)
+    seam = M(g, "MULTIPLY", br.outputs["Fac"], side)
+    col = MIXC(g, M(g, "MULTIPLY", seam, 0.45), col, (0.16, 0.155, 0.14),
+               "MULTIPLY")
     rough = M(g, "MULTIPLY_ADD", NOISE(g, obj, 3.2, 6.0, 0.55),
               0.10, 0.34 if not carve else 0.40)
     g.put(g.bsdf.inputs["Base Color"], col)
     g.put(g.bsdf.inputs["Roughness"], rough)
     g.bsdf.inputs["Specular IOR Level"].default_value = 0.42
-    h = M(g, "ADD", M(g, "MULTIPLY", n2, 0.35), M(g, "MULTIPLY", vein, 0.45))
+    h = M(g, "ADD", M(g, "ADD", M(g, "MULTIPLY", n2, 0.35),
+                      M(g, "MULTIPLY", vein, 0.45)),
+          M(g, "MULTIPLY", seam, -0.55))
     g.put(g.bsdf.inputs["Normal"], BUMP(g, h, strength=0.45 if not carve else 0.85,
                                         distance=bump if not carve else bump * 2.2))
 
