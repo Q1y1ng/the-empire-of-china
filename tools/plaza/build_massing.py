@@ -9,8 +9,8 @@
         --out <输出目录> [--samples 64] [--res 1920] [--only 鸟瞰]
 
 产物：
-    <out>/国家广场(2026)·体量白模·*.png
-    <out>/国家广场(2026)·体量白模.glb
+    <out>/国家广场(2026)·体量白模·*.webp
+    <out>/国家广场(2026)·体量白模.glb      （--draco 时走 Draco 压缩，约 1/5）
     $TEMP/plaza_massing/plaza_massing.blend
 """
 
@@ -39,6 +39,7 @@ ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位")
 ap.add_argument("--no-glb", action="store_true")
 ap.add_argument("--cpu", action="store_true", help="强制 CPU 渲染（默认优先 OptiX/CUDA）")
+ap.add_argument("--draco", action="store_true", help="glb 开 Draco 压缩（约 1/5 体积，查看器需解码器）")
 ap.add_argument("--precise", action="store_true", help="精模：加石材分缝、柱头、竖梃、门、瓦面与戗脊")
 args = ap.parse_args(argv)
 P = args.precise
@@ -1155,7 +1156,8 @@ _pick_gpu()
 sc.cycles.samples = args.samples
 sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 4
-sc.render.image_settings.file_format = "PNG"
+sc.render.image_settings.file_format = "WEBP"
+sc.render.image_settings.quality = 92
 sc.view_settings.view_transform = "Standard"
 sc.view_settings.exposure = -0.25
 
@@ -1195,7 +1197,7 @@ for name, s in shots:
     look_at(cam, s["target"])
     sc.render.resolution_x = args.res
     sc.render.resolution_y = int(args.res / AR)
-    path = os.path.join(args.out, f"国家广场(2026)·{prefix}·{name}.png")
+    path = os.path.join(args.out, f"国家广场(2026)·{prefix}·{name}.webp")
     sc.render.filepath = path
     t0 = time.time()
     bpy.ops.render.render(write_still=True)
@@ -1207,7 +1209,14 @@ blend = os.path.join(WORK, "plaza_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
 glb = os.path.join(args.out, f"国家广场(2026)·{prefix}.glb")
 if not args.no_glb:
-    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
+    kw = {}
+    if args.draco:
+        kw = dict(export_draco_mesh_compression_enable=True,
+                  export_draco_mesh_compression_level=6,
+                  export_draco_position_quantization=14,
+                  export_draco_normal_quantization=10,
+                  export_draco_texcoord_quantization=12)
+    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True, **kw)
 
 tris = 0
 for o in col.objects:

@@ -979,6 +979,9 @@ def gate_house(name, w, d, z=0.0, h=9.0):
                               sw + 0.8, st + 0.8, z + shh, 0.52,
                               mat=MAT.get("tile_gray") or MAT["tile_gray"])
         _cap.location.x = cx
+        # 端头墩：墙到此为止是有收头的，不是被截断在半空
+        box(f"{name}·墙端{'EW'[sx > 0]}", 2.4, st + 1.0, shh + 0.6,
+            sx * (w / 2 + sw - 1.2), 0, z, mat_w)
     if h - top > 0.25:
         box(f"{name}·城台上", ow, d, h - top, 0, 0, z + top, mat_w)
 

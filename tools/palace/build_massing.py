@@ -160,12 +160,12 @@ def paving_mat(name, rgb, bw=0.48, rh=0.24, mortar=(0.085, 0.078, 0.070),
 
 
 # 广场是 1.2×0.6 m 的大石条（照片里一眼能数出缝），不是 480 mm 青砖
-MAT["plaza"] = paving_mat("宫城地坪·石板", (0.092, 0.086, 0.074),
+MAT["plaza"] = paving_mat("宫城地坪·石板", (0.165, 0.157, 0.138),
                           bw=1.20, rh=0.60, mortar=(0.058, 0.052, 0.045),
                           mortar_w=0.018, rough=0.86)
 MAT["path"] = paving_mat("御道·石板", (0.168, 0.160, 0.142), bw=1.55, rh=0.78,
                          mortar=(0.15, 0.14, 0.12), mortar_w=0.014, rough=0.78)
-MAT["ground"] = paving_mat("城外地面·土路", (0.070, 0.066, 0.058), bw=1.6, rh=0.8,
+MAT["ground"] = paving_mat("城外地面·土路", (0.120, 0.113, 0.098), bw=1.6, rh=0.8,
                            mortar=(0.16, 0.15, 0.13), mortar_w=0.02, rough=0.95)
 
 
@@ -713,9 +713,40 @@ if not args.only:
 # ------------------------------------------------------------------ 导出
 blend = os.path.join(WORK, "palace_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
+def _join_by_material(target):
+    """按材质 Join：2.9 万个对象 = 2.9 万 draw call，网页端必卡。
+
+    导出前合并，只影响 glb，不影响出图（出图在前面已完成）。
+    """
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for ob in list(target.objects):
+        if ob.type == "MESH" and len(ob.data.materials) == 1:
+            groups[ob.data.materials[0].name].append(ob)
+    merged = 0
+    for _mat, obs in groups.items():
+        if len(obs) < 2:
+            continue
+        bpy.ops.object.select_all(action="DESELECT")
+        for ob in obs:
+            ob.select_set(True)
+        bpy.context.view_layer.objects.active = obs[0]
+        try:
+            bpy.ops.object.join()
+            merged += len(obs) - 1
+        except RuntimeError:
+            pass
+    return merged
+
+
 glb = os.path.join(WORK, "palace_massing.glb")
 if not args.no_glb:
-    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
+    _n_merged = _join_by_material(col)
+    print("JOINED", _n_merged, "objects ->", len(col.objects))
+    bpy.ops.export_scene.gltf(
+        filepath=glb, export_format="GLB", export_apply=True,
+        export_draco_mesh_compression_enable=True,
+        export_draco_mesh_compression_level=4)
 glb_lite = None
 if args.precise and not args.no_glb:      # 轻量 glb：剔掉斗拱/值房/树/城墙等重复件，便于网页加载
     for ob in list(col.objects):
@@ -726,7 +757,11 @@ if args.precise and not args.no_glb:      # 轻量 glb：剔掉斗拱/值房/树
             dm = ob.modifiers.new("dec", "DECIMATE")
             dm.ratio = 0.28
     glb_lite = os.path.join(WORK, "palace_precise_lite.glb")
-    bpy.ops.export_scene.gltf(filepath=glb_lite, export_format="GLB", export_apply=True)
+    _join_by_material(col)
+    bpy.ops.export_scene.gltf(
+        filepath=glb_lite, export_format="GLB", export_apply=True,
+        export_draco_mesh_compression_enable=True,
+        export_draco_mesh_compression_level=4)
 
 tris = 0
 for o in col.objects:
