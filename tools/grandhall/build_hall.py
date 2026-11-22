@@ -394,6 +394,19 @@ def build_shell():
             G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.70, 0.70, h)
             G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.90, 0.90, 0.55)
         G.box(px + 0.55, AX, h - 0.75, 0.70, 2 * pw, 0.75)
+        # 墙面分格：侧墙与后墙的汉白玉壁柱（12 m 一柱）＋ 1.2 m 墙裙
+        W2 = Mesh("墙面分格", MAT["wall"], "shell")
+        for x in range(-474, -392, 12):
+            for sgn in (1, -1):
+                y = AX + sgn * hall_half_width(x)
+                hh = D.dome_edge_z(x)
+                W2.box(x, y, 0.0, 0.9, 0.62, hh - 0.3)
+                W2.box(x, y, hh - 0.75, 1.15, 0.85, 0.45)      # 柱头
+                W2.box(x, y - sgn * 0.20, 0.0, 1.15, 0.45, 1.25)  # 墙裙加厚
+        hw2 = D.HALL["w_rear"] / 2
+        for y in range(int(AX - hw2) + 8, int(AX + hw2), 12):
+            W2.box(HX1 - 0.31, y, 0.0, 0.62, 0.9, D.dome_edge_z(HX1) - 0.3)
+        emit(W2)
         emit(G)
 
 
