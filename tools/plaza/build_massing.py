@@ -268,19 +268,19 @@ def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None, fro
         if front in ("E", "W"):
             xe = x + (W / 2 if front == "E" else -W / 2)
             sg = 1 if front == "E" else -1
-            n = max(4, int(D / 0.8))
+            n = max(6, int(D / 0.45))
             for i in range(n):
                 yy = y - D / 2 + (i + 0.5) * D / n
-                box("檐椽", 0.90, 0.22, 0.22, xe + sg * 0.35, yy, z - 0.95, MAT["trunk"])
-                box("瓦当", 0.28, 0.22, 0.28, xe + sg * 0.05, yy, z + 0.02, MAT["roof_tile"])
+                box("檐椽", 0.55, 0.12, 0.14, xe + sg * 0.30, yy, z - 1.25, MAT["trunk"])
+                box("瓦当", 0.18, 0.14, 0.22, xe + sg * 0.04, yy, z + 0.02, MAT["roof_tile"])
         elif front in ("N", "S"):
             ye = y + (D / 2 if front == "N" else -D / 2)
             sg = 1 if front == "N" else -1
-            n = max(4, int(W / 0.8))
+            n = max(6, int(W / 0.45))
             for i in range(n):
                 xx = x - W / 2 + (i + 0.5) * W / n
-                box("檐椽", 0.22, 0.90, 0.22, xx, ye + sg * 0.35, z - 0.95, MAT["trunk"])
-                box("瓦当", 0.22, 0.28, 0.28, xx, ye + sg * 0.05, z + 0.02, MAT["roof_tile"])
+                box("檐椽", 0.12, 0.55, 0.14, xx, ye + sg * 0.30, z - 1.25, MAT["trunk"])
+                box("瓦当", 0.14, 0.18, 0.22, xx, ye + sg * 0.04, z + 0.02, MAT["roof_tile"])
     return ob
 
 
@@ -364,16 +364,28 @@ def rail_edge(name, axis, fixed, lo, hi, gaps, z0=2.32):
         L = b - a
         if axis == "y":
             box(name + f"·栏板{si}", 0.35, L, 0.55, fixed, (a + b) / 2, z0 + 0.55, MAT["marble"])
+            box(name + f"·寻杖{si}", 0.24, L, 0.18, fixed, (a + b) / 2, z0 + 1.03, MAT["marble"])
             n = max(2, int(L / 6.0) + 1)
             for i in range(n):
                 yy = a + i * L / (n - 1)
                 box(name + f"·望柱{si}-{i}", 0.45, 0.45, 1.15, fixed, yy, z0, MAT["marble"])
+            for i in range(n - 1):
+                yy = a + (i + 0.5) * L / (n - 1)
+                cyl(name + f"·净瓶{si}-{i}", 0.15, 0.42, fixed, yy, z0 + 0.55, MAT["marble"], n=10)
+            for k, yy in ((0, a), (1, b)):
+                box(name + f"·螭首{si}-{k}", 0.55, 0.65, 0.42, fixed, yy, z0 + 0.95, MAT["marble"])
         else:
             box(name + f"·栏板{si}", L, 0.35, 0.55, (a + b) / 2, fixed, z0 + 0.55, MAT["marble"])
+            box(name + f"·寻杖{si}", L, 0.24, 0.18, (a + b) / 2, fixed, z0 + 1.03, MAT["marble"])
             n = max(2, int(L / 6.0) + 1)
             for i in range(n):
                 xx = a + i * L / (n - 1)
                 box(name + f"·望柱{si}-{i}", 0.45, 0.45, 1.15, xx, fixed, z0, MAT["marble"])
+            for i in range(n - 1):
+                xx = a + (i + 0.5) * L / (n - 1)
+                cyl(name + f"·净瓶{si}-{i}", 0.15, 0.42, xx, fixed, z0 + 0.55, MAT["marble"], n=10)
+            for k, xx in ((0, a), (1, b)):
+                box(name + f"·螭首{si}-{k}", 0.65, 0.55, 0.42, xx, fixed, z0 + 0.95, MAT["marble"])
 
 
 def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing=12.0):
@@ -438,6 +450,11 @@ def portico(name, rect, h, facade_side="E"):
                 box(name + f"·柱{i}·础", 3.0, 3.0, 0.55, ox, yy, 1.25, MAT["marble"])
                 cyl(name + f"·柱{i}·础弧", 1.60, 0.35, ox, yy, 1.8, MAT["marble"])
                 cyl(name + f"·柱{i}·头", 1.60, 0.35, ox, yy, 1.25 + h - 3.4, MAT["marble"])
+                for k in range(8):
+                    ang = 2 * math.pi * k / 8
+                    box(name + f"·卷草{i}-{k}", 0.32, 0.32, 0.32,
+                        ox + 1.55 * math.cos(ang), yy + 1.55 * math.sin(ang),
+                        1.25 + h - 3.55, MAT["stone_light"])
                 box(name + f"·柱{i}·顶板", 3.0, 3.0, 0.45, ox, yy, 1.25 + h - 3.05, MAT["stone_light"])
         box(name + "·檐部下", w + 1, d + 1, 1.3, cx, cy, 1.25 + h - 3.0, MAT["stone_light"])
         box(name + "·檐部中", w + 1.7, d + 1.7, 1.2, cx, cy, 1.25 + h - 1.9, MAT["stone_light"])
@@ -453,6 +470,11 @@ def portico(name, rect, h, facade_side="E"):
                 box(name + f"·柱{i}·础", 3.0, 3.0, 0.55, xx, oy, 1.25, MAT["marble"])
                 cyl(name + f"·柱{i}·础弧", 1.60, 0.35, xx, oy, 1.8, MAT["marble"])
                 cyl(name + f"·柱{i}·头", 1.60, 0.35, xx, oy, 1.25 + h - 3.4, MAT["marble"])
+                for k in range(8):
+                    ang = 2 * math.pi * k / 8
+                    box(name + f"·卷草{i}-{k}", 0.32, 0.32, 0.32,
+                        xx + 1.55 * math.cos(ang), oy + 1.55 * math.sin(ang),
+                        1.25 + h - 3.55, MAT["stone_light"])
                 box(name + f"·柱{i}·顶板", 3.0, 3.0, 0.45, xx, oy, 1.25 + h - 3.05, MAT["stone_light"])
         box(name + "·檐部下", w + 1, d + 1, 1.3, cx, cy, 1.25 + h - 3.0, MAT["stone_light"])
         box(name + "·檐部中", w + 1.7, d + 1.7, 1.2, cx, cy, 1.25 + h - 1.9, MAT["stone_light"])
