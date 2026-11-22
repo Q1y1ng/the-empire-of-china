@@ -29,6 +29,7 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import plaza_data as D  # noqa: E402
+import tex_lib as TX  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 ap = argparse.ArgumentParser()
@@ -37,6 +38,7 @@ ap.add_argument("--samples", type=int, default=64)
 ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位")
 ap.add_argument("--no-glb", action="store_true")
+ap.add_argument("--cpu", action="store_true", help="强制 CPU 渲染（默认优先 OptiX/CUDA）")
 ap.add_argument("--precise", action="store_true", help="精模：加石材分缝、柱头、竖梃、门、瓦面与戗脊")
 args = ap.parse_args(argv)
 P = args.precise
@@ -95,60 +97,16 @@ MAT = {
 
 
 
-def panel_texture(m, bw=1.2, bh=0.6, mortar=0.012, c1=(0.44, 0.42, 0.37),
-                  c2=(0.40, 0.38, 0.34), mc=(0.20, 0.19, 0.17), bump=0.02):
-    nt = m.node_tree
-    bsdf = nt.nodes["Principled BSDF"]
-    tc = nt.nodes.new("ShaderNodeTexCoord")
-    br = nt.nodes.new("ShaderNodeTexBrick")
-    br.inputs["Scale"].default_value = 1.0
-    br.inputs["Brick Width"].default_value = bw
-    br.inputs["Row Height"].default_value = bh
-    br.inputs["Mortar Size"].default_value = mortar
-    br.inputs["Color1"].default_value = (*c1, 1.0)
-    br.inputs["Color2"].default_value = (*c2, 1.0)
-    br.inputs["Mortar"].default_value = (*mc, 1.0)
-    nt.links.new(tc.outputs["Object"], br.inputs["Vector"])
-    nt.links.new(br.outputs["Color"], bsdf.inputs["Base Color"])
-    bp = nt.nodes.new("ShaderNodeBump")
-    bp.inputs["Strength"].default_value = bump
-    nt.links.new(br.outputs["Fac"], bp.inputs["Height"])
-    nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
-
-
-
-def tile_texture(m):
-    nt = m.node_tree
-    bsdf = nt.nodes["Principled BSDF"]
-    tc = nt.nodes.new("ShaderNodeTexCoord")
-    wv = nt.nodes.new("ShaderNodeTexWave")
-    wv.wave_type = "BANDS"
-    wv.bands_direction = "X"
-    wv.inputs["Scale"].default_value = 2.9
-    wv.inputs["Distortion"].default_value = 0.25
-    wv.inputs["Detail"].default_value = 2.0
-    ramp = nt.nodes.new("ShaderNodeValToRGB")
-    ramp.color_ramp.elements[0].color = (0.025, 0.05, 0.04, 1.0)
-    ramp.color_ramp.elements[1].color = (0.10, 0.16, 0.13, 1.0)
-    nt.links.new(tc.outputs["Object"], wv.inputs["Vector"])
-    nt.links.new(wv.outputs["Fac"], ramp.inputs[0])
-    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
-    bp = nt.nodes.new("ShaderNodeBump")
-    bp.inputs["Strength"].default_value = 0.10
-    nt.links.new(wv.outputs["Fac"], bp.inputs["Height"])
-    nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
-
-
 def link(ob):
     col.objects.link(ob)
     return ob
 
 
 if P:
-    panel_texture(MAT["stone"], 2.4, 1.2, 0.025, (0.47, 0.45, 0.40), (0.37, 0.35, 0.31), (0.10, 0.09, 0.08), 0.03)
-    panel_texture(MAT["marble"], 2.4, 1.2, 0.020, (0.82, 0.80, 0.74), (0.74, 0.72, 0.66), (0.30, 0.29, 0.27), 0.025)
-    panel_texture(MAT["paving"], 2.4, 1.2, 0.020, (0.54, 0.52, 0.46), (0.46, 0.44, 0.39), (0.26, 0.25, 0.23), 0.02)
-    tile_texture(MAT["roof_tile"])
+    # 砖石分缝 / 琉璃釉面：烘成可平铺 PNG + 盒式投影 UV，见 tex_lib.py
+    TEXTURE_TILES = TX.setup(MAT, os.path.join(HERE, "tex"))
+else:
+    TEXTURE_TILES = {}
 
 
 def mesh_object(name, verts, faces, material, smooth=False, recalc=True):
@@ -1161,8 +1119,39 @@ def look_at(ob, target):
     ob.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
 
 
+# ------------------------------------------------------------------ 贴图 UV
+if TEXTURE_TILES:
+    TX.apply_uv(col.objects, TEXTURE_TILES)
+
+
+# ------------------------------------------------------------------ 渲染设备
+# --factory-startup 会绕过用户首选项，compute_device_type 默认是 NONE；
+# 此时只写 scene.cycles.device = "GPU" 会静默回落 CPU（实测 21.6s vs 9.1s）。
+def _pick_gpu():
+    if args.cpu:
+        print("DEVICE CPU (--cpu)", flush=True)
+        return
+    pre = bpy.context.preferences.addons["cycles"].preferences
+    for backend in ("OPTIX", "CUDA"):
+        try:
+            pre.compute_device_type = backend
+            pre.get_devices()
+            if not any(d.type == backend for d in pre.devices):
+                continue
+            for d in pre.devices:
+                d.use = (d.type == backend)
+            sc.cycles.device = "GPU"
+            sc.cycles.denoiser = "OPTIX" if backend == "OPTIX" else "OPENIMAGEDENOISE"
+            print("DEVICE", backend, flush=True)
+            return
+        except Exception as exc:
+            print("DEVICE", backend, "failed:", exc, flush=True)
+    sc.cycles.device = "CPU"
+    print("DEVICE CPU (fallback)", flush=True)
+
+
 sc.render.engine = "CYCLES"
-sc.cycles.device = "GPU"
+_pick_gpu()
 sc.cycles.samples = args.samples
 sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 4
