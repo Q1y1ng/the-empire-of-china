@@ -94,6 +94,8 @@ if WHITE:
                     emit_str=6.0),
         "dome": mat("白模·穹顶光", (0.86, 0.85, 0.82), 0.9,
                     emit=(1.0, 0.98, 0.94), emit_str=1.10),
+        "soffit": mat("白模·楼座底", (0.82, 0.81, 0.78), 0.9,
+                      emit=(1.0, 0.97, 0.92), emit_str=1.45),
     }
 else:
     MAT = {
@@ -153,7 +155,7 @@ class Mesh:
                  [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)])
 
     # ---- 生成物体
-    def build(self):
+    def build(self, want=None):
         if not self.f:
             return None
         me = bpy.data.meshes.new(self.name)
@@ -163,6 +165,12 @@ class Mesh:
         bm.from_mesh(me)
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        if want is not None:
+            tot = Vector((0.0, 0.0, 0.0))
+            for f in bm.faces:
+                tot += f.normal
+            if tot.dot(Vector(want)) < 0:
+                bmesh.ops.reverse_faces(bm, faces=bm.faces)
         bm.to_mesh(me)
         bm.free()
         me.update()
@@ -177,8 +185,8 @@ class Mesh:
 OBJECTS = []
 
 
-def emit(m: Mesh):
-    ob = m.build()
+def emit(m: Mesh, want=None):
+    ob = m.build(want)
     if ob:
         OBJECTS.append(ob)
     return ob
@@ -203,6 +211,62 @@ def in_hall(x, y, grow=0.0):
     if not (HX0 - grow <= x <= HX1 + grow):
         return False
     return abs(y - AX) <= hall_half_width(x) + grow
+
+
+def hall_radius(th):
+    """自扇心沿 th 方向到观众厅边界的距离（梯形四边求交）。"""
+    dx, dy = math.cos(th), math.sin(th)
+    poly = D.hall_plan()
+    ts = []
+    n = len(poly)
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        ex, ey = x2 - x1, y2 - y1
+        den = dx * ey - dy * ex
+        if abs(den) < 1e-12:
+            continue
+        t = ((x1 - FX) * ey - (y1 - FY) * ex) / den
+        u = ((x1 - FX) * dy - (y1 - FY) * dx) / den
+        if t > 0 and -1e-9 <= u <= 1 + 1e-9:
+            ts.append(t)
+    # 扇心在观众厅之外（台口以西 30 m），一条射线先进后出，取**出射**那一点
+    return max(ts) if ts else 0.0
+
+
+def fan_surface(mesh, tier, zoff=0.0, up=True, n_th=260, n_s=10):
+    """沿 (r, θ) 铺一层楼板：前缘取 U 形前缘曲线、外缘取厅墙，边线精确无锯齿。"""
+    wrap = tier.get("wrap", 0.0)
+    r0 = tier["r0"]
+    tref = tier.get("theta_ref", 0.5)
+    th_lo, th_hi = -0.95, 0.95
+    r_first = D.tier_rows(tier)[0]["r"]          # 该层最前一排座席
+    grid = []
+    for i in range(n_th + 1):
+        th = th_lo + (th_hi - th_lo) * i / n_th
+        rf = r0 - wrap * (th / tref) ** 2 if wrap > 0 else r0
+        rs = max(rf, r_first)
+        re = hall_radius(th)
+        if re <= rs + 0.2:
+            grid.append(None)
+            continue
+        col = []
+        for j in range(n_s + 1):
+            r = rs + (re - rs) * j / n_s
+            x, y = FX + r * math.cos(th), FY + r * math.sin(th)
+            col.append((x, y, tier_z(tier, x, y) + zoff))
+        grid.append(col)
+    for i in range(n_th):
+        a, b = grid[i], grid[i + 1]
+        if not a or not b:
+            continue
+        for j in range(n_s):
+            p00, p10 = a[j], b[j]
+            p11, p01 = b[j + 1], a[j + 1]
+            if up:
+                mesh.add([p00, p10, p11, p01], [(0, 1, 2, 3)])
+            else:
+                mesh.add([p00, p01, p11, p10], [(0, 1, 2, 3)])
 
 
 def tier_front_r(tier, th):
@@ -285,7 +349,7 @@ def build_shell():
         return min(z, D.tier_rows(pit)[-1]["z"])
 
     grid_surface(Z, lambda x, y: in_hall(x, y, 1.2), zf, step=1.0)
-    emit(Z)
+    emit(Z, (0, 0, 1))
 
     # 台口墙：两侧墩 + 上过梁
     W = Mesh("台口墙", MAT["wall"], "shell")
@@ -343,6 +407,11 @@ def build_stage():
           [(0, 1, 2, 3)])
     emit(W)
 
+    # 舞台与后台上方的顶板（否则从池座透过台口会看到"天空"）
+    RF = Mesh("舞台顶板", MAT["soffit"], "stage")
+    RF.box(-513.0, AX, D.PROSCENIUM["h"], 60.0, 130.0, 0.9)
+    emit(RF, (0, 0, -1))
+
     # 后台体块
     BG = Mesh("后台", MAT["wall"], "stage")
     B = D.ZONES["backstage"]
@@ -377,29 +446,25 @@ def build_stage():
 def build_balcony(tier, idx):
     g = f"bal{idx}"
     top = Mesh(f"挑台{idx}·面", MAT["floor"], g)
-    bot = Mesh(f"挑台{idx}·底", MAT["ceil"], g)
+    bot = Mesh(f"挑台{idx}·底", MAT["soffit"], g)
 
-    def pred(x, y):
-        return in_hall(x, y, 1.2) and tier_has(tier, x, y)
-
-    grid_surface(top, pred, lambda x, y: tier_z(tier, x, y), step=0.85)
-    grid_surface(bot, pred, lambda x, y: tier_z(tier, x, y) - 1.55, step=0.85,
-                 up=False)
-    emit(top)
-    emit(bot)
+    fan_surface(top, tier)
+    fan_surface(bot, tier, zoff=-1.55, up=False)
+    top.want = (0, 0, 1)
+    bot.want = (0, 0, -1)
+    emit(top, (0, 0, 1))
+    emit(bot, (0, 0, -1))
 
     # 前缘板 + 栏板
     F = Mesh(f"挑台{idx}·前缘", MAT["wall"], g)
     rows = D.tier_rows(tier)
-    n = 220
-    th_lo = -1.15
+    r_first = rows[0]["r"]
+    n = 260
+    th_lo = -1.05
     prev = None
     for i in range(n + 1):
         th = th_lo + 2 * -th_lo * i / n
-        r = tier_front_r(tier, th)
-        if r < rows[0]["r"] - 3.0:
-            prev = None
-            continue
+        r = max(tier_front_r(tier, th), r_first)
         x = FX + r * math.cos(th)
         y = FY + r * math.sin(th)
         if not in_hall(x, y, 0.6):
@@ -418,10 +483,7 @@ def build_balcony(tier, idx):
         prev = None
         for i in range(n + 1):
             th = th_lo + 2 * -th_lo * i / n
-            r = tier_front_r(tier, th)
-            if r < rows[0]["r"] - 3.0:
-                prev = None
-                continue
+            r = max(tier_front_r(tier, th), r_first)
             x = FX + r * math.cos(th)
             y = FY + r * math.sin(th)
             if not in_hall(x, y, 0.6):
@@ -479,7 +541,7 @@ def build_dome():
     C = Mesh("穹顶", MAT["dome"], "dome")
     grid_surface(C, lambda x, y: in_hall(x, y, 2.6), D.dome_height, step=1.1,
                  up=False)
-    emit(C)
+    emit(C, (0, 0, -1))
 
     # 三环水波灯槽
     c = D.hall_centroid()
@@ -629,7 +691,7 @@ def build_foyer():
         C.box(gx, (y0 + y1) / 2, F["h"], 1.1, y1 - y0, 1.3)
     for gy in range(int(y0) + 12, int(y1), 12):
         C.box((x0 + x1) / 2, gy, F["h"], x1 - x0, 1.1, 1.3)
-    emit(C)
+    emit(C, (0, 0, -1))
 
     # 20 根明柱
     CO = Mesh("前厅·明柱", MAT["marble_w"] if P else MAT["wall"], "foyer_col")
@@ -808,7 +870,8 @@ SHOTS = [
     ("纵剖A—A", dict(loc=(-425, AX + 330, 23.5), target=(-425, AX, 23.5), lens=50,
                    ortho=246, ar=4.15, hide=(), exp=-0.6)),
     ("全景自台口", dict(loc=(-482, AX, 15.5), target=(-410, AX, 12.0), lens=17)),
-        ("二层末排望主席台", dict(loc=(-440.7, AX, 15.6), target=(-500, AX, 7.0), lens=26)),
+        ("池座望主席台", dict(loc=(-444, AX - 10, 3.9), target=(-502, AX + 2, 8.0), lens=26)),
+    ("二层末排望主席台", dict(loc=(-440.7, AX, 15.6), target=(-500, AX, 7.0), lens=26)),
     ("三层末排望主席台", dict(loc=(-435.4, AX, 23.0), target=(-500, AX, 6.0), lens=26)),
     ("主席台望观众席", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
     ("仰望穹顶", dict(loc=(-452, AX + 5, 4.3), target=(-427, AX + 1, 43.0), lens=19)),

@@ -68,9 +68,9 @@ TIERS = [
     {"key": "pit", "name": "池座", "r0": 37.0, "r1": 79.0,
      "z0": 0.0, "slope": 0.075, "wrap": 0.0, "theta_ref": 0.5, "target": 4690},
     {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 73.3,
-     "z0": 10.0, "slope": 0.33, "wrap": 44.0, "theta_ref": 0.5, "target": 3020},
+     "z0": 10.0, "slope": 0.38, "wrap": 44.0, "theta_ref": 0.5, "target": 3020},
     {"key": "bal2", "name": "三层挑台", "r0": 71.0, "r1": 78.6,
-     "z0": 18.5, "slope": 0.46, "wrap": 30.0, "theta_ref": 0.5, "target": 2500},
+     "z0": 19.0, "slope": 0.52, "wrap": 30.0, "theta_ref": 0.5, "target": 2500},
 ]
 
 STAGE_SEATS = 400        # 主席台（不计入万人席）
