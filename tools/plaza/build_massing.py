@@ -565,9 +565,10 @@ for yy, nm in ((A["y_north"] - A["sidewalk"] / 2, "北人行道"),
     box(f"大街·{nm}", A["x1"] - A["x0"], A["sidewalk"], 0.22,
         (A["x0"] + A["x1"]) / 2, yy, 0.02, MAT["sidewalk"])
 yc = (A["y_north"] + A["y_south"]) / 2
-box("大街·中央分隔带", A["x1"] - A["x0"], A["median"], 0.30,
-    (A["x0"] + A["x1"]) / 2, yc, 0.02, MAT["lawn"])
-box("大街·轴心过街", 40.0, A["width"], 0.26, 0, yc, 0.02, MAT["paving_axis"])
+_med_seg = (A["x1"] - A["x0"] - 40.0) / 2
+for _sx in (-1, 1):
+    box("大街·中央分隔带", _med_seg, A["median"], 0.30,
+        _sx * (20.0 + _med_seg / 2), yc, 0.02, MAT["lawn"])
 # 车道虚线
 for k, dy in enumerate((-24.0, -10.5, 10.5, 24.0)):
     x = A["x0"] + 6
@@ -1041,6 +1042,7 @@ if P:
         ("议事楼入口", dict(loc=(120, -1035, 26), target=(400, -1035, 28), lens=55)),
         ("博物馆入口", dict(loc=(0, -1370, 22), target=(0, -1480, 24), lens=50)),
         ("承天门人视", dict(loc=(0, -650, 3.5), target=(0, -468, 15), lens=34)),
+        ("广场北口", dict(loc=(0, -720, 6), target=(0, -620, 2), lens=45)),
         ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
     ]
 
