@@ -53,7 +53,7 @@ PL.hall("金瓯殿", W, D, bays=BAYS, dbays=DBAYS, z=0.0, storeys=2,
 build_s = time.time() - t_build
 
 # 广场：汉白玉铺地 + 一圈台明
-PL.box("广场", 600, 600, 0.5, 0, 0, -0.5, PL.MAT["stone2"])
+PL.box("广场", 700, 700, 0.5, 0, 0, -0.5, PL.MAT["brick"])
 
 # ---------------------------------------------------------------- 环境光
 hdri = {"sunny": "hdri_sky_sunny_2k.hdr",

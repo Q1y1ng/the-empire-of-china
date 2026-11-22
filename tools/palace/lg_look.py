@@ -817,9 +817,9 @@ def make_materials():
                                                 rough=(0.34, 0.44), coat=0.30, grime=0.20))
     add("wood_dark", "深色木", lambda g: _wood(g, (0.050, 0.030, 0.019), rough=0.56,
                                                grain=0.30, coat=0.04))
-    add("door", "隔扇", lambda g: _wood(g, (0.105, 0.028, 0.017), rough=0.50,
+    add("door", "隔扇", lambda g: _wood(g, (0.150, 0.045, 0.026), rough=0.48,
                                         grain=0.26, coat=0.12))
-    add("lattice", "格心", lambda g: _wood(g, (0.080, 0.045, 0.024), rough=0.55,
+    add("lattice", "格心", lambda g: _wood(g, (0.215, 0.130, 0.062), rough=0.46,
                                            grain=0.28, coat=0.06))
     add("soffit", "椽望", lambda g: _wood(g, (0.058, 0.043, 0.036), rough=0.80,
                                           grain=0.35, coat=0.0))

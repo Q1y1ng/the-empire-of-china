@@ -311,6 +311,47 @@ def base_platform(w, d, h=3.2, stairs=True, balustrade=True, name="台基"):
 
 
 
+def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None):
+    """沿闭合多边形铺一圈汉白玉栏板：望柱 + 栏板 + 寻杖。合成一个网格。"""
+    mat = mat or MAT["stone"]
+    verts, faces = [], []
+
+    def obb(cx, cy, cz, sx, sy, sz, rot):
+        ca, sa = math.cos(rot), math.sin(rot)
+        b = len(verts)
+        for dz in (0.0, sz):
+            for dy in (-sy / 2, sy / 2):
+                for dx in (-sx / 2, sx / 2):
+                    verts.append((cx + dx * ca - dy * sa, cy + dx * sa + dy * ca, cz + dz))
+        faces.extend([(b, b + 1, b + 3, b + 2), (b + 4, b + 6, b + 7, b + 5),
+                      (b, b + 4, b + 5, b + 1), (b + 2, b + 3, b + 7, b + 6),
+                      (b, b + 2, b + 6, b + 4), (b + 1, b + 5, b + 7, b + 3)])
+
+    n = len(poly)
+    for i in range(n):
+        x0, y0 = poly[i]
+        x1, y1 = poly[(i + 1) % n]
+        L = math.hypot(x1 - x0, y1 - y0)
+        if L < 1.0:
+            continue
+        rot = math.atan2(y1 - y0, x1 - x0)
+        k = max(1, int(L / step))
+        seg = L / k
+        for j in range(k):
+            t0 = (j + 0.5) / k
+            cx = x0 + (x1 - x0) * t0
+            cy = y0 + (y1 - y0) * t0
+            obb(cx, cy, z + 0.06, seg - post - 0.06, t, h - 0.34 + 0.02, rot)   # 栏板
+            obb(cx, cy, z + h - 0.20, seg - post + 0.10, t + 0.10, 0.14, rot)   # 寻杖
+        for j in range(k + 1):
+            t0 = j / k
+            cx = x0 + (x1 - x0) * t0
+            cy = y0 + (y1 - y0) * t0
+            obb(cx, cy, z, post, post, h, rot)                                  # 望柱
+            obb(cx, cy, z + h, post * 0.86, post * 0.86, 0.12, rot)             # 柱头
+    return mesh_from(name + "·栏板", verts, faces, mat, merge=False)
+
+
 # ------------------------------------------------------------------ 柱 / 枋
 def edges(bays):
     out = [-sum(bays) / 2]

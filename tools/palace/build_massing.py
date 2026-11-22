@@ -29,6 +29,7 @@ ap.add_argument("--out", default=os.path.join(HERE, "..", "..", "docs", "assets"
 ap.add_argument("--samples", type=int, default=160)
 ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位（其余跳过）")
+ap.add_argument("--no-glb", action="store_true", help="只出图，不导 glb（迭代用）")
 ap.add_argument("--precise", action="store_true", help="用明官式构件库出精模（慢）")
 args = ap.parse_args(argv)
 WORK = os.path.join(os.environ.get("TEMP", HERE), "palace_massing")
@@ -90,6 +91,57 @@ MAT = {
     "ridge": material("屋脊压顶", (0.32, 0.22, 0.09), 0.5),
     "rock": material("假山石", (0.45, 0.43, 0.39), 0.95),
 }
+
+
+def paving_mat(name, rgb, bw=0.48, rh=0.24, mortar=(0.085, 0.078, 0.070),
+               rough=0.88, mortar_w=0.012):
+    """地面铺装：Brick 纹理按米制铺 480×240 青砖（Object 坐标，平面直接可用）。"""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nt = m.node_tree
+    N, L = nt.nodes, nt.links
+    for n in list(N):
+        N.remove(n)
+    out = N.new("ShaderNodeOutputMaterial")
+    bsdf = N.new("ShaderNodeBsdfPrincipled")
+    L.new(bsdf.outputs[0], out.inputs[0])
+    tc = N.new("ShaderNodeTexCoord")
+    br = N.new("ShaderNodeTexBrick")
+    br.offset = 0.5
+    br.squash = 1.0
+    br.inputs["Scale"].default_value = 1.0
+    br.inputs["Brick Width"].default_value = bw
+    br.inputs["Row Height"].default_value = rh
+    br.inputs["Mortar Size"].default_value = mortar_w
+    br.inputs["Mortar Smooth"].default_value = 0.25
+    br.inputs["Bias"].default_value = 0.0
+    br.inputs["Color1"].default_value = (*rgb, 1.0)
+    br.inputs["Color2"].default_value = (rgb[0] * 0.84, rgb[1] * 0.84, rgb[2] * 0.84, 1.0)
+    br.inputs["Mortar"].default_value = (*mortar, 1.0)
+    L.new(tc.outputs["Object"], br.inputs["Vector"])
+    L.new(br.outputs["Color"], bsdf.inputs["Base Color"])
+    n = N.new("ShaderNodeTexNoise")
+    n.inputs["Scale"].default_value = 0.35
+    n.inputs["Detail"].default_value = 6.0
+    L.new(tc.outputs["Object"], n.inputs["Vector"])
+    mr = N.new("ShaderNodeMapRange")
+    L.new(n.outputs["Fac"], mr.inputs[0])
+    mr.inputs[3].default_value = rough - 0.10
+    mr.inputs[4].default_value = min(0.98, rough + 0.06)
+    L.new(mr.outputs[0], bsdf.inputs["Roughness"])
+    bp = N.new("ShaderNodeBump")
+    bp.inputs["Strength"].default_value = 0.45
+    bp.inputs["Distance"].default_value = 0.012
+    L.new(br.outputs["Fac"], bp.inputs["Height"])
+    L.new(bp.outputs[0], bsdf.inputs["Normal"])
+    return m
+
+
+MAT["plaza"] = paving_mat("宫城地坪·铺砖", (0.072, 0.066, 0.056))
+MAT["path"] = paving_mat("御道·石板", (0.150, 0.144, 0.128), bw=0.90, rh=0.45,
+                         mortar=(0.14, 0.13, 0.11), mortar_w=0.010, rough=0.80)
+MAT["ground"] = paving_mat("城外地面·土路", (0.070, 0.066, 0.058), bw=1.6, rh=0.8,
+                           mortar=(0.16, 0.15, 0.13), mortar_w=0.02, rough=0.95)
 
 
 def box(name, w, d, h, x, y, z0=0.0, mat=None):
@@ -290,13 +342,17 @@ def prism(name, poly, h, z0, mat):
 
 
 PL.make_materials()
-prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, PL.MAT["stone2"])
-PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
-PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
-PL.balustrade_line(-215, -110, 117.5, D.PLATFORM_H, along_x=False)
-PL.balustrade_line(-215, -110, -117.5, D.PLATFORM_H, along_x=False)
-PL.balustrade_line(-50, 10, 103.5, D.PLATFORM_H, along_x=False)
-PL.balustrade_line(-50, 10, -103.5, D.PLATFORM_H, along_x=False)
+prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0,
+      PL.MAT["stone"] if args.precise else MAT["platform"])
+if args.precise:
+    PL.railing_poly("三台", D.PLATFORM_POLY, D.PLATFORM_H, step=2.4, h=1.02)
+else:
+    PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
+    PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
+    PL.balustrade_line(-215, -110, 117.5, D.PLATFORM_H, along_x=False)
+    PL.balustrade_line(-215, -110, -117.5, D.PLATFORM_H, along_x=False)
+    PL.balustrade_line(-50, 10, 103.5, D.PLATFORM_H, along_x=False)
+    PL.balustrade_line(-50, 10, -103.5, D.PLATFORM_H, along_x=False)
 for p in D.PLATFORMS:
     box(p["name"], p["w"], p["d"], p["h"], p["cx"], p["cy"], 0.0, MAT["platform"])
 
@@ -535,9 +591,10 @@ if not args.only:
 blend = os.path.join(WORK, "palace_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
 glb = os.path.join(WORK, "palace_massing.glb")
-bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
+if not args.no_glb:
+    bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
 glb_lite = None
-if args.precise:      # 轻量 glb：剔掉斗拱/值房/树/城墙等重复件，便于网页加载
+if args.precise and not args.no_glb:      # 轻量 glb：剔掉斗拱/值房/树/城墙等重复件，便于网页加载
     for ob in list(col.objects):
         if ob.name.split("·")[0].startswith(("斗拱", "值房", "树", "城墙", "角楼", "三台·望柱")):
             bpy.data.objects.remove(ob, do_unlink=True)
@@ -556,5 +613,5 @@ for o in col.objects:
 
 print("RESULT " + json.dumps({
     "renders": results, "objects": len(col.objects), "triangles": tris,
-    "blend": blend, "glb": glb, "glb_mb": round(os.path.getsize(glb) / 1e6, 2),
+    "blend": blend, "glb": glb, "glb_mb": round(os.path.getsize(glb) / 1e6, 2) if os.path.exists(glb) else None,
 }, ensure_ascii=False))
