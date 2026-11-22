@@ -335,17 +335,17 @@ def wall_segments(site, gates):
 
 def emblem(name, axis, fixed, center, z, side):
     if axis == "x":
-        red = cyl(name + "·底盘", 7.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
+        red = cyl(name + "·底盘", 6.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
         red.rotation_euler = (0, math.pi / 2, 0)
         red.location = (fixed + side * 0.15, center, z)
-        gold = cyl(name + "·金徽", 5.4, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
+        gold = cyl(name + "·金徽", 4.6, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
         gold.rotation_euler = (0, math.pi / 2, 0)
         gold.location = (fixed + side * 0.45, center, z)
     else:
-        red = cyl(name + "·底盘", 7.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
+        red = cyl(name + "·底盘", 6.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
         red.rotation_euler = (math.pi / 2, 0, 0)
         red.location = (center, fixed + side * 0.15, z)
-        gold = cyl(name + "·金徽", 5.4, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
+        gold = cyl(name + "·金徽", 4.6, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
         gold.rotation_euler = (math.pi / 2, 0, 0)
         gold.location = (center, fixed + side * 0.45, z)
 
@@ -507,6 +507,31 @@ def portico(name, rect, h, facade_side="E"):
                 box(name + f"·门挺{k}", 0.12, 0.12, 14, cx + k * 3.2, y0 + 1.80, 1.5, MAT["roof_gold"])
             else:
                 box(name + f"·门挺{k}", 0.12, 0.12, 14, cx + k * 3.2, y1 - 1.80, 1.5, MAT["roof_gold"])
+
+        if facade_side in ("E", "W"):
+            sx = 1 if facade_side == "E" else -1
+            fx = (x0 + 2.6) if facade_side == "E" else (x1 - 2.6)
+            box(name + "·门槛", 1.5, dw + 2, 0.55, (x0 + 2.0) if facade_side == "E" else (x1 - 2.0), cy, 1.25, MAT["stone_light"])
+            box(name + "·匾框", 1.2, 12.0, 4.2, fx, cy, 15.7, MAT["stone_light"])
+            box(name + "·匾", 1.0, 10.6, 3.4, fx + sx * 0.5, cy, 16.1, MAT["roof_flat"])
+            for zz in (16.1, 19.3):
+                box(name + "·匾金边", 0.16, 10.8, 0.18, fx + sx * 0.7, cy, zz, MAT["roof_gold"])
+            for sy in (-1, 1):
+                ring = cyl(name + f"·铺首{sy}", 0.32, 0.18, 0, 0, 0, MAT["roof_gold"], n=12)
+                ring.rotation_euler = (0, math.pi / 2, 0)
+                ring.location = (fx + sx * 0.9, cy + sy * 3.4, 8.0)
+        else:
+            sy = 1 if facade_side == "N" else -1
+            fy = (y0 + 2.6) if facade_side == "N" else (y1 - 2.6)
+            box(name + "·门槛", dw + 2, 1.5, 0.55, cx, (y0 + 2.0) if facade_side == "N" else (y1 - 2.0), 1.25, MAT["stone_light"])
+            box(name + "·匾框", 12.0, 1.2, 4.2, cx, fy, 15.7, MAT["stone_light"])
+            box(name + "·匾", 10.6, 1.0, 3.4, cx, fy + sy * 0.5, 16.1, MAT["roof_flat"])
+            for zz in (16.1, 19.3):
+                box(name + "·匾金边", 10.8, 0.16, 0.18, cx, fy + sy * 0.7, zz, MAT["roof_gold"])
+            for sx in (-1, 1):
+                ring = cyl(name + f"·铺首{sx}", 0.32, 0.18, 0, 0, 0, MAT["roof_gold"], n=12)
+                ring.rotation_euler = (math.pi / 2, 0, 0)
+                ring.location = (cx + sx * 3.4, fy + sy * 0.9, 8.0)
 
 
 def steps(name, cx, cy, w, side, depth=8.0, n=3):
@@ -683,9 +708,9 @@ if P:
     rail_edge("议事大楼·台基栏板", "y", 306.0, -1339.5, -731.5,
               [(-895.5, -855.5), (-1085.5, -985.5), (-1215.5, -1175.5)])
     rail_edge("博物馆·台基栏板", "x", -1446.5, -284.0, 284.0, [(-70.0, 70.0)])
-    emblem("大会堂·国徽", "x", -308.2, -1035.5, 23.0, 1)
-    emblem("议事大楼·国徽", "x", 308.2, -1035.5, 23.0, -1)
-    emblem("博物馆·国徽", "y", -1449.2, 0.0, 20.0, 1)
+    emblem("大会堂·国徽", "x", -308.2, -1035.5, 24.6, 1)
+    emblem("议事大楼·国徽", "x", 308.2, -1035.5, 24.6, -1)
+    emblem("博物馆·国徽", "y", -1449.2, 0.0, 22.2, 1)
     for m in D.MASSES:
         if m["parent"] == "hall" and m["kind"] != "portico":
             add_mullions("大会堂·" + m["name"], m["x1"], "y", 1,
