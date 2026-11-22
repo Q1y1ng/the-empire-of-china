@@ -449,7 +449,15 @@ def add_struct_precise(st):
     k = st["kind"]
     x, y = st["cx"], st["cy"]
     if k == "gate":
+        before = set(col.objects)
         PL.gate_house(st["name"], w, d, z=z, h=h)
+        new = set(col.objects) - before
+        if d > w:            # 东西宫门：整体绕自身原点转 90°，让券洞朝东西
+            for ob in new:
+                ob.rotation_euler[2] = math.pi / 2
+        for ob in new:       # 构件按原点建，整体挪到城门实位
+            ob.location.x += x
+            ob.location.y += y
         return
     if k == "pavilion":
         for sx in (-1, 1):
