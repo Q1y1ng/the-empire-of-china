@@ -202,8 +202,8 @@ def _shadow(ax, x0, x1, y0, y1):
 
 
 def draw_masses(ax):
-    # 大会堂：三厅共用一个外框，内部分间线用虚线
-    x0, x1, y0, y1 = -540.0, -330.0, -1270.5, -800.5
+    # 大会堂：230 × 600 m 三段式，南北镜像
+    x0, x1, y0, y1 = -540.0, -310.0, -1335.5, -735.5
     _shadow(ax, x0, x1, y0, y1)
     for m in D.MASSES:
         if m["parent"] != "hall":
@@ -216,26 +216,33 @@ def draw_masses(ax):
              zorder=4.6)
     rect(ax, x0, y0, x1 - x0, y1 - y0, fill=False, edgecolor=C["hall_edge"],
          lw=1.4, zorder=5.0)
-    for yy in (-1120.5, -950.5):
+    for yy in (-1155.5, -915.5):
         ax.plot([x0, x1], [yy, yy], color=C["hall_edge"], lw=0.7,
                 ls=(0, (5, 3)), zorder=5.0)
 
-    # 议事大楼：主楼外框 + 中部议事厅高体量
-    _shadow(ax, 315.0, 445.0, -1190.5, -880.5)
-    rect(ax, 315.0, -1190.5, 130.0, 310.0, facecolor=C["council"],
-         edgecolor=C["hall_edge"], lw=1.2, zorder=4.6)
-    rect(ax, 335.0, -1090.5, 90.0, 110.0, facecolor=C["chamber"],
-         edgecolor=C["chamber_edge"], lw=0.9, zorder=4.9)
-    rect(ax, 300.0, -1065.5, 15.0, 60.0, facecolor=C["portico"],
-         edgecolor=C["portico_edge"], lw=0.6, zorder=4.8)
-    rect(ax, 315.0, -1190.5, 130.0, 310.0, fill=False, edgecolor=C["hall_edge"],
-         lw=1.2, zorder=5.0)
+    # 议事大楼：同尺寸 230 × 600 m 三段式，与大会堂隔广场镜像
+    x0, x1 = 310.0, 540.0
+    _shadow(ax, x0, x1, y0, y1)
+    for m in D.MASSES:
+        if m["parent"] != "council":
+            continue
+        fc, ec = ((C["council"], C["hall_edge"]) if m["kind"] == "wing"
+                  else (C["chamber"], C["chamber_edge"]) if m["kind"] == "chamber"
+                  else (C["portico"], C["portico_edge"]))
+        rect(ax, m["x0"], m["y0"], m["x1"] - m["x0"], m["y1"] - m["y0"],
+             facecolor=fc, edgecolor=ec, lw=0.35 if m["kind"] == "portico" else 0.5,
+             zorder=4.6)
+    rect(ax, x0, y0, x1 - x0, y1 - y0, fill=False, edgecolor=C["hall_edge"],
+         lw=1.4, zorder=5.0)
+    for yy in (-1155.5, -915.5):
+        ax.plot([x0, x1], [yy, yy], color=C["hall_edge"], lw=0.7,
+                ls=(0, (5, 3)), zorder=5.0)
 
-    # 博物馆：一整块，门廊居中
-    _shadow(ax, -200.0, 200.0, -1610.5, -1460.5)
-    rect(ax, -200.0, -1610.5, 400.0, 150.0, facecolor=C["museum"],
+    # 博物馆：560 × 170 m，一整块，门廊居中
+    _shadow(ax, -280.0, 280.0, -1620.5, -1450.5)
+    rect(ax, -280.0, -1620.5, 560.0, 170.0, facecolor=C["museum"],
          edgecolor=C["hall_edge"], lw=1.2, zorder=4.6)
-    rect(ax, -50.0, -1460.5, 100.0, 20.0, facecolor=C["portico"],
+    rect(ax, -70.0, -1450.5, 140.0, 15.0, facecolor=C["portico"],
          edgecolor=C["portico_edge"], lw=0.6, zorder=4.7)
 
 
@@ -249,52 +256,52 @@ def draw_labels(ax):
     label(ax, 282, -1180, "广场东侧道 12 m", fs=7.0, color=C["muted"], rot=90, box=False)
     label(ax, 0, -1422, "南端（博物馆前）", fs=7.2, color=C["muted"])
 
-    # 大会堂
-    label(ax, -435, -768, "国家大会堂", fs=12.0, box=True)
-    label(ax, -435, -790, "20 ha · 三厅 · 两层", fs=7.6, color=C["muted"])
-    label(ax, -435, -875, "右厅\n宴会厅 3,000 席", fs=8.0)
-    label(ax, -435, -1035, "中厅\n万人大礼堂 10,000 席", fs=8.2)
-    label(ax, -435, -1195, "左厅\n八州厅＋宣政厅", fs=8.0)
+    # 大会堂（西，230×600）
+    label(ax, -425, -724, "国家大会堂", fs=11.8, box=True)
+    label(ax, -425, -825.5, "右厅\n宴会厅 3,000 席", fs=8.0)
+    label(ax, -425, -1035.5, "中厅\n万人大礼堂 10,000 席", fs=8.2)
+    label(ax, -425, -1245.5, "左厅\n八州厅＋宣政厅", fs=8.0)
 
-    # 议事大楼
-    label(ax, 380, -828, "国家议会\n议事大楼", fs=10.2, box=True)
-    label(ax, 380, -854, "约 8 ha 建筑 · 1,100 席", fs=7.2, color=C["muted"])
-    label(ax, 380, -1035, "议事厅\n1,100 席", fs=7.6)
+    # 议事大楼（东，与大会堂镜像同大）
+    label(ax, 425, -724, "国家议会议事大楼", fs=9.8, box=True)
+    label(ax, 425, -825.5, "北翼", fs=8.0)
+    label(ax, 425, -1035.5, "议事厅\n1,100 席", fs=8.2)
+    label(ax, 425, -1245.5, "南翼", fs=8.0)
 
     # 博物馆
-    label(ax, 0, -1528, "国家政治博物馆", fs=11.5)
-    label(ax, 0, -1551, "12 ha · 两层", fs=7.6, color=C["muted"])
-    label(ax, 150, -1535, "大革命\n主题馆", fs=6.8, rot=90)
+    label(ax, 0, -1535, "国家政治博物馆", fs=11.5)
+    label(ax, 0, -1558, "560 × 170 m · 两层", fs=7.6, color=C["muted"])
+    label(ax, 195, -1535, "大革命\n主题馆", fs=6.8, rot=90)
 
 
 def draw_axis(ax):
-    y0, y1 = -443.0, -1440.5
+    y0, y1 = -443.0, -1435.5
     ax.plot([0, 0], [y0, y1], color=C["axis_red"], lw=0.9,
             ls=(0, (8, 3, 1.5, 3)), zorder=5.5, alpha=0.8)
-    ax.annotate("", xy=(0, -1440.5), xytext=(0, -1400.5),
+    ax.annotate("", xy=(0, -1435.5), xytext=(0, -1395.5),
                 arrowprops=dict(arrowstyle="-|>", color=C["axis_red"], lw=1.1), zorder=5.6)
 
 
 def draw_dims(ax):
-    # 底边：250 / 600 / 160
+    # 底边：250 / 600 / 250
     y = -1700
-    for xa, xb, txt in ((-550, -300, "250"), (-300, 300, "600"), (300, 460, "160")):
+    for xa, xb, txt in ((-550, -300, "250"), (-300, 300, "600"), (300, 550, "250")):
         ax.annotate("", xy=(xa, y), xytext=(xb, y),
                     arrowprops=dict(arrowstyle="<|-|>", color=C["ink"], lw=0.9,
                                     shrinkA=0, shrinkB=0), zorder=6)
         ax.plot([xa, xa], [y - 6, y + 6], color=C["ink"], lw=0.8, zorder=6)
         ax.text((xa + xb) / 2, y + 9, f"{txt} m", ha="center", va="bottom",
                 fontsize=7.6, color=C["ink"], zorder=6)
-    ax.plot([460, 460], [y - 6, y + 6], color=C["ink"], lw=0.8, zorder=6)
+    ax.plot([550, 550], [y - 6, y + 6], color=C["ink"], lw=0.8, zorder=6)
 
     # 右侧：广场 800
-    x = 520
+    x = 600
     ax.annotate("", xy=(x, -635.5), xytext=(x, -1435.5),
                 arrowprops=dict(arrowstyle="<|-|>", color=C["ink"], lw=0.9,
                                 shrinkA=0, shrinkB=0), zorder=6)
     for yy in (-635.5, -1435.5):
         ax.plot([x - 6, x + 6], [yy, yy], color=C["ink"], lw=0.8, zorder=6)
-        ax.plot([460, x + 6], [yy, yy], color=C["ink"], lw=0.35,
+        ax.plot([550, x + 6], [yy, yy], color=C["ink"], lw=0.35,
                 ls=(0, (2, 3)), zorder=5.6)
     ax.text(x + 13, -1035.5, "800 m", rotation=90, ha="center", va="center",
             fontsize=8.6, color=C["ink"])
@@ -311,7 +318,7 @@ def draw_dims(ax):
 
 
 def draw_north(ax):
-    x, y = 450, -470
+    x, y = 520, -470
     ax.annotate("", xy=(x, y + 62), xytext=(x, y),
                 arrowprops=dict(arrowstyle="-|>", color=C["ink"], lw=1.4), zorder=9)
     ax.text(x, y + 70, "N", ha="center", va="bottom", fontsize=12,
@@ -373,6 +380,9 @@ def draw_panel(ax):
         ax.text(0.0, y, name, fontsize=7.8, va="center", color=C["ink"])
         ax.text(1.0, y, val, fontsize=7.8, va="center", ha="right", color=C["muted"])
         y -= 0.0225
+    ax.text(0.0, y, "两楼同 230 × 600 m、镜像对称；原设定 20 / 8 / 12 ha 待重定。",
+            fontsize=6.8, color=C["muted"], va="center")
+    y -= 0.0225
 
     # ── 三厅与两馆
     y = head("三厅与两馆", y - 0.014)
@@ -380,7 +390,7 @@ def draw_panel(ax):
         ("左厅", "八州厅 8 间 · 宣政厅 140 席"),
         ("中厅", "无立柱万人大礼堂 10,000 席"),
         ("右厅", "无立柱宴会厅 3,000 席"),
-        ("议事大楼", "议事厅 1,100 席（议员 720）"),
+        ("议事大楼", "议事厅 1,100 席（与大会堂同大）"),
         ("政治博物馆", "大革命主题馆（东段）"),
     ]:
         ax.text(0.0, y, name, fontsize=7.8, va="center", color=C["ink"])
@@ -397,14 +407,14 @@ def draw_panel(ax):
         ]),
         ("【作者】", [
             "2026-11-22 裁决：800 m 全铺装（48 ha）；阅兵台并入承天门；",
-            "承天门前新设 100 m 大街；三座建筑放大（降两层、加宽加长）。",
+            "门前新设 100 m 大街；两楼对称同大、三座主体占满区块。",
         ]),
         ("【判读】", [
-            "20 / 8 / 12 ha 按建筑面积读，两层反算 19.7 / 8.1 / 12.0 ha；",
-            "用地西 250 m、东 160 m、南 600×200 m，单体居中留前庭。",
+            "两楼同为 230 × 600 m（占地 13.8 ha，两层）；博物馆 560 × 170 m；",
+            "原 20 / 8 / 12 ha 建筑面积控制随「对称」调整，待重定。",
         ]),
         ("【推定】", [
-            "面宽进深、门廊、围墙、道路、大街断面（8 m 人行道＋84 m 车行道）为推定。",
+            "门廊、围墙、道路、大街断面（8 m 人行道＋84 m 车行道）为推定。",
         ]),
     ]
     for tag, lines in blocks:
@@ -417,10 +427,12 @@ def draw_panel(ax):
     # ── 待定
     y = head("待　定", y - 0.012)
     for ln in [
-        "① 广场 45 ha → 48 ha：是否同步改《长安城市志》内城表。",
-        "② 国旗杆：阅兵 09:05 升旗，设定未给位置；本图暂不画。",
-        "③ 大街名称：暂作「承天门大街」，是否另有正式地名。",
-        "④ 内城 2,700 m：广场 800 m＋博物馆 200 m 已 1,000 m，加皇城",
+        "① 对称后两楼同大：原设定大会堂 20 ha、议事 8 ha 不再适用，",
+        "   两楼占地 13.8 ha、建筑约 27.6 ha；是否按此改设定表。",
+        "② 广场 45 ha → 48 ha：是否同步改《长安城市志》内城表。",
+        "③ 国旗杆：阅兵 09:05 升旗，设定未给位置；本图暂不画。",
+        "④ 大街名称：暂作「承天门大街」，是否另有正式地名。",
+        "⑤ 内城 2,700 m：广场 800 m＋博物馆 200 m 已 1,000 m，加皇城",
         "   1,950 m 超过 2,700 m；本模型不含内城城墙与永宁门。",
     ]:
         ax.text(0.0, y, ln, fontsize=7.0, color=C["muted"], va="top")
@@ -444,11 +456,11 @@ def main():
         return
     os.makedirs(args.out, exist_ok=True)
 
-    fig = plt.figure(figsize=(15.2, 16.2), dpi=args.dpi, facecolor=C["paper"])
+    fig = plt.figure(figsize=(15.6, 16.2), dpi=args.dpi, facecolor=C["paper"])
     ax = fig.add_axes([0.010, 0.043, 0.665, 0.878])
     ax.set_facecolor(C["ground"])
     ax.set_aspect("equal")
-    ax.set_xlim(-720, 580)
+    ax.set_xlim(-720, 640)
     ax.set_ylim(-1775, -405)
     ax.axis("off")
 
@@ -471,13 +483,13 @@ def main():
              fontsize=24, color=C["ink"], fontweight="bold")
     fig.text(0.33, 0.950,
              "长安 · 2026　│　广场 600 × 800 m（48 ha）　│　承天门大街 100 m（新设）　│　"
-             "大会堂 20 ha · 议事 8 ha · 博物馆 12 ha　│　最简稿",
-             ha="center", va="center", fontsize=8.4, color=C["muted"])
+             "大会堂 · 议事大楼 230 × 600 m（对称）　│　博物馆 560 × 170 m　│　最简稿",
+             ha="center", va="center", fontsize=8.2, color=C["muted"])
 
     fig.text(0.010, 0.015,
              "数据：《长安城市志》卷三·内城表（广场、大会堂、议事、博物馆、中轴里程）·"
              "《总设定》第十六编（600×800 m、三厅、1,100 席）·《继位大典与宫城启闭（草案）》（阅兵、检阅车东侧道）。\n"
-             "2026-11-22 作者裁决：800 m 全铺装（48 ha）；阅兵台并入承天门城台；承天门前新设 100 m 东西向大街；三座建筑降为两层、加大面宽进深。"
+             "2026-11-22 作者裁决：800 m 全铺装（48 ha）；阅兵台并入承天门城台；承天门前新设 100 m 东西向大街；两楼对称同大、三座主体占满区块。"
              "宫城接口（承天门、护城河、城墙）取自 tools/palace/palace_data.py。",
              ha="left", va="bottom", fontsize=6.6, color=C["muted"], linespacing=1.6)
     fig.text(0.980, 0.015, "中华帝国设定集 · 图版", ha="right", va="bottom",
