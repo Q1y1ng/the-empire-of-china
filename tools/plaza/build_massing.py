@@ -86,6 +86,9 @@ MAT = {
     "wall_red": mat("宫墙红", (0.34, 0.06, 0.05), 0.85),
     "ground": mat("场外地面", (0.22, 0.21, 0.19), 0.95),
     "white": mat("灯柱白", (0.85, 0.84, 0.80), 0.6),
+    "lamp_bronze": mat("灯柱青铜", (0.10, 0.08, 0.06), 0.45, 0.6),
+    "lamp_glass": mat("灯罩", (0.95, 0.84, 0.62), 0.35),
+    "paving_band": mat("铺装横带", (0.45, 0.43, 0.38), 0.9),
     "metal": mat("深色金属", (0.055, 0.050, 0.045), 0.35, 0.75),
     "door": mat("入口门", (0.035, 0.030, 0.025), 0.4, 0.35),
 }
@@ -588,6 +591,45 @@ e = D.FEATURES["east_road"]
 box("广场东侧道", e["x1"] - e["x0"], e["y1"] - e["y0"], 0.20,
     (e["x0"] + e["x1"]) / 2, (e["y0"] + e["y1"]) / 2, 0.02, MAT["sidewalk"])
 
+# 广场细部：10 m 分格、御道石边、100 m 横带、灯柱、石墩、长凳
+_pcx, _pcy = 0.0, (P["y_north"] + P["y_south"]) / 2
+for _i in range(1, 60):
+    box("铺装缝·10m纵", 0.12, P["depth"], 0.02, P["x0"] + _i * 10, _pcy, 0.20, MAT["stone_dark"])
+for _i in range(1, 80):
+    box("铺装缝·10m横", P["width"], 0.12, 0.02, 0, P["y_south"] + _i * 10, 0.20, MAT["stone_dark"])
+for _sx in (-1, 1):
+    box("御道石边", 1.2, P["depth"], 0.06, _sx * 20.6, _pcy, 0.24, MAT["stone_dark"])
+    box("御道内边", 0.22, P["depth"], 0.03, _sx * 19.8, _pcy, 0.27, MAT["stone_light"])
+for _k in range(1, 8):
+    box("铺装横带", P["width"], 2.0, 0.03, 0, P["y_north"] - _k * 100, 0.21, MAT["paving_band"])
+
+
+def lamp_post(name, x, y):
+    cyl(name + "·座", 0.45, 0.45, x, y, 0.20, MAT["stone_light"], n=8)
+    cyl(name + "·柱", 0.11, 6.8, x, y, 0.65, MAT["lamp_bronze"], n=8)
+    box(name + "·横担", 2.8, 0.14, 0.14, x, y, 7.35, MAT["lamp_bronze"])
+    cyl(name + "·顶", 0.16, 0.5, x, y, 7.45, MAT["lamp_bronze"], n=8)
+    for _sx in (-1, 1):
+        box(name + "·灯罩", 0.5, 0.5, 0.8, x + _sx * 1.25, y, 6.9, MAT["lamp_glass"])
+        box(name + "·灯顶", 0.62, 0.62, 0.12, x + _sx * 1.25, y, 7.7, MAT["lamp_bronze"])
+
+
+for _sx in (-1, 1):
+    for _k in range(12):
+        lamp_post(f"广场灯·{_sx}·{_k}", _sx * 286, -700 - _k * 60)
+    for _k in range(9):
+        lamp_post(f"轴灯·{_sx}·{_k}", _sx * 24, -720 - _k * 80)
+for _k in range(39):
+    _x = -285 + _k * 15
+    cyl("广场石墩", 0.17, 0.90, _x, -642, 0.20, MAT["stone_light"], n=8)
+    cyl("广场石墩·顶", 0.20, 0.12, _x, -642, 1.10, MAT["roof_gold"], n=8)
+for _sx in (-1, 1):
+    for _k in range(7):
+        _x, _y = _sx * 27, -760 - _k * 90
+        box("长凳·座", 0.55, 2.0, 0.12, _x, _y, 0.62, MAT["stone_light"])
+        for _dy in (-0.75, 0.75):
+            box("长凳·腿", 0.45, 0.18, 0.50, _x, _y + _dy, 0.12, MAT["stone_dark"])
+
 # 周边道路
 for r in D.ROADS:
     box("周边道路", r["x1"] - r["x0"], r["y1"] - r["y0"], 0.10,
@@ -932,6 +974,8 @@ for s in D.SITES:
         ob.scale = (sc_, sc_, sc_)
         ob.rotation_euler[2] = random.uniform(0, math.pi * 2)
         link(ob)
+        box(f"树池·{s['key']}·{i}", 2.8, 2.8, 0.08, px, py, 0.16, MAT["stone_light"])
+        box(f"树池·土·{s['key']}·{i}", 2.2, 2.2, 0.10, px, py, 0.20, MAT["stone_dark"])
         TREE_COUNT += 1
 
 # ------------------------------------------------------------------ 灯光 / 相机
