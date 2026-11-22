@@ -747,8 +747,24 @@ def _caihua_uv(g, heart, zhaotou, kuto, edge_v=0.12, kuto_u=0.07, gline=0.006):
     dz = M(g, "ABSOLUTE", M(g, "SUBTRACT", M(g, "FRACT", M(g, "DIVIDE", vz, 0.26)), 0.5))
     rr = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", dx, dx), M(g, "MULTIPLY", dz, dz)))
     dots = M(g, "MULTIPLY", M(g, "SUBTRACT", 1.0, STEP(g, rr, 0.10, 0.16)), in_zhao)
-    gold = M(g, "MAXIMUM", M(g, "MAXIMUM", gold_line, v_gold),
-             M(g, "MAXIMUM", M(g, "MULTIPLY", orn, 0.85), M(g, "MULTIPLY", dots, 0.62)))
+    # ---- 枋心金龙（写意）：一条 S 形金带 + 头部团块，只落在枋心范围内。
+    # 和玺彩画的枋心本来就是「青地金龙」，之前只有一块平色，远看像没画完。
+    uu = M(g, "MULTIPLY", M(g, "SUBTRACT", u, 0.26), 1.0 / 0.48)
+    vv = M(g, "MULTIPLY", M(g, "SUBTRACT", v, 0.18), 1.0 / 0.64)
+    sp = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", uu, 8.80)), 0.150, 0.50)
+    dv = M(g, "ABSOLUTE", M(g, "SUBTRACT", vv, sp))
+    dbody = M(g, "SUBTRACT", 1.0, STEP(g, dv, 0.046, 0.080))
+    hdu = M(g, "SUBTRACT", uu, 0.135)
+    hdv = M(g, "SUBTRACT", vv, 0.500)
+    hd = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", hdu, hdu),
+                       M(g, "MULTIPLY", hdv, hdv)))
+    dhead = M(g, "SUBTRACT", 1.0, STEP(g, hd, 0.068, 0.100))
+    dragon = M(g, "MULTIPLY", M(g, "MAXIMUM", dbody, dhead), inner)
+    gold = M(g, "MAXIMUM",
+             M(g, "MAXIMUM", M(g, "MAXIMUM", gold_line, v_gold),
+               M(g, "MAXIMUM", M(g, "MULTIPLY", orn, 0.85),
+                 M(g, "MULTIPLY", dots, 0.62))),
+             M(g, "MULTIPLY", dragon, 0.95))
     _caihua_finish(g, col, gold, tc)
 
 

@@ -1064,6 +1064,14 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1):
         _cap.location.x = cxw
         box(f"{name}·墙端{'EW'[sx > 0]}", 2.4, st + 1.0, shh + 0.6,
             sx * (w / 2 + sw - 1.2), 0, z, mat_w)
+        # 八字墙：翼墙到头后向内折回一段，收成有交代的门口，而不是截断在半空
+        box(f"{name}·八字墙{'EW'[sx > 0]}", st, 12.0, shh * 0.94,
+            sx * (w / 2 + sw - st / 2), 12.0 + st / 2, z, mat_w)
+        _cap2 = ROOF.two_slope(_self(), f"{name}·八字帽{'EW'[sx > 0]}",
+                               st + 0.8, 12.8, z + shh * 0.94, 0.48,
+                               mat=MAT.get("tile_gray") or MAT["tile_gray"])
+        _cap2.location.x = sx * (w / 2 + sw - st / 2)
+        _cap2.location.y = 6.0
 
     # 门楼：城台上复用 hall()
     tw, td = w * 0.56, d * 0.62
