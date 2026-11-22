@@ -60,8 +60,8 @@ def srgb(r, g=None, b=None):
 GLAZE_YELLOW = (0.480, 0.270, 0.010)
 GLAZE_YELLOW_DARK = (0.300, 0.145, 0.006)
 GLAZE_GREEN = (0.012, 0.135, 0.042)
-ZHU_RED = (0.272, 0.030, 0.019)          # 朱红（柱）
-ZHU_RED_WALL = (0.235, 0.026, 0.017)     # 宫墙，比柱略暗
+ZHU_RED = (0.370, 0.044, 0.026)          # 朱红（柱）
+ZHU_RED_WALL = (0.330, 0.038, 0.022)     # 宫墙，比柱略暗
 BAI_YU = (0.600, 0.585, 0.525)           # 汉白玉
 CAI_BLUE = (0.020, 0.088, 0.205)         # 石青
 CAI_GREEN = (0.013, 0.130, 0.060)        # 石绿
@@ -920,11 +920,11 @@ def _dou(g):
     tc = TEXCO(g)
     obj = tc.outputs["Object"]
     n = NOISE(g, obj, 2.6, 8.0, 0.6, distortion=0.5)
-    col = MIXC(g, STEP(g, n, 0.52, 0.72), (0.165, 0.375, 0.330), (0.175, 0.410, 0.255))
+    col = MIXC(g, STEP(g, n, 0.52, 0.72), (0.235, 0.520, 0.455), (0.245, 0.575, 0.360))
     # 每攒（每个物体实例）微调色相，避免一片死平
     oi = g.node("ShaderNodeObjectInfo")
     col = MIXC(g, M(g, "MULTIPLY", oi.outputs["Random"], 0.35),
-               col, (0.150, 0.300, 0.210))
+               col, (0.205, 0.420, 0.290))
     # 描金边：面法线 · Bevel 法线 < 1 的地方就是棱
     geo = g.node("ShaderNodeNewGeometry")
     bev = g.node("ShaderNodeBevel", samples=2)
