@@ -603,15 +603,85 @@ box("承天门桥", b["x1"] - b["x0"], b["y1"] - b["y0"], b["h"],
 for x in (-47.5, 47.5):
     box("承天门桥·栏板", 1.2, b["y1"] - b["y0"], 1.1, x, (b["y0"] + b["y1"]) / 2,
         0.25 + b["h"], MAT["marble"])
-box("宫城南墙", 2 * (hw + 3), PW["wall_t"], 10.0, 0, PW["south_wall_face"], 0.1, MAT["wall_red"])
-box("宫城南墙·压顶", 2 * (hw + 3) + 0.8, PW["wall_t"] + 0.6, 0.5, 0,
-    PW["south_wall_face"], 10.1, MAT["stone_dark"])
+for yy in (b["y0"] + 1.2, b["y1"] - 1.2):
+    box("承天门桥·栏板", b["x1"] - b["x0"] - 2.4, 0.4, 0.9, 0, yy, 0.25 + b["h"], MAT["marble"])
+    for i in range(15):
+        xx = -47 + i * 94 / 14
+        box("承天门桥·望柱", 0.4, 0.4, 1.1, xx, yy, 0.25 + b["h"], MAT["marble"])
+g = PW["gate"]
+_wall_w = 2 * (hw + 3)
+_seg = (_wall_w - g["w"]) / 2
+for _sx in (-1, 1):
+    _cx = _sx * (g["w"] / 2 + _seg / 2)
+    box("宫城南墙", _seg, PW["wall_t"], 10.0, _cx, PW["south_wall_face"], 0.1, MAT["wall_red"])
+    box("宫城南墙·压顶", _seg + 0.4, PW["wall_t"] + 0.6, 0.5, _cx,
+        PW["south_wall_face"], 10.1, MAT["stone_dark"])
 x = -370
 while x <= 370:
     if abs(x) > 54:
         box("宫城·垛口", 2.8, 0.9, 1.2, x, PW["south_wall_face"] - 2.2, 10.4, MAT["wall_red"])
     x += 8.0
-g = PW["gate"]
+def arch_ring(name, cx, y, r, spring, z0=0.1, thick=0.55, depth=0.36,
+              seg=32, material=None):
+    verts, faces = [], []
+    for i in range(seg + 1):
+        a = math.pi * i / seg
+        for rr in (r, r + thick):
+            for yy in (y - depth / 2, y + depth / 2):
+                verts.append((cx + rr * math.cos(a), yy, z0 + spring + rr * math.sin(a)))
+    for i in range(seg):
+        b, c = i * 4, (i + 1) * 4
+        faces += [(b, b + 1, c + 1, c), (b + 2, b + 3, c + 3, c + 2),
+                  (b, b + 2, c + 2, c), (b + 1, b + 3, c + 3, c + 1)]
+    return mesh_object(name, verts, faces, material)
+
+
+def arch_prism(name, cx, y, r, spring, z0=0.1, depth=0.6, material=None, seg=24):
+    prof = [(-r, 0.0), (r, 0.0)]
+    for i in range(1, seg):
+        a = math.pi * i / seg
+        prof.append((r * math.cos(a), spring + r * math.sin(a)))
+    prof.append((-r, spring))
+    n = len(prof)
+    verts = [(cx + px, y - depth / 2, z0 + pz) for px, pz in prof]
+    verts += [(cx + px, y + depth / 2, z0 + pz) for px, pz in prof]
+    faces = [tuple(range(n))[::-1], tuple(range(n, 2 * n))]
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append((i, j, n + j, n + i))
+    return mesh_object(name, verts, faces, material)
+
+
+def five_arch_gate(g):
+    """承天门五券门城台：六墩、中央 16 m、两侧 9.5 m，真券洞。"""
+    CY, Z0, H, DEP = g["cy"], 0.1, 12.0, g["d"]
+    TOP = Z0 + H
+    Y0, Y1 = CY - DEP / 2, CY + DEP / 2
+    piers = [(-48, -39.8333), (-30.8333, -22.6667), (-13.6667, -5.5),
+             (5.5, 13.6667), (22.6667, 30.8333), (39.8333, 48)]
+    for i, (a, b) in enumerate(piers):
+        box(f"承天门·墩台{i}", b - a, DEP, H, (a + b) / 2, CY, Z0, MAT["wall_red"])
+    ops = [(-35.3333, 9.0, 4.2), (-18.1667, 9.0, 4.2), (0.0, 11.0, 4.0),
+           (18.1667, 9.0, 4.2), (35.3333, 9.0, 4.2)]
+    for k, (cx, ow, spring) in enumerate(ops):
+        r = ow / 2.0
+        n = 36
+        for i in range(n):
+            xm = cx - r + (i + 0.5) * ow / n
+            zb = spring + math.sqrt(max(0.0, r * r - (xm - cx) ** 2))
+            if TOP - zb > 0.05:
+                box(f"承天门·拱腹{k}-{i}", ow / n + 0.02, DEP, TOP - zb, xm, CY, zb, MAT["wall_red"])
+        arch_prism(f"承天门·门洞{k}", cx, CY, r, spring, Z0, 0.6, MAT["stone_dark"])
+        for tag, yy in (("南", Y0), ("北", Y1)):
+            arch_ring(f"承天门·券脸{k}{tag}", cx, yy, r, spring, Z0, 0.55, 0.36,
+                      material=MAT["stone_light"])
+            for sx in (-1, 1):
+                box(f"承天门·券脚{k}{tag}{sx}", 0.55, 0.36, spring,
+                    cx + sx * (r + 0.275), yy, Z0, MAT["stone_light"])
+    box("承天门·城台地栿", 96.6, DEP + 0.6, 0.7, 0, CY, Z0, MAT["stone_light"])
+    box("承天门·城台压顶", 96.8, DEP + 0.8, 0.5, 0, CY, TOP - 0.5, MAT["stone_light"])
+
+
 if not P:
     box("承天门·城台", g["w"], g["d"], 12.0, 0, g["cy"], 0.1, MAT["wall_red"])
     r = D.FEATURES["review"]
@@ -639,9 +709,11 @@ if P:
         PL.gate_house("承天门·精模", g["w"], g["d"], z=0.1, h=12.0)
         new = [o for o in bpy.data.objects if o not in before]
         for o in new:
-            o.location.y += g["cy"]
-            if "翼墙" in o.name:
+            if any(k in o.name for k in ("城台", "门洞", "券脚", "券脸", "翼墙")):
                 bpy.data.objects.remove(o, do_unlink=True)
+            else:
+                o.location.y += g["cy"]
+        five_arch_gate(g)
         for sx in (-1, 1):
             b2 = set(bpy.data.objects)
             PL.wall_tower("承天门·雁翅楼" + ("东" if sx > 0 else "西"), 38, 20, z=0.1, body_h=11)
@@ -905,7 +977,7 @@ if P:
         ("大会堂檐下", dict(loc=(-270, -940, 52), target=(-430, -1035, 42), lens=55)),
         ("议事楼入口", dict(loc=(120, -1035, 26), target=(400, -1035, 28), lens=55)),
         ("博物馆入口", dict(loc=(0, -1370, 22), target=(0, -1480, 24), lens=50)),
-        ("承天门人视", dict(loc=(120, -640, 2.2), target=(0, -480, 16), lens=45)),
+        ("承天门人视", dict(loc=(0, -690, 4.0), target=(0, -470, 14), lens=36)),
         ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
     ]
 
