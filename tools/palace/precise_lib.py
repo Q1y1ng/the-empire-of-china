@@ -873,6 +873,10 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     beams(xs, ys, z0 + col_h, beam_h)
     z_ping = z0 + col_h + beam_h
     ring_beam(f"{name}·平板枋", w + 0.4, d + 0.4, z_ping, 0.26, 0.66, MAT["wall"])
+    # 斗拱下的白粉线：平板枋顶一道窄白带，把"枋"和"斗拱"分开
+    # （真实做法里这道线是檐下最抓眼的一根亮线，没有它斗拱和枋就糊成一条）
+    ring_beam(f"{name}·白粉线", w + 0.46, d + 0.46, z_ping + 0.66, 0.30, 0.07,
+              MAT.get("marble_carved") or MAT["stone"])
     dou_z = z_ping + 0.26
     # 斗拱 LOD 压一档：整宫 100+ 殿时 lod2 的 2200 面/攒会把总面数顶到千万级
     dou_lod = 1 if lod >= 2 else 0
