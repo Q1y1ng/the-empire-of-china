@@ -210,7 +210,7 @@ def beam3d(name, p0, p1, w, h, material):
     return ob
 
 
-def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None):
+def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None, front=None):
     W, D = w + 2 * overhang, d + 2 * overhang
     hw, hd = W / 2, D / 2
     z0, z1 = 0.0, h
@@ -265,6 +265,22 @@ def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None):
             else:
                 for sy in (-1, 1):
                     box("正脊端·" + str(sy), 1.6, 1.6, 2.2, x, y + sy * L, z1 - 0.6, MAT["roof_gold"])
+        if front in ("E", "W"):
+            xe = x + (W / 2 if front == "E" else -W / 2)
+            sg = 1 if front == "E" else -1
+            n = max(4, int(D / 0.8))
+            for i in range(n):
+                yy = y - D / 2 + (i + 0.5) * D / n
+                box("檐椽", 0.90, 0.22, 0.22, xe + sg * 0.35, yy, z - 0.95, MAT["trunk"])
+                box("瓦当", 0.28, 0.22, 0.28, xe + sg * 0.05, yy, z + 0.02, MAT["roof_tile"])
+        elif front in ("N", "S"):
+            ye = y + (D / 2 if front == "N" else -D / 2)
+            sg = 1 if front == "N" else -1
+            n = max(4, int(W / 0.8))
+            for i in range(n):
+                xx = x - W / 2 + (i + 0.5) * W / n
+                box("檐椽", 0.22, 0.90, 0.22, xx, ye + sg * 0.35, z - 0.95, MAT["trunk"])
+                box("瓦当", 0.22, 0.28, 0.28, xx, ye + sg * 0.05, z + 0.02, MAT["roof_tile"])
     return ob
 
 
@@ -592,7 +608,7 @@ for m in D.MASSES:
     glass_facade("大会堂·" + m["name"], d, h, m["x1"], "y", 1, (m["y0"] + m["y1"]) / 2)
     box("大会堂·" + m["name"] + "·檐口", w + 3, d + 3, 2.2, cx, cy, h - 2.2, MAT["stone_light"])
     if m["kind"] == "chamber":
-        hip_roof("大会堂·中厅顶", w, d, 14.0, cx, cy, h + 0.15, MAT["roof_tile"], overhang=6)
+        hip_roof("大会堂·中厅顶", w, d, 14.0, cx, cy, h + 0.15, MAT["roof_tile"], overhang=6, front="E")
     else:
         flat_roof("大会堂·" + m["name"] + "顶", w, d, cx, cy, h + 0.15)
 for yy in (-925.5, -1155.5):
@@ -614,7 +630,7 @@ box("议事大楼·议事厅", 160, 160, 41.7, CX, CY, 2.3, MAT["stone"])
 box("议事大楼·议事厅基座线", 161.2, 161.2, 1.4, CX, CY, 34.3, MAT["stone_light"])
 box("议事大楼·议事厅幕墙", 0.4, 150, 37, 344.6, CY, 4.5, MAT["glass"])
 box("议事大楼·议事厅檐口", 163, 163, 2.2, CX, CY, 41.8, MAT["stone_light"])
-hip_roof("议事大楼·议事厅顶", 160, 160, 14.0, CX, CY, 44.15, MAT["roof_tile"], overhang=5)
+hip_roof("议事大楼·议事厅顶", 160, 160, 14.0, CX, CY, 44.15, MAT["roof_tile"], overhang=5, front="W")
 box("议事大楼·中央门楼", 16.0, 100.0, 8.0, 302.0, CY, 30.2, MAT["stone_light"])
 hip_roof("议事大楼·中央门楼顶", 16.0, 100.0, 3.0, 302.0, CY, 38.2, MAT["roof_tile"], overhang=3)
 for m in D.MASSES:
@@ -634,7 +650,7 @@ box("博物馆·中央陈列厅", 240, 140, 12.0, MX, MY, 30.15, MAT["stone"])
 box("博物馆·陈列厅基座线", 241.2, 141.2, 1.2, MX, MY, 30.15, MAT["stone_light"])
 box("博物馆·陈列厅幕墙", 220, 0.5, 9.0, MX, -1465.3, 31.0, MAT["glass"])
 box("博物馆·陈列厅檐口", 243, 143, 2.0, MX, MY, 40.2, MAT["stone_light"])
-hip_roof("博物馆·中央顶", 240, 140, 10.0, MX, MY, 42.15, MAT["roof_tile"], overhang=5)
+hip_roof("博物馆·中央顶", 240, 140, 10.0, MX, MY, 42.15, MAT["roof_tile"], overhang=5, front="N")
 m = next(x for x in D.MASSES if x["key"] == "museum-portico")
 portico("博物馆·门廊", (m["x0"], m["x1"], m["y0"], m["y1"]), 26, "N")
 steps("博物馆·门廊", 0, m["y1"], m["x1"] - m["x0"], "N")
