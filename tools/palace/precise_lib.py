@@ -836,9 +836,72 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
 
 def gate_house(name, w, d, z=0.0, h=9.0):
-    """宫门：砖城台 + 门洞 + 门楼。"""
-    box(name + "·城台", w, d, h, 0, 0, z, MAT["citywall"])
-    box(name + "·门洞", w * 0.22, d + 0.6, h * 0.62, 0, 0, z, MAT["soffit"])
+    """宫门：砖城台（**券洞**门）＋ 门楼。
+
+    城台拆成左右墩台 + 拱背以上的上墙；门洞是一条券形（矩形＋半圆）的暗色棱柱，
+    嵌在墩台之间，读出来就是拱券洞口；两侧加石券脚。
+    """
+    mat_w = MAT["citywall"]
+    mat_d = MAT.get("soffit") or MAT["wall"]
+    mat_s = MAT.get("stone") or MAT["stone2"]
+    ow = min(max(6.5, w * 0.26), 11.0)        # 门洞净宽
+    r = ow / 2.0
+    spring = max(2.6, min(h * 0.42, h - r - 0.9))   # 起券高
+    top = spring + r
+    side = (w - ow) / 2.0
+    y0, y1 = -d / 2, d / 2
+
+    for sx in (-1, 1):
+        box(f"{name}·城台{'EW'[sx > 0]}", side, d, h,
+            sx * (ow / 2 + side / 2), 0, z, mat_w)
+    if h - top > 0.25:
+        box(f"{name}·城台上", ow, d, h - top, 0, 0, z + top, mat_w)
+
+    seg = 14
+    prof = [(-r, 0.0), (r, 0.0)]
+    for i in range(1, seg):
+        a = math.pi * i / seg
+        prof.append((r * math.cos(a), spring + r * math.sin(a)))
+    prof.append((-r, spring))
+    n = len(prof)
+    verts, faces = [], []
+    for yy in (y0 - 0.05, y1 + 0.05):
+        for (px, pz) in prof:
+            verts.append((px, yy, z + pz))
+    faces.append(tuple(range(n)))
+    faces.append(tuple(range(n, 2 * n))[::-1])
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append((i, j, n + j, n + i))
+    mesh_from(f"{name}·门洞", verts, faces, mat_d, merge=False)
+
+    # 券脚：洞口两侧的石活
+    for sx in (-1, 1):
+        box(f"{name}·券脚{'EW'[sx > 0]}", 0.34, 0.30, spring + 0.05,
+            sx * (r + 0.17), y0 - 0.06, z, mat_s)
+    # 券脸：贴在前脸的一道石圈（细长条拼，不做曲面）
+    for i in range(seg):
+        a0 = math.pi * i / seg
+        a1 = math.pi * (i + 1) / seg
+        am = (a0 + a1) / 2
+        cx = (r + 0.20) * math.cos(am)
+        cz = spring + (r + 0.20) * math.sin(am)
+        seglen = r * abs(a1 - a0) + 0.06
+        # 沿切向的薄条：用两个端点直接建四边形棱柱
+        p0 = ((r + 0.00) * math.cos(a0), (r + 0.00) * math.sin(a0))
+        p1 = ((r + 0.00) * math.cos(a1), (r + 0.00) * math.sin(a1))
+        q0 = ((r + 0.42) * math.cos(a0), (r + 0.42) * math.sin(a0))
+        q1 = ((r + 0.42) * math.cos(a1), (r + 0.42) * math.sin(a1))
+        vv = []
+        for yy in (y0 - 0.07, y0 - 0.01):
+            for (px, pz) in (p0, q0, q1, p1):
+                vv.append((px, yy, z + spring + pz))
+        ff = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+              (2, 6, 7, 3), (3, 7, 4, 0)]
+        mesh_from(f"{name}·券脸{i}", vv, ff, mat_s, merge=False)
+
     roof_h = max(0.30 * d, 3.0)
     hip_roof(name + "·顶", w + 4, d + 4, z + h + 0.3, roof_h, step=0.7)
     ridges(w + 4, d + 4, z + h + 0.3, roof_h, (w + 4) - (d + 4))
+
+
