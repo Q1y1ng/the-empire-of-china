@@ -113,6 +113,29 @@ def panel_texture(m, bw=1.2, bh=0.6, mortar=0.012, c1=(0.44, 0.42, 0.37),
     nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
 
 
+
+def tile_texture(m):
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    wv = nt.nodes.new("ShaderNodeTexWave")
+    wv.wave_type = "BANDS"
+    wv.bands_direction = "X"
+    wv.inputs["Scale"].default_value = 2.9
+    wv.inputs["Distortion"].default_value = 0.25
+    wv.inputs["Detail"].default_value = 2.0
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.025, 0.05, 0.04, 1.0)
+    ramp.color_ramp.elements[1].color = (0.10, 0.16, 0.13, 1.0)
+    nt.links.new(tc.outputs["Object"], wv.inputs["Vector"])
+    nt.links.new(wv.outputs["Fac"], ramp.inputs[0])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bp = nt.nodes.new("ShaderNodeBump")
+    bp.inputs["Strength"].default_value = 0.10
+    nt.links.new(wv.outputs["Fac"], bp.inputs["Height"])
+    nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
+
+
 def link(ob):
     col.objects.link(ob)
     return ob
@@ -122,7 +145,7 @@ if P:
     panel_texture(MAT["stone"], 2.4, 1.2, 0.025, (0.47, 0.45, 0.40), (0.37, 0.35, 0.31), (0.10, 0.09, 0.08), 0.03)
     panel_texture(MAT["marble"], 2.4, 1.2, 0.020, (0.82, 0.80, 0.74), (0.74, 0.72, 0.66), (0.30, 0.29, 0.27), 0.025)
     panel_texture(MAT["paving"], 2.4, 1.2, 0.020, (0.54, 0.52, 0.46), (0.46, 0.44, 0.39), (0.26, 0.25, 0.23), 0.02)
-    panel_texture(MAT["roof_tile"], 0.32, 0.30, 0.008, (0.07, 0.11, 0.095), (0.05, 0.09, 0.075), (0.02, 0.03, 0.03), 0.012)
+    tile_texture(MAT["roof_tile"])
 
 
 def mesh_object(name, verts, faces, material, smooth=False, recalc=True):
@@ -235,6 +258,13 @@ def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None):
                     ((x - hw, y + hd, z0), (x, y + L, z1)), ((x + hw, y + hd, z0), (x, y + L, z1))]
         for i, (p0, p1) in enumerate(hips):
             beam3d("戗脊·" + str(i), p0, p1, 0.9, 0.55, ridge_mat or MAT["roof_gold"])
+        if abs(W - D) >= 1.0:
+            if W > D:
+                for sx in (-1, 1):
+                    box("正脊端·" + str(sx), 1.6, 1.6, 2.2, x + sx * L, y, z1 - 0.6, MAT["roof_gold"])
+            else:
+                for sy in (-1, 1):
+                    box("正脊端·" + str(sy), 1.6, 1.6, 2.2, x, y + sy * L, z1 - 0.6, MAT["roof_gold"])
     return ob
 
 
@@ -283,6 +313,51 @@ def wall_segments(site, gates):
             else:
                 yy = y1 if side == "N" else y0
                 box(f"门垛·{side}", 2.2, 2.2, 5.2, c + s * (w / 2 + 1.1), yy, z, MAT["stone"])
+
+
+
+
+def emblem(name, axis, fixed, center, z, side):
+    if axis == "x":
+        red = cyl(name + "·底盘", 7.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
+        red.rotation_euler = (0, math.pi / 2, 0)
+        red.location = (fixed + side * 0.15, center, z)
+        gold = cyl(name + "·金徽", 5.4, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
+        gold.rotation_euler = (0, math.pi / 2, 0)
+        gold.location = (fixed + side * 0.45, center, z)
+    else:
+        red = cyl(name + "·底盘", 7.0, 0.35, 0, 0, 0, MAT["wall_red"], n=24)
+        red.rotation_euler = (math.pi / 2, 0, 0)
+        red.location = (center, fixed + side * 0.15, z)
+        gold = cyl(name + "·金徽", 5.4, 0.45, 0, 0, 0, MAT["roof_gold"], n=24)
+        gold.rotation_euler = (math.pi / 2, 0, 0)
+        gold.location = (center, fixed + side * 0.45, z)
+
+
+def rail_edge(name, axis, fixed, lo, hi, gaps, z0=2.32):
+    segs, cur = [], lo
+    for a, b in sorted(gaps):
+        if a > cur:
+            segs.append((cur, min(a, hi)))
+        cur = max(cur, b)
+    if cur < hi:
+        segs.append((cur, hi))
+    for si, (a, b) in enumerate(segs):
+        if b - a < 1.0:
+            continue
+        L = b - a
+        if axis == "y":
+            box(name + f"·栏板{si}", 0.35, L, 0.55, fixed, (a + b) / 2, z0 + 0.55, MAT["marble"])
+            n = max(2, int(L / 6.0) + 1)
+            for i in range(n):
+                yy = a + i * L / (n - 1)
+                box(name + f"·望柱{si}-{i}", 0.45, 0.45, 1.15, fixed, yy, z0, MAT["marble"])
+        else:
+            box(name + f"·栏板{si}", L, 0.35, 0.55, (a + b) / 2, fixed, z0 + 0.55, MAT["marble"])
+            n = max(2, int(L / 6.0) + 1)
+            for i in range(n):
+                xx = a + i * L / (n - 1)
+                box(name + f"·望柱{si}-{i}", 0.45, 0.45, 1.15, xx, fixed, z0, MAT["marble"])
 
 
 def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing=12.0):
@@ -384,6 +459,16 @@ def portico(name, rect, h, facade_side="E"):
             dw = min(24.0, w * 0.4)
             box(name + "·门框", dw + 3, 1.0, 16, cx, y1 - 1.00, 1.25, MAT["stone_light"])
             box(name + "·门", dw, 0.8, 14, cx, y1 - 1.35, 1.25, MAT["door"])
+        # 门扇竖分格
+        for k in range(-2, 3):
+            if facade_side == "E":
+                box(name + f"·门挺{k}", 0.12, 0.12, 14, x0 + 1.80, cy + k * 3.2, 1.5, MAT["roof_gold"])
+            elif facade_side == "W":
+                box(name + f"·门挺{k}", 0.12, 0.12, 14, x1 - 1.80, cy + k * 3.2, 1.5, MAT["roof_gold"])
+            elif facade_side == "N":
+                box(name + f"·门挺{k}", 0.12, 0.12, 14, cx + k * 3.2, y0 + 1.80, 1.5, MAT["roof_gold"])
+            else:
+                box(name + f"·门挺{k}", 0.12, 0.12, 14, cx + k * 3.2, y1 - 1.80, 1.5, MAT["roof_gold"])
 
 
 def steps(name, cx, cy, w, side, depth=8.0, n=3):
@@ -555,6 +640,14 @@ portico("博物馆·门廊", (m["x0"], m["x1"], m["y0"], m["y1"]), 26, "N")
 steps("博物馆·门廊", 0, m["y1"], m["x1"] - m["x0"], "N")
 
 if P:
+    rail_edge("大会堂·台基栏板", "y", -306.0, -1339.5, -731.5,
+              [(-865.5, -785.5), (-1075.5, -995.5), (-1285.5, -1205.5)])
+    rail_edge("议事大楼·台基栏板", "y", 306.0, -1339.5, -731.5,
+              [(-895.5, -855.5), (-1085.5, -985.5), (-1215.5, -1175.5)])
+    rail_edge("博物馆·台基栏板", "x", -1446.5, -284.0, 284.0, [(-70.0, 70.0)])
+    emblem("大会堂·国徽", "x", -308.2, -1035.5, 23.0, 1)
+    emblem("议事大楼·国徽", "x", 308.2, -1035.5, 23.0, -1)
+    emblem("博物馆·国徽", "y", -1449.2, 0.0, 20.0, 1)
     for m in D.MASSES:
         if m["parent"] == "hall" and m["kind"] != "portico":
             add_mullions("大会堂·" + m["name"], m["x1"], "y", 1,
