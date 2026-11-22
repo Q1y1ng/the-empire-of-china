@@ -365,12 +365,18 @@ if args.precise:
     _y_edge = min(_ys)
     _n, _dep, _hw = 26, 18.0, 15.0
     _sd = _dep / _n
+    _ms = PL.MAT.get("marble_carved") or PL.MAT["stone"]
     for _i in range(_n):
-        box("三台·踏跺%02d" % _i, 2 * _hw, _sd + 0.02, D.PLATFORM_H * (_n - _i) / _n,
-            0, _y_edge - 0.5 - _i * _sd, 0.0, PL.MAT["stone"])
-    for _sx in (-1, 1):
-        box("三台·垂带%+d" % _sx, 1.6, _dep + 1.2, D.PLATFORM_H,
-            _sx * (_hw + 0.8), _y_edge - 0.5 - _dep / 2, 0.0, PL.MAT["stone"])
+        _top = D.PLATFORM_H * (_n - _i) / _n
+        _yy = _y_edge - 0.5 - _i * _sd
+        box("三台·踏跺%02d" % _i, 2 * _hw, _sd + 0.02, _top, 0, _yy, 0.0,
+            PL.MAT["stone"])
+        # 御路石：每级顶面一条 5 m 宽石带（不是整块斜板）
+        box("三台·御路%02d" % _i, 5.0, _sd * 0.86, 0.09, 0, _yy, _top - 0.09, _ms)
+        # 垂带：随级抬高的石边
+        for _sx in (-1, 1):
+            box("三台·垂带%+d%02d" % (_sx, _i), 1.7, _sd + 0.04, _top + 0.22,
+                _sx * (_hw + 0.85), _yy, 0.0, PL.MAT["stone"])
 else:
     PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
     PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
@@ -407,7 +413,7 @@ for i, (x, y) in enumerate(pts):
         dx, dy = pts[i + 1][0] - pts[i - 1][0], pts[i + 1][1] - pts[i - 1][1]
     L = math.hypot(dx, dy) or 1.0
     nx, ny = -dy / L * half, dx / L * half
-    verts += [(x + nx, y + ny, 0.12), (x - nx, y - ny, 0.12)]
+    verts += [(x + nx, y + ny, 0.36), (x - nx, y - ny, 0.36)]
 for i in range(len(pts) - 1):
     a = i * 2
     faces.append((a, a + 1, a + 3, a + 2))
@@ -589,7 +595,7 @@ shots = [
     ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
     ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
     ("细部·外朝", dict(loc=(86, -320, 62), target=(0, -120, 20), lens=52)),
-    ("正立面·正射", dict(loc=(0, -520, 46), target=(0, 0, 24), lens=0, ortho=150)),
+    ("正立面·正射", dict(loc=(0, -305, 26), target=(0, -60, 24), lens=72)),
 ]
 
 results = {}

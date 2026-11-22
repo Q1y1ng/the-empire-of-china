@@ -37,7 +37,9 @@ ap.add_argument("--samples", type=int, default=64)
 ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位")
 ap.add_argument("--no-glb", action="store_true")
+ap.add_argument("--precise", action="store_true", help="精模：加石材分缝、柱头、竖梃、门、瓦面与戗脊")
 args = ap.parse_args(argv)
+P = args.precise
 
 WORK = os.path.join(os.environ.get("TEMP", HERE), "plaza_massing")
 os.makedirs(WORK, exist_ok=True)
@@ -84,12 +86,43 @@ MAT = {
     "wall_red": mat("宫墙红", (0.34, 0.06, 0.05), 0.85),
     "ground": mat("场外地面", (0.22, 0.21, 0.19), 0.95),
     "white": mat("灯柱白", (0.85, 0.84, 0.80), 0.6),
+    "metal": mat("深色金属", (0.055, 0.050, 0.045), 0.35, 0.75),
+    "door": mat("入口门", (0.035, 0.030, 0.025), 0.4, 0.35),
 }
+
+
+
+def panel_texture(m, bw=1.2, bh=0.6, mortar=0.012, c1=(0.44, 0.42, 0.37),
+                  c2=(0.40, 0.38, 0.34), mc=(0.20, 0.19, 0.17), bump=0.02):
+    nt = m.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    br = nt.nodes.new("ShaderNodeTexBrick")
+    br.inputs["Scale"].default_value = 1.0
+    br.inputs["Brick Width"].default_value = bw
+    br.inputs["Row Height"].default_value = bh
+    br.inputs["Mortar Size"].default_value = mortar
+    br.inputs["Color1"].default_value = (*c1, 1.0)
+    br.inputs["Color2"].default_value = (*c2, 1.0)
+    br.inputs["Mortar"].default_value = (*mc, 1.0)
+    nt.links.new(tc.outputs["Object"], br.inputs["Vector"])
+    nt.links.new(br.outputs["Color"], bsdf.inputs["Base Color"])
+    bp = nt.nodes.new("ShaderNodeBump")
+    bp.inputs["Strength"].default_value = bump
+    nt.links.new(br.outputs["Fac"], bp.inputs["Height"])
+    nt.links.new(bp.outputs["Normal"], bsdf.inputs["Normal"])
 
 
 def link(ob):
     col.objects.link(ob)
     return ob
+
+
+if P:
+    panel_texture(MAT["stone"], 2.4, 1.2, 0.025, (0.47, 0.45, 0.40), (0.37, 0.35, 0.31), (0.10, 0.09, 0.08), 0.03)
+    panel_texture(MAT["marble"], 2.4, 1.2, 0.020, (0.82, 0.80, 0.74), (0.74, 0.72, 0.66), (0.30, 0.29, 0.27), 0.025)
+    panel_texture(MAT["paving"], 2.4, 1.2, 0.020, (0.54, 0.52, 0.46), (0.46, 0.44, 0.39), (0.26, 0.25, 0.23), 0.02)
+    panel_texture(MAT["roof_tile"], 0.32, 0.30, 0.008, (0.07, 0.11, 0.095), (0.05, 0.09, 0.075), (0.02, 0.03, 0.03), 0.012)
 
 
 def mesh_object(name, verts, faces, material, smooth=False, recalc=True):
@@ -146,6 +179,14 @@ def cyl(name, r, h, x, y, z0=0.0, material=None, n=12):
     return ob
 
 
+def beam3d(name, p0, p1, w, h, material):
+    a, b = Vector(p0), Vector(p1)
+    d = b - a
+    ob = box(name, d.length, w, h, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2, material)
+    ob.rotation_euler = d.to_track_quat("X", "Z").to_euler()
+    return ob
+
+
 def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None):
     W, D = w + 2 * overhang, d + 2 * overhang
     hw, hd = W / 2, D / 2
@@ -177,6 +218,23 @@ def hip_roof(name, w, d, h, x, y, z, material, overhang=4.0, ridge_mat=None):
                 ridge_mat or MAT["roof_gold"])
     else:
         box(name + "·宝顶", 1.2, 1.2, 1.2, x, y, z + h - 0.4, ridge_mat or MAT["roof_gold"])
+    if P:
+        hw, hd = W / 2, D / 2
+        z0, z1 = z, z + h
+        if abs(W - D) < 1.0:
+            apex = (x, y, z1)
+            hips = [((x - hw, y - hd, z0), apex), ((x + hw, y - hd, z0), apex),
+                    ((x + hw, y + hd, z0), apex), ((x - hw, y + hd, z0), apex)]
+        elif W > D:
+            L = (W - D) / 2
+            hips = [((x - hw, y - hd, z0), (x - L, y, z1)), ((x + hw, y - hd, z0), (x + L, y, z1)),
+                    ((x - hw, y + hd, z0), (x - L, y, z1)), ((x + hw, y + hd, z0), (x + L, y, z1))]
+        else:
+            L = (D - W) / 2
+            hips = [((x - hw, y - hd, z0), (x, y - L, z1)), ((x + hw, y - hd, z0), (x, y - L, z1)),
+                    ((x - hw, y + hd, z0), (x, y + L, z1)), ((x + hw, y + hd, z0), (x, y + L, z1))]
+        for i, (p0, p1) in enumerate(hips):
+            beam3d("戗脊·" + str(i), p0, p1, 0.9, 0.55, ridge_mat or MAT["roof_gold"])
     return ob
 
 
@@ -238,14 +296,40 @@ def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing
         p = -length / 2 + i * (length / n)
         if axis == "y":
             box(name + f"·柱{i}", 2.2, 2.2, h - 1.5, fixed + side * 2.6, center + p, 0.15, MAT["stone_light"])
+            if P:
+                box(name + f"·柱{i}·础", 2.9, 2.9, 0.9, fixed + side * 2.6, center + p, 0.15, MAT["marble"])
+                box(name + f"·柱{i}·头", 2.9, 2.9, 0.7, fixed + side * 2.6, center + p, h - 1.2, MAT["stone_light"])
         else:
             box(name + f"·柱{i}", 2.2, 2.2, h - 1.5, center + p, fixed + side * 2.6, 0.15, MAT["stone_light"])
+            if P:
+                box(name + f"·柱{i}·础", 2.9, 2.9, 0.9, center + p, fixed + side * 2.6, 0.15, MAT["marble"])
+                box(name + f"·柱{i}·头", 2.9, 2.9, 0.7, center + p, fixed + side * 2.6, h - 1.2, MAT["stone_light"])
     for k, frac in enumerate((0.42, 0.76)):
         zz = z0 + (h - z0) * frac
         if axis == "y":
             box(name + f"·腰线{k}", 1.1, length - 8, 1.4, fixed + side * 1.9, center, zz, MAT["stone_light"])
         else:
             box(name + f"·腰线{k}", length - 8, 1.1, 1.4, center, fixed + side * 1.9, zz, MAT["stone_light"])
+
+
+def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None):
+    gh = glass_h if glass_h else h - 6
+    z0 = 3.0
+    span = length - 16
+    n = max(1, int(span / 1.8))
+    for i in range(n + 1):
+        p = center - span / 2 + i * span / n
+        if axis == "y":
+            box(name + f"·竖梃{i}", 0.12, 0.16, gh, fixed + side * 1.55, p, z0, MAT["metal"])
+        else:
+            box(name + f"·竖梃{i}", 0.16, 0.12, gh, p, fixed + side * 1.55, z0, MAT["metal"])
+    m = max(1, int(gh / 4.5))
+    for j in range(m + 1):
+        zz = z0 + j * gh / m
+        if axis == "y":
+            box(name + f"·横梃{j}", 0.14, span, 0.14, fixed + side * 1.55, center, zz, MAT["metal"])
+        else:
+            box(name + f"·横梃{j}", span, 0.14, 0.14, center, fixed + side * 1.55, zz, MAT["metal"])
 
 
 def portico(name, rect, h, facade_side="E"):
@@ -258,17 +342,48 @@ def portico(name, rect, h, facade_side="E"):
         ox = x1 - 1.0 if facade_side == "E" else x0 + 1.0
         for i in range(n):
             yy = y0 + 2 + i * (d - 4) / (n - 1)
-            cyl(name + f"·柱{i}", 0.95, h - 2.5, ox, yy, 1.25, MAT["marble"], n=12)
-        box(name + "·檐部", w, d + 1, 2.2, cx, cy, 1.25 + h - 2.5, MAT["stone_light"])
-        box(name + "·顶", w + 1, d + 1, 0.7, cx, cy, 1.25 + h - 0.3, MAT["stone_light"])
+            cyl(name + f"·柱{i}", 1.20, h - 2.5, ox, yy, 1.25, MAT["marble"], n=16)
+            if P:
+                box(name + f"·柱{i}·础", 3.0, 3.0, 0.55, ox, yy, 1.25, MAT["marble"])
+                cyl(name + f"·柱{i}·础弧", 1.60, 0.35, ox, yy, 1.8, MAT["marble"])
+                cyl(name + f"·柱{i}·头", 1.60, 0.35, ox, yy, 1.25 + h - 3.4, MAT["marble"])
+                box(name + f"·柱{i}·顶板", 3.0, 3.0, 0.45, ox, yy, 1.25 + h - 3.05, MAT["stone_light"])
+        box(name + "·檐部下", w + 1, d + 1, 1.3, cx, cy, 1.25 + h - 3.0, MAT["stone_light"])
+        box(name + "·檐部中", w + 1.7, d + 1.7, 1.2, cx, cy, 1.25 + h - 1.9, MAT["stone_light"])
+        box(name + "·檐口", w + 2.4, d + 2.4, 0.8, cx, cy, 1.25 + h - 0.8, MAT["stone_light"])
+        box(name + "·顶", w + 1.2, d + 1.2, 0.8, cx, cy, 1.25 + h - 0.1, MAT["roof_flat"])
     else:
         n = max(4, int(w / 8) + 1)
         oy = y1 - 1.0 if facade_side == "N" else y0 + 1.0
         for i in range(n):
             xx = x0 + 2 + i * (w - 4) / (n - 1)
-            cyl(name + f"·柱{i}", 0.95, h - 2.5, xx, oy, 1.25, MAT["marble"], n=12)
-        box(name + "·檐部", w + 1, d, 2.2, cx, cy, 1.25 + h - 2.5, MAT["stone_light"])
-        box(name + "·顶", w + 1, d + 1, 0.7, cx, cy, 1.25 + h - 0.3, MAT["stone_light"])
+            cyl(name + f"·柱{i}", 1.20, h - 2.5, xx, oy, 1.25, MAT["marble"], n=16)
+            if P:
+                box(name + f"·柱{i}·础", 3.0, 3.0, 0.55, xx, oy, 1.25, MAT["marble"])
+                cyl(name + f"·柱{i}·础弧", 1.60, 0.35, xx, oy, 1.8, MAT["marble"])
+                cyl(name + f"·柱{i}·头", 1.60, 0.35, xx, oy, 1.25 + h - 3.4, MAT["marble"])
+                box(name + f"·柱{i}·顶板", 3.0, 3.0, 0.45, xx, oy, 1.25 + h - 3.05, MAT["stone_light"])
+        box(name + "·檐部下", w + 1, d + 1, 1.3, cx, cy, 1.25 + h - 3.0, MAT["stone_light"])
+        box(name + "·檐部中", w + 1.7, d + 1.7, 1.2, cx, cy, 1.25 + h - 1.9, MAT["stone_light"])
+        box(name + "·檐口", w + 2.4, d + 2.4, 0.8, cx, cy, 1.25 + h - 0.8, MAT["stone_light"])
+        box(name + "·顶", w + 1.2, d + 1.2, 0.8, cx, cy, 1.25 + h - 0.1, MAT["roof_flat"])
+    if P:
+        if facade_side == "E":
+            dw = min(24.0, d * 0.4)
+            box(name + "·门框", 1.0, dw + 3, 16, x0 + 1.00, cy, 1.25, MAT["stone_light"])
+            box(name + "·门", 0.8, dw, 14, x0 + 1.35, cy, 1.25, MAT["door"])
+        elif facade_side == "W":
+            dw = min(24.0, d * 0.4)
+            box(name + "·门框", 1.0, dw + 3, 16, x1 - 1.00, cy, 1.25, MAT["stone_light"])
+            box(name + "·门", 0.8, dw, 14, x1 - 1.35, cy, 1.25, MAT["door"])
+        elif facade_side == "N":
+            dw = min(24.0, w * 0.4)
+            box(name + "·门框", dw + 3, 1.0, 16, cx, y0 + 1.00, 1.25, MAT["stone_light"])
+            box(name + "·门", dw, 0.8, 14, cx, y0 + 1.35, 1.25, MAT["door"])
+        else:
+            dw = min(24.0, w * 0.4)
+            box(name + "·门框", dw + 3, 1.0, 16, cx, y1 - 1.00, 1.25, MAT["stone_light"])
+            box(name + "·门", dw, 0.8, 14, cx, y1 - 1.35, 1.25, MAT["door"])
 
 
 def steps(name, cx, cy, w, side, depth=8.0, n=3):
@@ -439,6 +554,15 @@ m = next(x for x in D.MASSES if x["key"] == "museum-portico")
 portico("博物馆·门廊", (m["x0"], m["x1"], m["y0"], m["y1"]), 26, "N")
 steps("博物馆·门廊", 0, m["y1"], m["x1"] - m["x0"], "N")
 
+if P:
+    for m in D.MASSES:
+        if m["parent"] == "hall" and m["kind"] != "portico":
+            add_mullions("大会堂·" + m["name"], m["x1"], "y", 1,
+                         (m["y0"] + m["y1"]) / 2, m["y1"] - m["y0"], m["h"])
+    add_mullions("议事大楼·基座", 310, "y", -1, CY, 600, 36)
+    add_mullions("议事大楼·议事厅", 344.6, "y", -1, CY, 150, 50, 37)
+    add_mullions("博物馆·主体", -1450.5, "x", 1, 0.0, 560, 30)
+
 # ------------------------------------------------------------------ 绿化树
 def tree_mesh():
     verts, faces, mids = [], [], []
@@ -594,6 +718,16 @@ shots = [
     ("南望博物馆", dict(loc=(0, -1120, 45), target=(0, -1560, 30), lens=55)),
     ("人视承天门", dict(loc=(90, -655, 2.2), target=(0, -480, 18), lens=40)),
 ]
+prefix = "精模" if P else "体量白模"
+if P:
+    shots = [
+        ("鸟瞰东南", dict(loc=(900, -2400, 820), target=(0, -1100, 0), lens=38)),
+        ("大会堂正立面", dict(loc=(-80, -1035, 30), target=(-420, -1035, 26), lens=45)),
+        ("大会堂檐下", dict(loc=(-270, -940, 52), target=(-430, -1035, 42), lens=55)),
+        ("议事楼入口", dict(loc=(120, -1035, 26), target=(400, -1035, 28), lens=55)),
+        ("博物馆入口", dict(loc=(0, -1370, 22), target=(0, -1480, 24), lens=50)),
+        ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
+    ]
 
 results = {}
 for name, s in shots:
@@ -605,7 +739,7 @@ for name, s in shots:
     look_at(cam, s["target"])
     sc.render.resolution_x = args.res
     sc.render.resolution_y = int(args.res / AR)
-    path = os.path.join(args.out, f"国家广场(2026)·体量白模·{name}.png")
+    path = os.path.join(args.out, f"国家广场(2026)·{prefix}·{name}.png")
     sc.render.filepath = path
     t0 = time.time()
     bpy.ops.render.render(write_still=True)
@@ -615,7 +749,7 @@ for name, s in shots:
 # ------------------------------------------------------------------ 保存 / 导出
 blend = os.path.join(WORK, "plaza_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
-glb = os.path.join(args.out, "国家广场(2026)·体量白模.glb")
+glb = os.path.join(args.out, f"国家广场(2026)·{prefix}.glb")
 if not args.no_glb:
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True)
 
