@@ -713,6 +713,33 @@ def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
             z0 + 0.26 + lh * 0.44, MAT.get("gold") or md)
     return w
 
+def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1):
+    """院门（随墙门楼）：门垛 + 门楣 + 板门 + 小两坡顶 + 垂带台阶。
+
+    face = -1 表示门朝南（门楼向 -y 凸出）。
+    """
+    md = MAT.get("wood_dark") or MAT.get("door") or MAT["wall"]
+    mk = MAT.get("soffit") or MAT["wall"]
+    ms = MAT.get("stone") or MAT["stone2"]
+    ys = y + face * 0.35
+    # 门垛
+    for sx in (-1, 1):
+        box(f"{name}·垛{'EW'[sx > 0]}", 0.62, 0.86, h + 0.45,
+            x + sx * (w / 2 + 0.31), ys, z, MAT["wall"])
+    # 门楣与门扇
+    box(f"{name}·门楣", w + 1.3, 0.80, 0.42, x, ys, z + h + 0.03, md)
+    box(f"{name}·门扇", w, 0.12, h - 0.05, x, ys + face * 0.30, z, md)
+    box(f"{name}·门缝", 0.05, 0.16, h * 0.94, x, ys + face * 0.30, z + 0.03 * h, mk)
+    # 小两坡顶
+    ROOF, _, _ = _lg()
+    ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, 2.6, z + h + 0.45, 0.95,
+                   mat=MAT.get("tile_gray") or MAT["tile_gray"])
+    # 台阶
+    for i in range(3):
+        box(f"{name}·阶{i}", w + 1.0, 0.40, 0.50 - i * 0.15, x,
+            ys + face * (0.55 + i * 0.40), z, ms)
+
+
 # ------------------------------------------------------------------ 整殿
 def wall_tower(name, w, d, z=0.0, body_h=10.0):
     """角楼：城台 + 上层柱廊 + 斗拱 + 庑殿顶。"""

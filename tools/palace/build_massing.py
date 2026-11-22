@@ -381,6 +381,13 @@ for w in D.inner_line_walls():
 for c in D.COMPOUNDS:
     for w in D.compound_walls(c):
         add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"], h=WH)
+if args.precise:          # 每座院落南墙正中一樘随墙门
+    for c in D.COMPOUNDS:
+        if c["name"] in ("琼苑",):
+            continue
+        _w = min(4.6, (c["x1"] - c["x0"]) * 0.22)
+        PL.court_gate(f"{c['name']}·院门", (c["x0"] + c["x1"]) / 2, c["y0"],
+                      z=0.0, w=max(3.4, _w), h=min(4.4, WH - 0.2))
 
 R = D.RIVER
 pts = R["points"]
