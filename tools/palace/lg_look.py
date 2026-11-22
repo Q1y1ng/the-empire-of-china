@@ -348,6 +348,10 @@ def _glaze_tile(g, base, dark, r_lo=0.28, r_hi=0.42, coat=0.12, bump=TILE_BUMP,
     big = NOISE(g, obj, scale=0.055, detail=3.0, rough=0.5, distortion=0.12)
     col = MIXC(g, M(g, "MULTIPLY", STEP(g, big, 0.34, 0.70), 0.42), col,
                MIXC(g, 1.0, col, (0.58, 0.55, 0.50), "MULTIPLY"), "MIX")
+    # 更大一档（70 m 上下）：整坡替换过的瓦色差，鸟瞰里才不会所有屋顶一个色
+    huge = NOISE(g, obj, scale=0.0135, detail=2.0, rough=0.45, distortion=0.08)
+    col = MIXC(g, M(g, "MULTIPLY", STEP(g, huge, 0.36, 0.72), 0.40), col,
+               MIXC(g, 1.0, col, (0.80, 0.77, 0.72), "MULTIPLY"), "MIX")
     # 瓦缝：深色 + 高粗糙；远距离把对比压下去，免得整片屋面条纹闪烁
     seam_c = M(g, "MULTIPLY", seam, M(g, "MULTIPLY_ADD", fade, 0.42, 0.05))
     col = MIXC(g, seam_c, col, (0.075, 0.068, 0.055), "MULTIPLY")
