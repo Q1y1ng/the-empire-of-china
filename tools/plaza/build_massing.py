@@ -392,47 +392,51 @@ for m in D.MASSES:
     glass_facade("大会堂·" + m["name"], d, h, m["x1"], "y", 1, (m["y0"] + m["y1"]) / 2)
     box("大会堂·" + m["name"] + "·檐口", w + 3, d + 3, 2.2, cx, cy, h - 2.2, MAT["stone_light"])
     if m["kind"] == "chamber":
-        hip_roof("大会堂·中厅顶", w, d, 10.0, cx, cy, h + 0.15, MAT["roof_tile"], overhang=6)
+        hip_roof("大会堂·中厅顶", w, d, 14.0, cx, cy, h + 0.15, MAT["roof_tile"], overhang=6)
     else:
         flat_roof("大会堂·" + m["name"] + "顶", w, d, cx, cy, h + 0.15)
+for yy in (-925.5, -1155.5):
+    box("大会堂·分界柱", 7.0, 5.0, 48.0, -307.0, yy, 2.3, MAT["stone_light"])
 for m in D.MASSES:
     if m["parent"] == "hall" and m["kind"] == "portico":
-        portico("大会堂·" + m["name"], (m["x0"], m["x1"], m["y0"], m["y1"]), 28, "E")
+        portico("大会堂·" + m["name"], (m["x0"], m["x1"], m["y0"], m["y1"]), 30, "E")
         steps("大会堂·" + m["name"], m["x1"], (m["y0"] + m["y1"]) / 2, m["y1"] - m["y0"], "E")
 
 # 议事大楼：同大外框，一整块基座 + 中央高体量
 CX, CY = 425.0, -1035.5
 plinth("议事大楼", 238, 608, CX, CY)
-box("议事大楼·基座", 230, 600, 29.7, CX, CY, 2.3, MAT["stone"])
+box("议事大楼·基座", 230, 600, 33.7, CX, CY, 2.3, MAT["stone"])
 box("议事大楼·基座线", 231.2, 601.2, 1.4, CX, CY, 2.3, MAT["stone_light"])
-glass_facade("议事大楼·基座", 600, 32, 310, "y", -1, CY)
-box("议事大楼·基座檐口", 233, 603, 2.2, CX, CY, 29.8, MAT["stone_light"])
-flat_roof("议事大楼·基座顶", 230, 600, CX, CY, 32.15)
+glass_facade("议事大楼·基座", 600, 36, 310, "y", -1, CY)
+box("议事大楼·基座檐口", 233, 603, 2.2, CX, CY, 33.8, MAT["stone_light"])
+flat_roof("议事大楼·基座顶", 230, 600, CX, CY, 36.15)
 box("议事大楼·议事厅", 160, 160, 41.7, CX, CY, 2.3, MAT["stone"])
 box("议事大楼·议事厅基座线", 161.2, 161.2, 1.4, CX, CY, 34.3, MAT["stone_light"])
 box("议事大楼·议事厅幕墙", 0.4, 150, 37, 344.6, CY, 4.5, MAT["glass"])
 box("议事大楼·议事厅檐口", 163, 163, 2.2, CX, CY, 41.8, MAT["stone_light"])
-hip_roof("议事大楼·议事厅顶", 160, 160, 11.0, CX, CY, 44.15, MAT["roof_tile"], overhang=5)
+hip_roof("议事大楼·议事厅顶", 160, 160, 14.0, CX, CY, 44.15, MAT["roof_tile"], overhang=5)
+box("议事大楼·中央门楼", 16.0, 100.0, 8.0, 302.0, CY, 30.2, MAT["stone_light"])
+hip_roof("议事大楼·中央门楼顶", 16.0, 100.0, 3.0, 302.0, CY, 38.2, MAT["roof_tile"], overhang=3)
 for m in D.MASSES:
     if m["parent"] == "council" and m["kind"] == "portico":
-        portico("议事大楼·" + m["name"], (m["x0"], m["x1"], m["y0"], m["y1"]), 28, "W")
+        portico("议事大楼·" + m["name"], (m["x0"], m["x1"], m["y0"], m["y1"]), 30, "W")
         steps("议事大楼·" + m["name"], m["x0"], (m["y0"] + m["y1"]) / 2, m["y1"] - m["y0"], "W")
 
 # 博物馆：560 × 170
 MX, MY = 0.0, -1535.5
 plinth("博物馆", 568, 178, MX, MY)
-box("博物馆·主体", 560, 170, 25.7, MX, MY, 2.3, MAT["stone"])
+box("博物馆·主体", 560, 170, 27.7, MX, MY, 2.3, MAT["stone"])
 box("博物馆·主体基座线", 561.2, 171.2, 1.4, MX, MY, 2.3, MAT["stone_light"])
-glass_facade("博物馆·主体", 560, 28, -1450.5, "x", 1, 0.0)
-box("博物馆·主体檐口", 563, 173, 2.2, MX, MY, 25.8, MAT["stone_light"])
-flat_roof("博物馆·主体顶", 560, 170, MX, MY, 28.15)
-box("博物馆·中央陈列厅", 240, 140, 12.0, MX, MY, 28.15, MAT["stone"])
-box("博物馆·陈列厅基座线", 241.2, 141.2, 1.2, MX, MY, 28.15, MAT["stone_light"])
-box("博物馆·陈列厅幕墙", 220, 0.5, 9.0, MX, -1465.3, 29.0, MAT["glass"])
-box("博物馆·陈列厅檐口", 243, 143, 2.0, MX, MY, 38.2, MAT["stone_light"])
-hip_roof("博物馆·中央顶", 240, 140, 8.0, MX, MY, 40.15, MAT["roof_tile"], overhang=5)
+glass_facade("博物馆·主体", 560, 30, -1450.5, "x", 1, 0.0)
+box("博物馆·主体檐口", 563, 173, 2.2, MX, MY, 27.8, MAT["stone_light"])
+flat_roof("博物馆·主体顶", 560, 170, MX, MY, 30.15)
+box("博物馆·中央陈列厅", 240, 140, 12.0, MX, MY, 30.15, MAT["stone"])
+box("博物馆·陈列厅基座线", 241.2, 141.2, 1.2, MX, MY, 30.15, MAT["stone_light"])
+box("博物馆·陈列厅幕墙", 220, 0.5, 9.0, MX, -1465.3, 31.0, MAT["glass"])
+box("博物馆·陈列厅檐口", 243, 143, 2.0, MX, MY, 40.2, MAT["stone_light"])
+hip_roof("博物馆·中央顶", 240, 140, 10.0, MX, MY, 42.15, MAT["roof_tile"], overhang=5)
 m = next(x for x in D.MASSES if x["key"] == "museum-portico")
-portico("博物馆·门廊", (m["x0"], m["x1"], m["y0"], m["y1"]), 24, "N")
+portico("博物馆·门廊", (m["x0"], m["x1"], m["y0"], m["y1"]), 26, "N")
 steps("博物馆·门廊", 0, m["y1"], m["x1"] - m["x0"], "N")
 
 # ------------------------------------------------------------------ 绿化树
@@ -538,7 +542,7 @@ for s in D.SITES:
 
 # ------------------------------------------------------------------ 灯光 / 相机
 sun_d = bpy.data.lights.new("Sun", type="SUN")
-sun_d.energy = 3.2
+sun_d.energy = 2.6
 sun_d.angle = math.radians(3)
 sun = bpy.data.objects.new("Sun", sun_d)
 link(sun)
@@ -547,8 +551,16 @@ sun.rotation_euler = (math.radians(35), 0, math.radians(232))
 sc.world = bpy.data.worlds.new("World")
 sc.world.use_nodes = True
 bg = sc.world.node_tree.nodes["Background"]
-bg.inputs[0].default_value = (0.56, 0.68, 0.86, 1.0)
-bg.inputs[1].default_value = 0.55
+nt = sc.world.node_tree
+tex = nt.nodes.new("ShaderNodeTexCoord")
+sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+ramp = nt.nodes.new("ShaderNodeValToRGB")
+nt.links.new(tex.outputs["Normal"], sep.inputs[0])
+nt.links.new(sep.outputs["Z"], ramp.inputs[0])
+e0 = ramp.color_ramp.elements[0]; e0.position = 0.00; e0.color = (0.72, 0.75, 0.80, 1.0)
+e1 = ramp.color_ramp.elements[1]; e1.position = 0.45; e1.color = (0.26, 0.40, 0.62, 1.0)
+nt.links.new(ramp.outputs["Color"], bg.inputs[0])
+bg.inputs[1].default_value = 0.45
 
 cam_data = bpy.data.cameras.new("Cam")
 cam_data.clip_start = 1.0
@@ -570,17 +582,17 @@ sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 4
 sc.render.image_settings.file_format = "PNG"
 sc.view_settings.view_transform = "Standard"
-sc.view_settings.exposure = -0.10
+sc.view_settings.exposure = -0.25
 
 # ------------------------------------------------------------------ 出图
 AR = 16 / 9
 shots = [
-    ("鸟瞰东南", dict(loc=(620, -1850, 420), target=(0, -1050, 30), lens=50)),
-    ("中轴", dict(loc=(0, -1950, 420), target=(0, -850, 0), lens=50)),
-    ("西望大会堂", dict(loc=(120, -1000, 55), target=(-440, -1035, 32), lens=50)),
-    ("东望议事楼", dict(loc=(-120, -1000, 55), target=(440, -1035, 32), lens=50)),
-    ("南望博物馆", dict(loc=(0, -1180, 55), target=(0, -1560, 30), lens=55)),
-    ("人视承天门", dict(loc=(0, -655, 1.7), target=(0, -480, 16), lens=35)),
+    ("鸟瞰东南", dict(loc=(900, -2400, 820), target=(0, -1100, 0), lens=38)),
+    ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
+    ("西望大会堂", dict(loc=(60, -900, 45), target=(-430, -1040, 32), lens=45)),
+    ("东望议事楼", dict(loc=(-60, -900, 45), target=(430, -1040, 32), lens=45)),
+    ("南望博物馆", dict(loc=(0, -1120, 45), target=(0, -1560, 30), lens=55)),
+    ("人视承天门", dict(loc=(90, -655, 2.2), target=(0, -480, 18), lens=40)),
 ]
 
 results = {}
