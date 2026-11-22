@@ -115,20 +115,23 @@ MASSES = [
        "h": 20.0, "floors": 1, "kind": "portico"}
       for t, cy in (("n", -825.5), ("c", -1045.5), ("s", -1245.5))],
 
-    # ── 国家议会议事大楼：230 × 600 m，两层，三段式，面西（朝广场）
-    {"key": "council-n", "parent": "council", "name": "北翼",
-     "x0": 310.0, "x1": 540.0, "y0": -915.5, "y1": -735.5,
-     "h": 26.0, "floors": 2, "kind": "wing"},
-    {"key": "council-c", "parent": "council", "name": "议事厅（1,100 席）",
-     "x0": 310.0, "x1": 540.0, "y0": -1155.5, "y1": -915.5,
-     "h": 32.0, "floors": 2, "kind": "chamber"},
-    {"key": "council-s", "parent": "council", "name": "南翼",
-     "x0": 310.0, "x1": 540.0, "y0": -1335.5, "y1": -1155.5,
-     "h": 26.0, "floors": 2, "kind": "wing"},
-    *[{"key": f"council-portico-{t}", "parent": "council", "name": "门廊",
-       "x0": 296.0, "x1": 310.0, "y0": cy - 40.0, "y1": cy + 40.0,
-       "h": 20.0, "floors": 1, "kind": "portico"}
-      for t, cy in (("n", -825.5), ("c", -1045.5), ("s", -1245.5))],
+    # ── 国家议会议事大楼：230 × 600 m 外框与大会堂同大，但建筑语言不同——
+    #    一整块两层基座 + 中央 160×160 m 议事厅高体量 + 一主两副门廊
+    {"key": "council-main", "parent": "council", "name": "国家议会议事大楼",
+     "x0": 310.0, "x1": 540.0, "y0": -1335.5, "y1": -735.5,
+     "h": 26.0, "floors": 2, "kind": "main"},
+    {"key": "council-chamber", "parent": "council", "name": "议事厅（1,100 席）",
+     "x0": 345.0, "x1": 505.0, "y0": -1115.5, "y1": -955.5,
+     "h": 34.0, "floors": 2, "kind": "chamber"},
+    {"key": "council-portico-c", "parent": "council", "name": "中央门廊",
+     "x0": 296.0, "x1": 310.0, "y0": -1085.5, "y1": -985.5,
+     "h": 22.0, "floors": 1, "kind": "portico"},
+    {"key": "council-portico-n", "parent": "council", "name": "北门廊",
+     "x0": 296.0, "x1": 310.0, "y0": -895.5, "y1": -855.5,
+     "h": 18.0, "floors": 1, "kind": "portico"},
+    {"key": "council-portico-s", "parent": "council", "name": "南门廊",
+     "x0": 296.0, "x1": 310.0, "y0": -1215.5, "y1": -1175.5,
+     "h": 18.0, "floors": 1, "kind": "portico"},
 
     # ── 国家政治博物馆：560 × 170 m，两层，面北（朝广场）；东段为大革命主题馆
     {"key": "museum-main", "parent": "museum", "name": "国家政治博物馆",
@@ -144,7 +147,7 @@ WALL_T = 1.5
 WALL_H = 3.5
 GATES = {
     "hall": [("E", -825.5, 80.0), ("E", -1045.5, 80.0), ("E", -1245.5, 80.0)],
-    "council": [("W", -825.5, 80.0), ("W", -1045.5, 80.0), ("W", -1245.5, 80.0)],
+    "council": [("W", -1035.5, 100.0), ("W", -875.5, 40.0), ("W", -1195.5, 40.0)],
     "museum": [("N", 0.0, 140.0)],
 }
 
@@ -180,7 +183,7 @@ def stats():
     }
     footprint_keys = {
         "hall": ("hall-s", "hall-c", "hall-n"),
-        "council": ("council-s", "council-c", "council-n"),
+        "council": ("council-main",),
         "museum": ("museum-main",),
     }
     for k in ("hall", "council", "museum"):

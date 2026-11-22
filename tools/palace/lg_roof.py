@@ -235,8 +235,9 @@ def two_slope(pl, name, W, D, z_eave, H, step=0.8, mat=None, thick=0.32):
     ob = _mesh_multi(pl, name, grids, mat, thick=thick)
     # 正脊
     zr = z_eave + H
+    _rm = pl.MAT.get("glaze_plain_dark") if mat is not pl.MAT.get("tile_gray") else mat
     sweep(pl, name + "·正脊", [(-W / 2, 0.0, zr - 0.04), (W / 2, 0.0, zr - 0.04)],
-          0.26, -0.10, 0.34, pl.MAT.get("glaze_plain_dark") or mat)
+          0.26, -0.10, 0.34, _rm or mat)
     return ob
 
 

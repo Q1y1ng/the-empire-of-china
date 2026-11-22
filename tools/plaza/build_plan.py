@@ -22,7 +22,7 @@ import sys
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Circle, Rectangle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -158,6 +158,27 @@ def draw_plaza(ax):
          facecolor="#E3D8BF", edgecolor="none", zorder=2.2)
 
 
+def draw_green(ax):
+    """建筑四周一圈绿化：草带 + 一排行道树，退院墙 3 m，避开建筑本体。"""
+    for s in D.SITES:
+        x0, x1 = s["x0"] + 3.0, s["x1"] - 3.0
+        y0, y1 = s["y0"] + 3.0, s["y1"] - 3.0
+        rect(ax, x0, y0, x1 - x0, y1 - y0, facecolor="#DCE7C9",
+             edgecolor="none", zorder=2.05)
+        for x in (s["x0"] + 6.0, s["x1"] - 6.0):
+            y = y0 + 12.0
+            while y <= y1 - 12.0:
+                ax.add_patch(Circle((x, y), 3.2, facecolor="#75905A",
+                                    edgecolor="none", alpha=0.85, zorder=2.2))
+                y += 20.0
+        for y in (s["y0"] + 6.0, s["y1"] - 6.0):
+            x = x0 + 12.0
+            while x <= x1 - 12.0:
+                ax.add_patch(Circle((x, y), 3.2, facecolor="#75905A",
+                                    edgecolor="none", alpha=0.85, zorder=2.2))
+                x += 20.0
+
+
 def wall_ring(ax, s, gates):
     """建筑群外墙：按门洞断开。gates = [(side, center, width), ...]"""
     x0, x1, y0, y1 = s["x0"], s["x1"], s["y0"], s["y1"]
@@ -220,23 +241,20 @@ def draw_masses(ax):
         ax.plot([x0, x1], [yy, yy], color=C["hall_edge"], lw=0.7,
                 ls=(0, (5, 3)), zorder=5.0)
 
-    # 议事大楼：同尺寸 230 × 600 m 三段式，与大会堂隔广场镜像
+    # 议事大楼：与大会堂同大的外框，但形制不同——一整块基座 + 中央议事厅高体量
     x0, x1 = 310.0, 540.0
     _shadow(ax, x0, x1, y0, y1)
+    rect(ax, x0, y0, x1 - x0, y1 - y0, facecolor=C["council"],
+         edgecolor=C["hall_edge"], lw=1.2, zorder=4.6)
+    rect(ax, 345.0, -1115.5, 160.0, 160.0, facecolor=C["chamber"],
+         edgecolor=C["chamber_edge"], lw=0.9, zorder=4.9)
     for m in D.MASSES:
-        if m["parent"] != "council":
-            continue
-        fc, ec = ((C["council"], C["hall_edge"]) if m["kind"] == "wing"
-                  else (C["chamber"], C["chamber_edge"]) if m["kind"] == "chamber"
-                  else (C["portico"], C["portico_edge"]))
-        rect(ax, m["x0"], m["y0"], m["x1"] - m["x0"], m["y1"] - m["y0"],
-             facecolor=fc, edgecolor=ec, lw=0.35 if m["kind"] == "portico" else 0.5,
-             zorder=4.6)
+        if m["parent"] == "council" and m["kind"] == "portico":
+            rect(ax, m["x0"], m["y0"], m["x1"] - m["x0"], m["y1"] - m["y0"],
+                 facecolor=C["portico"], edgecolor=C["portico_edge"], lw=0.35,
+                 zorder=4.8)
     rect(ax, x0, y0, x1 - x0, y1 - y0, fill=False, edgecolor=C["hall_edge"],
          lw=1.4, zorder=5.0)
-    for yy in (-1155.5, -915.5):
-        ax.plot([x0, x1], [yy, yy], color=C["hall_edge"], lw=0.7,
-                ls=(0, (5, 3)), zorder=5.0)
 
     # 博物馆：560 × 170 m，一整块，门廊居中
     _shadow(ax, -280.0, 280.0, -1620.5, -1450.5)
@@ -358,6 +376,7 @@ def draw_panel(ax):
         ("国家议会议事大楼", C["council"], C["hall_edge"]),
         ("国家政治博物馆", C["museum"], C["hall_edge"]),
         ("建筑群外墙", C["site_edge"], None),
+        ("建筑外圈绿化（草带＋树列）", "#DCE7C9", "#75905A"),
         ("宫城城墙 / 城门", C["wall"], C["wall_edge"]),
         ("护城河", C["water"], C["water_edge"]),
     ]
@@ -365,7 +384,7 @@ def draw_panel(ax):
         ax.add_patch(Rectangle((0.0, y - 0.008), 0.070, 0.016, facecolor=fc,
                                edgecolor=ec or fc, lw=0.6, clip_on=False))
         ax.text(0.095, y, txt, fontsize=7.8, va="center", color=C["ink"])
-        y -= 0.0238
+        y -= 0.0232
 
     # ── 占地
     y = head("占地（本图实测）", y - 0.014)
@@ -380,7 +399,7 @@ def draw_panel(ax):
         ax.text(0.0, y, name, fontsize=7.8, va="center", color=C["ink"])
         ax.text(1.0, y, val, fontsize=7.8, va="center", ha="right", color=C["muted"])
         y -= 0.0225
-    ax.text(0.0, y, "两楼同 230 × 600 m、镜像对称；原设定 20 / 8 / 12 ha 待重定。",
+    ax.text(0.0, y, "两楼同 230 × 600 m、同大不同形；原设定 20 / 8 / 12 ha 待重定。",
             fontsize=6.8, color=C["muted"], va="center")
     y -= 0.0225
 
@@ -407,7 +426,7 @@ def draw_panel(ax):
         ]),
         ("【作者】", [
             "2026-11-22 裁决：800 m 全铺装（48 ha）；阅兵台并入承天门；",
-            "门前新设 100 m 大街；两楼对称同大、三座主体占满区块。",
+            "门前新设 100 m 大街；两楼同大但形制不同；建筑外圈各加一圈绿化。",
         ]),
         ("【判读】", [
             "两楼同为 230 × 600 m（占地 13.8 ha，两层）；博物馆 560 × 170 m；",
@@ -467,6 +486,7 @@ def main():
     draw_roads(ax)
     draw_plaza(ax)
     draw_sites(ax)
+    draw_green(ax)
     draw_masses(ax)
     draw_context(ax)
     draw_avenue(ax)
@@ -483,13 +503,13 @@ def main():
              fontsize=24, color=C["ink"], fontweight="bold")
     fig.text(0.33, 0.950,
              "长安 · 2026　│　广场 600 × 800 m（48 ha）　│　承天门大街 100 m（新设）　│　"
-             "大会堂 · 议事大楼 230 × 600 m（对称）　│　博物馆 560 × 170 m　│　最简稿",
+             "大会堂 · 议事大楼 230 × 600 m（同大）　│　博物馆 560 × 170 m　│　最简稿",
              ha="center", va="center", fontsize=8.2, color=C["muted"])
 
     fig.text(0.010, 0.015,
              "数据：《长安城市志》卷三·内城表（广场、大会堂、议事、博物馆、中轴里程）·"
              "《总设定》第十六编（600×800 m、三厅、1,100 席）·《继位大典与宫城启闭（草案）》（阅兵、检阅车东侧道）。\n"
-             "2026-11-22 作者裁决：800 m 全铺装（48 ha）；阅兵台并入承天门城台；承天门前新设 100 m 东西向大街；两楼对称同大、三座主体占满区块。"
+             "2026-11-22 作者裁决：800 m 全铺装（48 ha）；阅兵台并入承天门城台；承天门前新设 100 m 东西向大街；两楼同大但形制不同、三座主体占满区块，建筑外圈各加一圈绿化。"
              "宫城接口（承天门、护城河、城墙）取自 tools/palace/palace_data.py。",
              ha="left", va="bottom", fontsize=6.6, color=C["muted"], linespacing=1.6)
     fig.text(0.980, 0.015, "中华帝国设定集 · 图版", ha="right", va="bottom",

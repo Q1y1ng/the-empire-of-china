@@ -571,16 +571,49 @@ def lattice_bay(name, w, h, x, y, z0, rot=0.0, bars=6):
 
 
 def small_house(name, w, d, z=0.0, h=4.5, tile=None):
-    """值房/库房：台明 + 墙 + 门 + 窗 + 青瓦两坡顶。"""
+    """值房/库房：阶条石台明 + 下碱墙 + 板门门框 + 槛窗棂条 + 悬山瓦顶。"""
     tile = tile or MAT["tile_gray"]
-    box(name + "·台明", w + 0.9, d + 0.9, 0.42, 0, 0, z, MAT["stone2"])
-    box(name + "·墙", w, d, h, 0, 0, z + 0.42, MAT["wall"])
-    box(name + "·门", min(1.6, w * 0.30), 0.14, h * 0.72, 0, -d / 2 - 0.04, z + 0.42, MAT["door"])
-    for sgn in (1, -1):
-        box(name + "·窗", min(1.2, w * 0.18), 0.10, h * 0.26, sgn * w * 0.28,
-            -d / 2 - 0.03, z + h * 0.55, MAT["lattice"])
-    gable_roof(name + "·顶", w + 0.5, d + 0.5, z + 0.42 + h,
+    md = MAT.get("wood_dark") or MAT.get("door") or MAT["wall"]
+    mk = MAT.get("soffit") or MAT["wall"]
+    ms = MAT.get("stone") or MAT["stone2"]
+    # 台明两级
+    box(f"{name}·台身", w + 1.10, d + 1.10, 0.28, 0, 0, z, MAT["stone2"])
+    box(f"{name}·阶条", w + 0.72, d + 0.72, 0.24, 0, 0, z + 0.28, ms)
+    zt = z + 0.52
+    # 墙身 + 下碱
+    box(f"{name}·墙", w, d, h, 0, 0, zt, MAT["wall"])
+    box(f"{name}·下碱", w + 0.05, d + 0.05, min(0.56, h * 0.16), 0, 0, zt, MAT["stone2"])
+    yf = -d / 2
+    # 板门：两扇 + 门框 + 门楣
+    dw = min(1.8, w * 0.32)
+    dh = min(h * 0.72, 3.0)
+    box(f"{name}·门扇", dw, 0.10, dh, 0, yf - 0.05, zt, md)
+    box(f"{name}·门缝", 0.05, 0.13, dh * 0.96, 0, yf - 0.06, zt + 0.04 * dh, mk)
+    for sx in (-1, 1):
+        box(f"{name}·门框{'LR'[sx > 0]}", 0.16, 0.16, dh + 0.14,
+            sx * (dw / 2 + 0.08), yf - 0.06, zt, md)
+    box(f"{name}·门楣", dw + 0.32, 0.16, 0.16, 0, yf - 0.06, zt + dh + 0.06, md)
+    # 槛窗：两侧各一，暗底 + 棂条
+    for sx in (-1, 1):
+        cx = sx * (w / 4 + dw * 0.2)
+        ww = min(w * 0.26, 1.9)
+        wh = min(h * 0.34, 1.5)
+        wz = zt + h * 0.44
+        box(f"{name}·窗洞{sx}", ww, 0.08, wh, cx, yf - 0.04, wz, mk)
+        nb = 5
+        for i in range(nb + 1):
+            box(f"{name}·棂{sx}{i}", 0.05, 0.05, wh, cx - ww / 2 + i * ww / nb,
+                yf - 0.08, wz, md)
+        for j in (0.33, 0.66):
+            box(f"{name}·横{sx}{j}", ww, 0.05, 0.05, cx, yf - 0.08,
+                wz + wh * j, md)
+    # 连檐：前后各一条
+    for sy in (-1, 1):
+        box(f"{name}·连檐{'SN'[sy > 0]}", w + 1.5, 0.16, 0.18, 0,
+            sy * (d / 2 + 0.72), zt + h - 0.02, md)
+    gable_roof(name + "·顶", w + 0.5, d + 0.5, zt + h,
                max(1.5, min(d, w) * 0.30), tile, overhang=0.9)
+
 
 
 def crenel_band(name, x0, x1, y, z, h=1.5, spacing=1.9, along_x=True, mat=None):
@@ -779,6 +812,13 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         great_door(f"{name}·大门", xs[ci] + 0.6, xs[ci + 1] - 0.6,
                    ys[0] - 0.12, z0, d_h, angle=0.0,
                    mat_door=MAT.get("red_lacquer") or MAT["column"])
+    elif lod == 0:      # 最简立面：一樘门 + 两窗，避免"白台明上空房子"
+        dh = min(col_h * 0.55, col_h - 1.2)
+        box(f"{name}·门0", min(2.4, w * 0.22), 0.10, dh, 0, ys[0] - 0.05, z0,
+            MAT.get("door") or MAT["wall"])
+        for _sx in (-1, 1):
+            box(f"{name}·窗{_sx}", w * 0.13, 0.10, dh * 0.46, _sx * w * 0.25,
+                ys[0] - 0.05, z0 + dh * 0.34, MAT.get("lattice") or MAT["wall"])
     elif lod == 1:      # 中距离：一块隔扇板 + 槛墙，不做棂条
         dh = min(col_h * 0.72, col_h - 1.2)
         for i in range(len(xs) - 1):
