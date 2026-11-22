@@ -30,6 +30,8 @@ ap.add_argument("--samples", type=int, default=160)
 ap.add_argument("--res", type=int, default=1920)
 ap.add_argument("--only", default="", help="只渲染名字含该串的机位（其余跳过）")
 ap.add_argument("--no-glb", action="store_true", help="只出图，不导 glb（迭代用）")
+ap.add_argument("--glb-textures", action="store_true",
+                help="导出前给 glb 补 UV 并换贴图材质（慢，交付时开）")
 ap.add_argument("--precise", action="store_true", help="用明官式构件库出精模（慢）")
 args = ap.parse_args(argv)
 WORK = os.path.join(os.environ.get("TEMP", HERE), "palace_massing")
@@ -473,25 +475,47 @@ for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
         box(f"值房{i:02d}", w, d, hh, cx, cy, 0.0, MAT["service"])
         gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
 
+_TT = (1.0 + 5 ** 0.5) / 2.0
+_IN = (1.0 + _TT * _TT) ** 0.5
+_ICO_V = [tuple(c / _IN for c in v) for v in (
+    (-1, _TT, 0), (1, _TT, 0), (-1, -_TT, 0), (1, -_TT, 0),
+    (0, -1, _TT), (0, 1, _TT), (0, -1, -_TT), (0, 1, -_TT),
+    (_TT, 0, -1), (_TT, 0, 1), (-_TT, 0, -1), (-_TT, 0, 1))]
+_ICO_F = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11),
+          (1, 5, 9), (5, 11, 4), (11, 10, 2), (10, 7, 6), (7, 1, 8),
+          (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9),
+          (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+_TV, _TF, _LV, _LF = [], [], [], []
+
+
 def _plant(i, x, y):
-    """种一棵树：柱身 + 三层错位树冠（确定性尺度，避免一片棒棒糖）。"""
+    """种一棵树：把几何塞进两个大数组，最后只建 2 个网格。
+
+    原来每棵树用 bpy.ops 建 1 柱 + 3 球 = 4 个对象，700 多棵就是 2,800 次算子
+    调用，构建时间全耗在这上面（构建从 3 分钟涨到 10 分钟的主因）。
+    """
     sv = 0.78 + 0.50 * ((i * 37) % 11) / 10.0
-    bpy.ops.mesh.primitive_cylinder_add(radius=0.34 * sv, depth=2.8 * sv,
-                                        location=(x, y, 1.4 * sv))
-    tr = bpy.context.object
-    tr.name = "树%d·干" % i
-    tr.data.materials.append(MAT["trunk"])
-    for k, (dx, dy, dz, rr) in enumerate(((0.0, 0.0, 0.0, 3.1),
-                                          (1.5, -1.0, 0.8, 2.1),
-                                          (-1.3, 1.2, 0.5, 1.9))):
-        bpy.ops.mesh.primitive_ico_sphere_add(
-            subdivisions=1, radius=rr * sv,
-            location=(x + dx * sv, y + dy * sv, 4.3 * sv + dz * sv))
-        cr = bpy.context.object
-        cr.name = "树%d·冠%d" % (i, k)
-        cr.scale = (1.0, 0.95, 0.80)
-        cr.rotation_euler = (0, 0, math.radians(47 * k + 23 * i))
-        cr.data.materials.append(MAT["tree"])
+    r, h = 0.34 * sv, 2.8 * sv
+    b0 = len(_TV)
+    for z in (0.0, h):
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            _TV.append((x + r * math.cos(a), y + r * math.sin(a), z))
+    for k in range(8):
+        k2 = (k + 1) % 8
+        _TF.append((b0 + k, b0 + k2, b0 + 8 + k2, b0 + 8 + k))
+    _TF.append(tuple(b0 + k for k in range(7, -1, -1)))
+    _TF.append(tuple(b0 + 8 + k for k in range(8)))
+    for (dx, dy, dz, rr) in ((0.0, 0.0, 0.0, 3.1), (1.5, -1.0, 0.8, 2.1),
+                             (-1.3, 1.2, 0.5, 1.9)):
+        cz = 4.3 * sv + dz * sv
+        b = len(_LV)
+        for (vx, vy, vz) in _ICO_V:
+            _LV.append((x + dx * sv + vx * rr * sv,
+                        y + dy * sv + vy * rr * sv * 0.95,
+                        cz + vz * rr * sv * 0.80))
+        for (a_, b_, c_) in _ICO_F:
+            _LF.append((b + a_, b + b_, b + c_))
 
 
 _planted = 0
@@ -512,6 +536,10 @@ for _y in range(int(-HD + 46), int(HD - 45), 15):
             continue
         _plant(_planted, _xx, _y)
         _planted += 1
+
+mesh_from("树·干", _TV, _TF, MAT["trunk"])
+mesh_from("树·冠", _LV, _LF, MAT["tree"])
+print("TREES", _planted, "trunk_tris", len(_TF), "leaf_tris", len(_LF))
 
 # ------------------------------------------------------------------ 单体
 def add_struct_precise(st):
@@ -713,19 +741,24 @@ if not args.only:
 # ------------------------------------------------------------------ 导出
 blend = os.path.join(WORK, "palace_massing.blend")
 bpy.ops.wm.save_as_mainfile(filepath=blend)
-def _join_by_material(target):
-    """按材质 Join：2.9 万个对象 = 2.9 万 draw call，网页端必卡。
+def _join_by_material(target, max_verts=400):
+    """按材质合并**小件**（瓦当/檐椽/门钉/望柱这类 ≤400 顶点的盒子）。
 
-    导出前合并，只影响 glb，不影响出图（出图在前面已完成）。
+    网页卡顿的来源是几万个 draw call，而 draw call 几乎全是小件；大件（屋面、
+    墙体）本来就少，合并收益低、耗时高。所以只合并小件：
+      * `bpy.ops.object.join()` 对 2.8 万个对象要 15 分钟，这里限到小件后约 1 分钟。
     """
-    from collections import defaultdict
-    groups = defaultdict(list)
+    import numpy as np
+    groups = {}
     for ob in list(target.objects):
-        if ob.type == "MESH" and len(ob.data.materials) == 1:
-            groups[ob.data.materials[0].name].append(ob)
+        if ob.type != "MESH" or len(ob.data.materials) != 1:
+            continue
+        if len(ob.data.vertices) > max_verts:
+            continue
+        groups.setdefault(ob.data.materials[0].name, []).append(ob)
     merged = 0
-    for _mat, obs in groups.items():
-        if len(obs) < 2:
+    for mat_name, obs in groups.items():
+        if len(obs) < 8:
             continue
         bpy.ops.object.select_all(action="DESELECT")
         for ob in obs:
@@ -739,10 +772,108 @@ def _join_by_material(target):
     return merged
 
 
+def _glb_textured(src_name):
+    """把程序化材质换成贴图版（glTF 不认 Brick/Wave/Noise，纯色交付等于丢材质）。
+
+    返回 (材质, 立方投影边长)。没配到的返回 None，保持原样。
+    """
+    A = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+    table = {
+        "琉璃黄": ("tex_glazedtile_2k_diff.jpg", "tex_glazedtile_2k_rough.jpg", 3.2),
+        "琉璃黄·暗": ("tex_glazedtile_2k_diff.jpg", "tex_glazedtile_2k_rough.jpg", 3.2),
+        "琉璃黄·素面": ("tex_glazedtile_2k_diff.jpg", "tex_glazedtile_2k_rough.jpg", 3.2),
+        "琉璃黄·素面暗": ("tex_glazedtile_2k_diff.jpg", "tex_glazedtile_2k_rough.jpg", 3.2),
+        "汉白玉": ("tex_whitemarble_2k_diff.jpg", "tex_whitemarble_2k_rough.jpg", 2.4),
+        "汉白玉·雕花": ("tex_whitemarble_2k_diff.jpg", "tex_whitemarble_2k_rough.jpg", 2.4),
+        "石阶": ("tex_whitemarble_2k_diff.jpg", "tex_whitemarble_2k_rough.jpg", 2.0),
+        "深色木": ("tex_wood_2k_diff.jpg", "tex_wood_2k_rough.jpg", 1.8),
+        "隔扇": ("tex_wood_2k_diff.jpg", "tex_wood_2k_rough.jpg", 1.8),
+        "朱红柱": ("tex_wood_2k_diff.jpg", "tex_wood_2k_rough.jpg", 2.2),
+        "朱红墙": ("tex_greybrick_2k_diff.jpg", "tex_greybrick_2k_rough.jpg", 2.6),
+        "城墙": ("tex_greybrick_2k_diff.jpg", "tex_greybrick_2k_rough.jpg", 2.6),
+        "宫城地坪·石板": ("tex_greybrick_2k_diff.jpg", "tex_greybrick_2k_rough.jpg", 2.4),
+        "御道·石板": ("tex_greybrick_2k_diff.jpg", "tex_greybrick_2k_rough.jpg", 2.4),
+    }
+    if src_name not in table:
+        return None
+    diff, rough, cube = table[src_name]
+    if not os.path.exists(os.path.join(A, diff)):
+        return None
+    key = "GLBTEX·" + src_name
+    m = bpy.data.materials.get(key)
+    if m is None:
+        m = bpy.data.materials.new(key)
+        m.use_nodes = True
+        nt = m.node_tree
+        bsdf = nt.nodes.get("Principled BSDF")
+        t1 = nt.nodes.new("ShaderNodeTexImage")
+        t1.image = bpy.data.images.load(os.path.join(A, diff), check_existing=True)
+        nt.links.new(t1.outputs["Color"], bsdf.inputs["Base Color"])
+        t2 = nt.nodes.new("ShaderNodeTexImage")
+        t2.image = bpy.data.images.load(os.path.join(A, rough), check_existing=True)
+        t2.image.colorspace_settings.name = "Non-Color"
+        nt.links.new(t2.outputs["Color"], bsdf.inputs["Roughness"])
+        uv = nt.nodes.new("ShaderNodeUVMap")
+        nt.links.new(uv.outputs["UV"], t1.inputs["Vector"])
+        nt.links.new(uv.outputs["UV"], t2.inputs["Vector"])
+    return (m, cube)
+
+
+def _box_uv(ob, cube):
+    """按面法线选投影轴生成米制立方投影 UV（numpy 向量化）。
+
+    纯 Python 逐 loop 写 460 万个 UV 要几十分钟，`uv.cube_project` 算子更慢；
+    这里全部用 foreach_get/foreach_set + numpy，秒级完成。
+    """
+    import numpy as np
+    me = ob.data
+    nv, ln, nf = len(me.vertices), len(me.loops), len(me.polygons)
+    co = np.empty(nv * 3, dtype=np.float32)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    mw = np.array(ob.matrix_world)
+    co = co @ mw[:3, :3].T + mw[:3, 3]
+    lv = np.empty(ln, dtype=np.int32)
+    me.loops.foreach_get("vertex_index", lv)
+    pn = np.empty(nf * 3, dtype=np.float32)
+    me.polygons.foreach_get("normal", pn)
+    axis = np.argmax(np.abs(pn.reshape(-1, 3)), axis=1)
+    lt = np.empty(nf, dtype=np.int32)
+    me.polygons.foreach_get("loop_total", lt)
+    fax = np.repeat(axis, lt)[:ln]
+    c = co[lv]
+    u = np.where(fax == 0, c[:, 1], c[:, 0])
+    v = np.where(fax == 2, c[:, 1], c[:, 2])
+    uv = np.stack([u / cube, v / cube], axis=1).astype(np.float32)
+    lay = me.uv_layers.new(name="BoxUV")
+    lay.data.foreach_set("uv", uv.ravel())
+
+
+def _texturize(target):
+    """给每个对象补立方投影 UV，并把大面材质换成贴图版。"""
+    n_uv = n_mat = 0
+    for ob in list(target.objects):
+        if ob.type != "MESH" or not ob.data.materials:
+            continue
+        got = _glb_textured(ob.data.materials[0].name)
+        if got is None:
+            continue
+        mat, cube = got
+        if not ob.data.uv_layers:
+            _box_uv(ob, cube)      # 纯 Python 立方投影：edit-mode 算子对百万面太慢
+            n_uv += 1
+        ob.data.materials[0] = mat
+        n_mat += 1
+    return n_uv, n_mat
+
+
 glb = os.path.join(WORK, "palace_massing.glb")
 if not args.no_glb:
     _n_merged = _join_by_material(col)
     print("JOINED", _n_merged, "objects ->", len(col.objects))
+    if args.glb_textures:
+        _u, _m = _texturize(col)
+        print("TEXTURIZED uv_added=%d mats=%d" % (_u, _m))
     bpy.ops.export_scene.gltf(
         filepath=glb, export_format="GLB", export_apply=True,
         export_draco_mesh_compression_enable=True,
