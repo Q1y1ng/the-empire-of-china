@@ -710,22 +710,18 @@ if P:
         new = [o for o in bpy.data.objects if o not in before]
         keep = []
         for o in new:
-            if any(k in o.name for k in ("城台", "门洞", "券脚", "券脸", "翼墙")):
+            if any(k in o.name for k in ("城台", "门洞", "券脚", "券脸", "翼墙", "门楼")):
                 bpy.data.objects.remove(o, do_unlink=True)
             else:
                 o.location.y += g["cy"]
                 keep.append(o)
-        tower = [o for o in keep if "门楼" in o.name]
-        emp = bpy.data.objects.new("承天门·门楼比例", None)
-        col.objects.link(emp)
-        emp.location = (0.0, g["cy"], 16.1)
-        emp.hide_render = True
-        emp.matrix_parent_inverse = Matrix.Translation((0.0, -g["cy"], -16.1))
-        for o in tower:
-            o.parent = emp
-            o.matrix_parent_inverse = emp.matrix_parent_inverse
-        emp.scale = (1.35, 1.15, 1.15)
         five_arch_gate(g)
+        b3 = set(bpy.data.objects)
+        PL.hall("承天门·门楼", 72.0, 31.5, z=16.1, storeys=2,
+                base_h=0.65, col_h=6.5, plaque=None, lod=2,
+                stairs=False, balustrade=False)
+        for o in [x for x in bpy.data.objects if x not in b3]:
+            o.location.y += g["cy"]
         for sx in (-1, 1):
             b2 = set(bpy.data.objects)
             PL.wall_tower("承天门·雁翅楼" + ("东" if sx > 0 else "西"), 38, 20, z=0.1, body_h=11)
