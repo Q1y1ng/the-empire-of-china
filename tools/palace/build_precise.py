@@ -60,13 +60,14 @@ hdri = {"sunny": "hdri_sky_sunny_2k.hdr",
         "overcast": "hdri_sky_overcast_2k.hdr",
         "none": None}[args.hdri]
 review = LK.review_settings()
-w_strength = 0.80 if hdri else 1.0
-sun_e = args.sun_energy or 3.0
+# 与整宫同一套光比（太阳 2.6 : 环境 1.3），否则单殿图比整宫图"烈"一档
+w_strength = 1.30 if hdri else 1.0
+sun_e = args.sun_energy or 2.60
 info = LK.setup_world(sc, hdri, strength=w_strength,
                       az=228, elev=36, fallback_sky=True)
 sun = LK.setup_sun(sc, energy=sun_e, az=228, elev=36)
 sun_info = sun[1] if isinstance(sun, (tuple, list)) and len(sun) > 1 else str(sun)
-exp = args.exposure if args.exposure else -0.20
+exp = args.exposure if args.exposure else -0.50
 LK.setup_render(sc, res=args.res, samples=args.samples, exposure=exp)
 
 cam_data = bpy.data.cameras.new("Cam")
