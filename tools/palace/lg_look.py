@@ -804,8 +804,8 @@ def make_materials():
                                rough=(0.24, 0.36), grime=0.95, coat=0.14))
     add("tile_gray", "青瓦", _gray_tile)
     # ---- 石作
-    add("stone", "汉白玉", lambda g: _marble(g))
-    add("marble_carved", "汉白玉·雕花", lambda g: _marble(g, veins=1.15, bump=0.0008,
+    add("stone", "汉白玉", lambda g: _marble(g, veins=1.45, bump=0.0011))
+    add("marble_carved", "汉白玉·雕花", lambda g: _marble(g, veins=1.75, bump=0.0016,
                                                           carve=True))
     add("stone2", "石阶", lambda g: _stone(g, (0.470, 0.450, 0.400), dirt=0.55,
                                            rough_lo=0.46, rough_hi=0.66))

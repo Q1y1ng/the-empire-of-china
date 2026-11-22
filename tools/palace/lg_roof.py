@@ -597,6 +597,24 @@ def _hip_line(W, D, z0, H, lift, sx, sy, n=14, inset=0.0):
     return pts
 
 
+def _cap_tiles(pl, name, pts, z_top, mat, step=0.42, w=0.34, h=0.16):
+    """沿折线铺一排盖脊瓦小块（垂脊/戗脊用）：按局部坐标基摆正，不设物体旋转。"""
+    verts, faces = [], []
+    for i in range(len(pts) - 1):
+        a, b = pts[i], pts[i + 1]
+        seg = math.dist(a, b)
+        n = max(1, int(seg / step))
+        t = _norm(_sub(b, a))
+        right = _norm(_cross(t, (0, 0, 1.0)))
+        for k in range(n):
+            f = (k + 0.5) / n
+            c = (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f,
+                 a[2] + (b[2] - a[2]) * f + z_top)
+            _box_t(verts, faces, c, t, right, (0.0, 0.0, 1.0),
+                   seg / n - 0.02, w, h)
+    return pl.mesh_from(name, verts, faces, mat, merge=False)
+
+
 def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
     """正脊 + 鸱吻 + 四条垂脊 + 走兽。"""
     mat = mat or pl.MAT.get("tile2") or pl.MAT["tile"]
@@ -627,6 +645,8 @@ def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
         for sy in (-1, 1):
             hp = _hip_line(W, D, z0, H, lift, sx, sy, n=16)
             objs.append(sweep(pl, f"{name}·垂脊{sx}{sy}", hp, 0.38, -0.36, 0.58, mat))
+            objs.append(_cap_tiles(pl, f"{name}·垂脊瓦{sx}{sy}", hp, 0.66, mat,
+                                   step=0.40, w=0.30, h=0.18))
             if lod >= 2:
                 # 翼角走兽：靠檐口一段排 5 个小兽，坐在脊背上
                 for k in range(5):
@@ -640,19 +660,27 @@ def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
 
 
 def _chiwen(pl, name, x_end, zr, s, mat, gold):
-    """鸱吻：正脊端头一片卷尾的板（侧看成"逗号"），嘴朝脊咬住脊端，背上插剑把。"""
-    base_z = zr + 0.86                      # 坐在正脊顶上
-    prof = [(0.00, 0.00), (1.05, 0.00), (1.55, 0.28), (1.88, 0.85),
-            (2.00, 1.55), (1.92, 2.20), (1.66, 2.78), (1.26, 3.18),
-            (0.92, 3.30), (0.70, 3.16), (0.62, 2.88), (0.80, 2.60),
-            (1.00, 2.34), (1.04, 2.06), (0.86, 1.86), (0.52, 1.88),
-            (0.22, 1.62), (0.10, 1.10), (0.10, 0.55)]
+    """鸱吻（正吻）：吻座 + 卷尾主体 + 剑把 + 背兽。
+
+    侧看成"逗号"：底宽、背上鼓、尾上卷、口朝脊咬住正脊端；
+    轮廓取直线段（不用多点平滑），4 m 高度在 60 m 外才立得住。
+    """
+    base_z = zr + 0.72                       # 坐在正脊顶（吻座下皮）
+    # 吻座
+    pl.box(name + "·吻座", 1.95, 1.02, 0.42, x_end + s * 0.72, 0, base_z,
+           mat)
+    z0 = base_z + 0.42
+    prof = [(0.00, 0.00), (1.55, 0.00), (1.95, 0.45), (2.24, 1.30),
+            (2.18, 2.20), (1.92, 2.92), (1.46, 3.42), (1.02, 3.66),
+            (0.72, 3.56), (0.66, 3.22), (0.88, 2.94), (1.04, 2.66),
+            (0.98, 2.42), (0.72, 2.30), (0.36, 2.22), (0.16, 1.86),
+            (0.10, 1.30), (0.00, 1.02)]
+    sc = 1.16
     verts, faces = [], []
-    half = 0.78
-    sc = 1.28
+    half = 0.48
     for (dx, dz) in prof:
-        verts.append((x_end + s * dx * sc, -half, base_z + dz * sc))
-        verts.append((x_end + s * dx * sc, half, base_z + dz * sc))
+        verts.append((x_end + s * dx * sc, -half, z0 + dz * sc))
+        verts.append((x_end + s * dx * sc, half, z0 + dz * sc))
     n = len(prof)
     for i in range(n):
         j = (i + 1) % n
@@ -661,10 +689,12 @@ def _chiwen(pl, name, x_end, zr, s, mat, gold):
     faces.append(tuple(i * 2 + 1 for i in range(n - 1, -1, -1)))
     ob = pl.mesh_from(name, verts, faces, mat, merge=True)
     # 剑把：斜插在背上
-    pl.box(name + "·剑把", 0.18, 0.18, 1.45, x_end + s * 1.62, 0, base_z + 3.06,
+    pl.box(name + "·剑把", 0.20, 0.20, 1.55, x_end + s * 1.72, 0, z0 + 2.95,
+           gold or mat)
+    pl.box(name + "·剑把座", 0.44, 0.44, 0.26, x_end + s * 1.70, 0, z0 + 2.72,
            gold or mat)
     # 背兽：尾巴根上的小团
-    pl.box(name + "·背兽", 0.46, 0.46, 0.46, x_end + s * 1.88, 0, base_z + 1.62,
+    pl.box(name + "·背兽", 0.52, 0.52, 0.52, x_end + s * 1.86, 0, z0 + 1.55,
            gold or mat)
     return ob
 
@@ -697,6 +727,8 @@ def ridge_xie(pl, name, OW, OD, IW, ID, z0, H, lift=1.35, mat=None):
                                                           OW, OD) * (1 - t) ** 2 + 0.02
                 pts.append((x, y, z))
             sweep(pl, f"{name}·戗脊{sx}{sy}", pts, 0.26, -0.14, 0.36, mat)
+            _cap_tiles(pl, f"{name}·戗脊瓦{sx}{sy}", pts, 0.42, mat,
+                       step=0.40, w=0.22, h=0.16)
 
 
 # ------------------------------------------------------------------ 组合
