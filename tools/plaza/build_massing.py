@@ -721,20 +721,46 @@ def flag_platform(cx=0.0, cy=-780.0):
     box("升旗台·杆座", 2.4, 2.4, 0.8, cx, cy, z, MAT["stone_light"])
     _pole("升旗台·旗杆", 0.20, 0.10, 30.0, cx, cy, z + 0.8, MAT["lamp_bronze"], n=12)
     cyl("升旗台·杆顶", 0.22, 0.5, cx, cy, z + 0.8 + 30.0, MAT["roof_gold"], n=12)
-    box("升旗台·旗", 12.0, 0.08, 8.0, cx + 6.2, cy, z + 0.8 + 20.5, MAT["wall_red"])
-    for sy in (-1, 1):
-        _yy = cy + sy * 0.12
-        _specs = ((2.0, 26.0, 0.95), (4.0, 27.0, 0.34), (4.9, 26.2, 0.34),
-                  (4.9, 24.9, 0.34), (4.0, 24.1, 0.34))
-        for k, (dx, hz, rr) in enumerate(_specs):
-            st = cyl(f"升旗台·星{k}{sy}", rr, 0.10, 0, 0, 0, MAT["roof_gold"], n=10)
-            st.rotation_euler = (math.pi / 2, 0, 0)
-            st.location = (cx + dx, _yy, hz + 0.0)
     rail_edge("升旗台·栏板N", "x", cy + 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
     rail_edge("升旗台·栏板S", "x", cy - 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
     rail_edge("升旗台·栏板E", "y", cx + 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
     rail_edge("升旗台·栏板W", "y", cx - 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
 
+
+def huabiao(name, x, y):
+    box(name + "·台", 7.0, 7.0, 0.7, x, y, 0.20, MAT["marble"])
+    box(name + "·座", 5.0, 5.0, 1.0, x, y, 0.90, MAT["marble"])
+    cyl(name + "·柱", 0.75, 10.5, x, y, 1.90, MAT["marble"], n=16)
+    for _z in (3.5, 6.0, 8.5):
+        cyl(name + "·金箍", 0.80, 0.12, x, y, _z, MAT["roof_gold"], n=16)
+    box(name + "·云板", 5.4, 0.45, 1.4, x, y, 9.90, MAT["marble"])
+    for sx in (-1, 1):
+        box(name + "·云板头", 1.4, 0.45, 1.4, x + sx * 2.8, y, 10.10, MAT["marble"])
+        box(name + "·云板上翘", 1.0, 0.45, 0.5, x + sx * 3.3, y, 10.90, MAT["marble"])
+    cyl(name + "·承露盘", 1.30, 0.30, x, y, 11.30, MAT["marble"], n=16)
+    box(name + "·兽身", 1.1, 1.5, 0.9, x, y, 11.60, MAT["marble"])
+    box(name + "·兽头", 0.9, 0.9, 0.9, x, y - 0.45, 12.25, MAT["marble"])
+    for sx in (-1, 1):
+        box(name + "·兽腿", 0.30, 0.30, 0.65, x + sx * 0.32, y + 0.35, 11.60, MAT["marble"])
+    box(name + "·兽尾", 0.30, 0.6, 0.7, x, y + 0.85, 11.60, MAT["marble"])
+
+
+def stone_lion(name, x, y):
+    box(name + "·座", 3.6, 3.6, 1.3, x, y, 0.20, MAT["marble"])
+    box(name + "·身", 1.5, 2.6, 1.4, x, y, 1.50, MAT["stone_light"])
+    box(name + "·头", 1.3, 1.2, 1.3, x, y - 0.90, 2.75, MAT["stone_light"])
+    for sx in (-1, 1):
+        box(name + "·前腿", 0.38, 0.65, 1.2, x + sx * 0.45, y - 0.90, 1.50, MAT["stone_light"])
+        box(name + "·耳", 0.32, 0.22, 0.40, x + sx * 0.40, y - 1.10, 3.85, MAT["stone_light"])
+    box(name + "·尾", 0.40, 0.8, 0.8, x, y + 1.15, 2.00, MAT["stone_light"])
+
+
+for _sx in (-1, 1):
+    huabiao(f"华表{_sx}", _sx * 34.0, -740.0)
+    stone_lion(f"石狮{_sx}", _sx * 26.0, -700.0)
+for _sx in (-1, 1):
+    box("广场排水沟", 0.30, P["depth"], 0.06, _sx * 296, _pcy, 0.20, MAT["stone_dark"])
+    box("广场路缘", 0.50, P["depth"], 0.12, _sx * 300, _pcy, 0.18, MAT["stone_light"])
 
 flag_platform()
 national_monument()
