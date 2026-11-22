@@ -1061,7 +1061,7 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1):
         cxw = sx * (w / 2 + sw / 2)
         box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cxw, 0, z, mat_w)
         _cap = ROOF.two_slope(_self(), f"{name}·翼墙帽{'EW'[sx > 0]}",
-                              sw + 0.2, st + 0.2, z + shh - 0.10, 0.42,
+                              sw + 0.10, st + 0.10, z + shh - 0.14, 0.38,
                               mat=MAT.get("glaze_plain_dark") or MAT.get("tile_gray")
                               or MAT["tile_gray"])
         _cap.location.x = cxw

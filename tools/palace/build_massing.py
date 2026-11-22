@@ -304,11 +304,11 @@ def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
     box(name, Lx, Ly, h, cx, cy, 0.0, mat)
     H = 0.55
     if Lx >= Ly:
-        a, b = Lx + 0.8, Ly + 0.8
+        a, b = Lx + 0.45, Ly + 0.45
         v = [(-a / 2, -b / 2, 0), (a / 2, -b / 2, 0), (a / 2, b / 2, 0),
              (-a / 2, b / 2, 0), (-a / 2, 0, H), (a / 2, 0, H)]
     else:
-        a, b = Ly + 0.8, Lx + 0.8
+        a, b = Ly + 0.45, Lx + 0.45
         v = [(-a / 2, -b / 2, 0), (a / 2, -b / 2, 0), (a / 2, b / 2, 0),
              (-a / 2, b / 2, 0), (-a / 2, 0, H), (a / 2, 0, H)]
         v = [(y, x, z) for (x, y, z) in v]
@@ -337,7 +337,7 @@ openings = {g["side"]: g["opening"] for g in D.GATES}
 
 def wall_bar(name, w, d, x, y, along_x=True):
     box(name, w, d, H, x, y, 0.0, MAT["citywall"])
-    box(name + "_顶", w + 1.2, d + 1.2, 0.7, x, y, H, MAT["ridge"])
+    box(name + "_顶", w + 0.6, d + 0.6, 0.7, x, y, H, MAT["ridge"])
     if args.precise:
         if along_x:
             PL.crenel_band(name + "_垛", x - w / 2, x + w / 2, y - d / 2 + 0.55, H + 0.7, along_x=True)
