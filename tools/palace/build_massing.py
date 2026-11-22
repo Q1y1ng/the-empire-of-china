@@ -363,7 +363,7 @@ if args.precise:
     # 三台前陛（南面正中踏跺）：26 级 + 御路 + 两侧垂带
     _ys = [b for a, b in D.PLATFORM_POLY]
     _y_edge = min(_ys)
-    _n, _dep, _hw = 26, 18.0, 15.0
+    _n, _dep, _hw = 30, 22.0, 23.0
     _sd = _dep / _n
     _ms = PL.MAT.get("marble_carved") or PL.MAT["stone"]
     for _i in range(_n):
@@ -474,7 +474,7 @@ def add_struct_precise(st):
                  with_kiss=False)
         return
     storeys = 2 if (w >= 64 and h >= 11 and k in ("hall", "tower")) else 1
-    lod = 2 if w >= 64 else (1 if w >= 42 else 0)
+    lod = 2 if w >= 64 else (1 if w >= 30 else 0)
     n = max(3, int(round(w / 7)))
     m = max(3, int(round(d / 9)))
     before = set(col.objects)

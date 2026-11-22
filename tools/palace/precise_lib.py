@@ -926,6 +926,11 @@ def gate_house(name, w, d, z=0.0, h=9.0):
     for sx in (-1, 1):
         box(f"{name}·城台{'EW'[sx > 0]}", side, d, h,
             sx * (ow / 2 + side / 2), 0, z, mat_w)
+    # 两侧翼墙：让门接进一道墙里，不再孤零零立在空场
+    sw, st, shh = 28.0, max(3.2, d * 0.42), h * 0.90
+    for sx in (-1, 1):
+        box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh,
+            sx * (w / 2 + sw / 2), 0, z, mat_w)
     if h - top > 0.25:
         box(f"{name}·城台上", ow, d, h - top, 0, 0, z + top, mat_w)
 
