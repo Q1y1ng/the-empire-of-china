@@ -429,19 +429,34 @@ def build_stage():
 
     # 国徽与十面旗（精模）
     if P:
+        # 国徽：先在局部 XY 平面画（u=x 横向、v=y 竖向、w=z 出挑），
+        # 建完整体绕 Y 转 −90° 立起来朝东——Mesh 没有轴变换，只能靠对象旋转。
         E = Mesh("国徽", MAT["gold"], "stage")
-        cx, cz = S["x0"] + 0.9, 12.5
         R = D.EMBLEM["d"] / 2.0
-        E.cyl(cx, AX, cz - 0.18, cz + 0.18, R, n=40)
-        # 蟠龙浮雕：S 形盘绕的简化卷
-        for k in range(18):
-            a = -1.2 + k * 0.14
-            rr = R * 0.62 * (0.55 + 0.45 * math.sin(k * 0.55))
-            E.cyl(cx + 0.25, AX + rr * math.cos(a), cz - 0.22 + rr * math.sin(a),
-                  cz + 0.02, 0.28, n=8)
-        E.box(cx + 0.2, AX, cz - 2.55, 0.5, 3.0, 0.55)
-        emit(E)
+        E.cyl(0, 0, -0.10, 0.14, R, n=56)
+        Z0, ZD = -0.36, 0.24
 
+        ww = 0.21 * D.EMBLEM["d"]                      # 城墙半宽 0.21D
+        E.box(0, -R * 0.54, Z0, 2 * ww, 0.86, ZD)      # 墙身
+        for dy in (-ww, -ww * 0.33, ww * 0.33, ww):
+            E.box(dy, -R * 0.54 + 0.55, Z0, 0.30, 0.28, ZD)   # 垛口
+        gr = 0.62 * R
+        for i in range(8):                             # 齿轮八齿
+            a = 2 * math.pi * i / 8
+            E.box(gr * math.cos(a), -R * 0.70 + 0.30 * math.sin(a), Z0, 0.26, 0.26, ZD)
+        for sgn in (-1, 1):                            # 稻穗各五粒
+            for i in range(5):
+                E.box(sgn * (R * 0.68 - 0.05 * i), -R * 0.24 + i * 0.40, Z0,
+                      0.17, 0.26, ZD)
+        for i in range(22):                            # 金蟠龙 S 形盘绕
+            t = i / 21.0
+            E.box(1.02 * math.sin(t * 2.2 * math.pi - 0.6), -R * 0.34 + 3.10 * t,
+                  Z0, 0.30, 0.32, ZD)
+        E.box(0, -R * 0.92, Z0, 2.05, 0.30, ZD)        # 绶带
+        ob = emit(E, (0, 0, 1))
+        if ob:
+            ob.rotation_euler = (0, math.radians(-90), 0)
+            ob.location = (S["x0"] + 1.0, AX, 12.0)
         if D.FLAGS_AT_PROSCENIUM:
             F = Mesh("红底金龙旗", MAT["red"], "stage")
             for dy in (-16.5, -11.0, -5.5, 5.5, 11.0, 16.5,
