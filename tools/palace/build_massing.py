@@ -49,6 +49,12 @@ col = sc.collection
 if args.precise:
     PL.set_collection(col)
     PL.make_materials()
+    try:
+        import lg_look as _LK
+        PL.MAT.update(_LK.make_materials())
+        print("MATERIALS: lg_look", len(_LK.MAT), flush=True)
+    except Exception as _e:
+        print("MATERIALS: precise_lib only (%s)" % _e, flush=True)
 
 
 def material(name, rgb, rough=0.75, metal=0.0):
@@ -366,7 +372,7 @@ def add_struct_precise(st):
                  with_kiss=False)
         return
     storeys = 2 if (w >= 64 and h >= 11 and k in ("hall", "tower")) else 1
-    lod = 2 if w >= 60 else (1 if w >= 34 else 0)
+    lod = 2 if w >= 64 else (1 if w >= 42 else 0)
     n = max(3, int(round(w / 7)))
     m = max(3, int(round(d / 9)))
     before = set(col.objects)
@@ -457,6 +463,18 @@ bg = sc.world.node_tree.nodes["Background"]
 bg.inputs[0].default_value = (0.60, 0.72, 0.90, 1.0)
 bg.inputs[1].default_value = 0.32
 
+if args.precise:
+    try:
+        import lg_look as _LK2
+        _LK2.setup_world(sc, "hdri_sky_sunny_2k.hdr", strength=1.0, az=228, elev=36,
+                         fallback_sky=True)
+        _LK2.setup_sun(sc, energy=3.0, az=228, elev=36)
+        sun = bpy.data.objects.get("LG_Sun") or sun
+        _LK2.setup_render(sc, res=args.res, samples=args.samples, exposure=-0.42)
+        sc.view_settings.exposure = -0.42
+    except Exception as _e2:
+        print("LOOK setup failed:", _e2, flush=True)
+
 sc.render.engine = "CYCLES"
 sc.cycles.device = "GPU"
 sc.cycles.samples = args.samples
@@ -464,7 +482,8 @@ sc.cycles.use_denoising = True
 sc.cycles.max_bounces = 6
 sc.render.image_settings.file_format = "PNG"
 sc.view_settings.view_transform = "Standard"
-sc.view_settings.exposure = -0.2
+if not args.precise:
+    sc.view_settings.exposure = -0.2
 
 # ------------------------------------------------------------------ 出图
 AR = 16 / 9

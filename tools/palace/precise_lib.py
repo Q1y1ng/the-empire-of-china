@@ -63,6 +63,108 @@ def _col():
     return COL or bpy.context.scene.collection
 
 
+def box_at(name, w, d, h, x, y, z0, mat=None):
+    """局部建盒子再定位：Object 空间以自身中心为原点；UV 的 U 沿长边 0..1、V 沿高度 0..1。
+
+    彩画、匾额这类"按构件长度分段"的着色器要的就是这个口径（用 Object X 或 UV.U）。
+    """
+    hx, hy = w / 2.0, d / 2.0
+    verts = [(-hx, -hy, 0.0), (hx, -hy, 0.0), (hx, hy, 0.0), (-hx, hy, 0.0),
+             (-hx, -hy, h), (hx, -hy, h), (hx, hy, h), (-hx, hy, h)]
+    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+             (2, 6, 7, 3), (3, 7, 4, 0)]
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    uv = me.uv_layers.new(name="UVMap")
+    for poly in me.polygons:
+        n = poly.normal
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            if abs(n.x) > max(abs(n.y), abs(n.z)):
+                u = (co.y + hy) / (2 * hy) if hy else 0.5
+                v = co.z / h if h else 0.0
+            elif abs(n.y) > abs(n.z):
+                u = (co.x + hx) / (2 * hx) if hx else 0.5
+                v = co.z / h if h else 0.0
+            else:
+                u = (co.x + hx) / (2 * hx) if hx else 0.5
+                v = (co.y + hy) / (2 * hy) if hy else 0.5
+            uv.data[li].uv = (u, v)
+    me.validate()
+    me.update()
+    ob = bpy.data.objects.new(name, me)
+    _col().objects.link(ob)
+    if mat:
+        ob.data.materials.append(mat)
+    ob.location = (x, y, z0)
+    return ob
+
+
+_LG = None
+
+
+def _lg():
+    """延迟导入三个新构件库（lg_roof / lg_dougong / lg_facade）。"""
+    global _LG
+    if _LG is None:
+        import lg_dougong
+        import lg_facade
+        import lg_roof
+        _LG = (lg_roof, lg_dougong, lg_facade)
+    return _LG
+
+
+def _self():
+    import sys
+    return sys.modules[__name__]
+
+
+def unit_for(w):
+    """斗口（材宽）按面阔定：太和殿 60 m → 0.11 m，本工程 90 m 殿 → 0.165 m。"""
+    return max(0.070, min(0.170, w / 545.0))
+
+
+def merge_ring(pl, name, dg, w, d, z, unit, spacing, lod):
+    """把一圈斗拱合成**一个**网格对象（整宫精模里 100+ 殿，散着放会有上万对象）。"""
+    import math as _m
+    slots = dg.ring_layout(w, d, spacing)
+    verts, faces, midx = [], [], []
+    cache = {}
+    mats = []
+    for (x, y, rot, sp, _side) in slots:
+        key = round(sp, 6)
+        if key not in cache:
+            me = dg.make_mesh(unit, lod, seg=sp / unit)
+            cache[key] = ([tuple(v.co) for v in me.vertices],
+                          [tuple(p.vertices) for p in me.polygons],
+                          [p.material_index for p in me.polygons])
+            if not mats:
+                mats = list(me.materials)
+        vs, fs, mi = cache[key]
+        c, s = _m.cos(rot), _m.sin(rot)
+        b = len(verts)
+        for (vx, vy, vz) in vs:
+            verts.append((x + vx * c - vy * s, y + vx * s + vy * c, z + vz))
+        for f in fs:
+            faces.append(tuple(b + i for i in f))
+        midx.extend(mi)
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    for m in mats:
+        me.materials.append(m)
+    me.update()
+    for i, p in enumerate(me.polygons):
+        if i < len(midx):
+            p.material_index = midx[i]
+        if p.material_index == 2 and abs(p.normal.x) < 0.9:
+            p.use_smooth = True
+    me.validate()
+    me.update()
+    ob = bpy.data.objects.new(name, me)
+    _col().objects.link(ob)
+    return ob
+
+
 def box(name, w, d, h, x, y, z0=0.0, mat=None):
     """直接建网格（不走 bpy.ops，快 20 倍以上）。"""
     hx, hy, hz = w / 2, d / 2, h / 2
@@ -120,37 +222,93 @@ def solidify(ob, thickness=0.5):
 
 
 # ------------------------------------------------------------------ 台基
+def _ring_extrude(name, W, D, prof, mat, cap=True):
+    """把 (内收量, 相对高度) 剖面绕矩形一圈挤出 —— 须弥座台基用，不会像叠盒子那样 z-fighting。"""
+    verts, faces = [], []
+    n = len(prof)
+    for (dx, z) in prof:
+        ww, dd = W - 2 * dx, D - 2 * dx
+        b = len(verts)
+        verts.extend([(-ww / 2, -dd / 2, z), (ww / 2, -dd / 2, z),
+                      (ww / 2, dd / 2, z), (-ww / 2, dd / 2, z)])
+        if b:
+            for k in range(4):
+                k2 = (k + 1) % 4
+                faces.append((b - 4 + k, b - 4 + k2, b + k2, b + k))
+    if cap:
+        b = (n - 1) * 4
+        faces.append((b, b + 1, b + 2, b + 3))
+    return mesh_from(name, verts, faces, mat, merge=False)
+
+
 def base_platform(w, d, h=3.2, stairs=True, balustrade=True, name="台基"):
-    tiers = [("圭角", w + 8.4, d + 8.4, h * 0.17, 0.0),
-             ("下枋", w + 7.2, d + 7.2, h * 0.14, h * 0.17),
-             ("束腰", w + 5.4, d + 5.4, h * 0.36, h * 0.31),
-             ("上枋", w + 7.2, d + 7.2, h * 0.17, h * 0.67),
-             ("台面", w + 7.8, d + 7.8, h * 0.16, h * 0.84)]
-    for nm, ww, dd, hh, z in tiers:
-        box(f"{name}·{nm}", ww, dd, hh, 0, 0, z,
-            MAT["stone2"] if nm == "束腰" else MAT["stone"])
+    """须弥座台基：圭角 → 下枋 → 束腰 → 上枋 → 台面，一圈挤出成型。"""
+    W0, D0 = w + 7.0, d + 7.0
+    k = h / 3.10
+    prof = [(0.00, 0.00 * k), (0.00, 0.34 * k), (0.30, 0.40 * k), (0.30, 0.92 * k),
+            (0.54, 1.06 * k), (0.54, 2.08 * k), (0.30, 2.22 * k), (0.30, 2.80 * k),
+            (0.10, 2.94 * k), (0.00, 3.10 * k)]
+    _ring_extrude(name, W0, D0, prof, MAT["stone"])
+    # 束腰做深一档（把 3~6 段单独上一遍暗色会 z-fighting，改在剖面里用同一材质即可）
     if stairs:
-        sw, n = min(20.0, w * 0.24), 9
+        sw = min(20.0, w * 0.26)
+        n = 9
+        y0 = -D0 / 2
         for i in range(n):
             top = h * (i + 1) / n
-            box(f"{name}·踏跺{i}", sw, 0.95, top, 0, -d / 2 - 4.0 - i * 0.95, 0.0, MAT["stone2"])
-        box(f"{name}·御路", sw * 0.22, 4.6, 0.22, 0, -d / 2 - 4.2, h - 0.45, MAT["stone"])
+            box(f"{name}·踏跺{i}", sw, 0.92, top, 0, y0 - 0.46 - i * 0.92, 0.0,
+                MAT["stone2"])
+        # 垂带（两侧斜板）
+        for sx in (-1, 1):
+            x = sx * (sw / 2 + 0.55)
+            for i in range(n):
+                box(f"{name}·垂带{sx}{i}", 1.1, 0.92, h * (i + 1) / n,
+                    x, y0 - 0.46 - i * 0.92, 0.0, MAT["stone"])
+        # 御路：从台面斜到地面的石坡（不做浮空平板）
+        hw = sw * 0.13
+        yw = y0 - n * 0.92 - 0.15
+        ve = [(-hw, y0, h - 0.02), (hw, y0, h - 0.02), (hw, yw, 0.02), (-hw, yw, 0.02),
+              (-hw, y0, h - 0.30), (hw, y0, h - 0.30), (hw, yw, 0.0), (-hw, yw, 0.0)]
+        fe = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3),
+              (3, 7, 4, 0)]
+        mesh_from(f"{name}·御路", ve, fe,
+                  MAT.get("marble_carved") or MAT["stone"], merge=False)
     if balustrade:
+        rail_h, rail_t = 0.92, 0.16
+        # 栏板：沿台面边缘一圈（南面留出踏跺口）
+        gap = (min(20.0, w * 0.26) / 2 + 1.6) if stairs else 0.0
+        yS, yN = -D0 / 2 + 0.10, D0 / 2 - 0.10
+        xE, xW = W0 / 2 - 0.10, -W0 / 2 + 0.10
+        for (x0, x1, y) in ((-W0 / 2 + 0.1, -gap, yS), (gap, W0 / 2 - 0.1, yS),
+                            (-W0 / 2 + 0.1, W0 / 2 - 0.1, yN)):
+            if x1 - x0 > 0.5:
+                box(f"{name}·栏板S", x1 - x0, rail_t, rail_h, (x0 + x1) / 2, y, h,
+                    MAT["stone"])
+                box(f"{name}·栏板压", x1 - x0, rail_t + 0.10, 0.12, (x0 + x1) / 2, y,
+                    h + rail_h, MAT["stone"])
+        for (y0, y1, x) in ((-D0 / 2 + 0.1, D0 / 2 - 0.1, xE),
+                            (-D0 / 2 + 0.1, D0 / 2 - 0.1, xW)):
+            box(f"{name}·栏板E", rail_t, y1 - y0, rail_h, x, (y0 + y1) / 2, h,
+                MAT["stone"])
+            box(f"{name}·栏板压", rail_t + 0.10, y1 - y0, 0.12, x, (y0 + y1) / 2,
+                h + rail_h, MAT["stone"])
+        # 望柱
         for side in ("S", "N", "E", "W"):
             if side in ("S", "N"):
-                length, n_post = w + 7.8, max(6, int(w / 5.5))
-                y = (d + 7.8) / 2 * (1 if side == "N" else -1)
+                length, n_post = W0 - 0.2, max(6, int(w / 5.5))
+                y = yS if side == "S" else yN
                 for i in range(n_post + 1):
                     x = -length / 2 + i * length / n_post
-                    if side == "S" and stairs and abs(x) < min(20.0, w * 0.24) / 2 + 1.2:
+                    if side == "S" and stairs and abs(x) < gap:
                         continue
-                    box(f"{name}·望柱{side}{i}", 0.34, 0.34, 1.18, x, y, h, MAT["stone"])
+                    box(f"{name}·望柱{side}{i}", 0.36, 0.36, 1.22, x, y, h, MAT["stone"])
             else:
-                length, n_post = d + 7.8, max(4, int(d / 5.5))
-                x = (w + 7.8) / 2 * (1 if side == "E" else -1)
+                length, n_post = [d + 7.0 - 0.2][0], max(4, int(d / 5.5))
+                x = xE if side == "E" else xW
                 for i in range(n_post + 1):
                     y = -length / 2 + i * length / n_post
-                    box(f"{name}·望柱{side}{i}", 0.34, 0.34, 1.18, x, y, h, MAT["stone"])
+                    box(f"{name}·望柱{side}{i}", 0.36, 0.36, 1.22, x, y, h, MAT["stone"])
+
 
 
 # ------------------------------------------------------------------ 柱 / 枋
@@ -192,38 +350,23 @@ def ring_beam(name, w, d, z, h, t, mat):
 
 
 def beams(xs, ys, z, h, t=0.55):
-    """额枋：按清式彩画分段——两端箍头（青）、中间枋心（绿/青交替），交界加金线。"""
-    def one(name, cx, cy, bw, bd, along_x, heart):
-        # 箍头 0.3 / 枋心 0.4
-        segs = [(0.15, MAT["cai_blue"]), (0.70, heart), (0.15, MAT["cai_blue"])]
-        pos = -0.5
-        for frac, mat in segs:
-            length = frac
-            center = (pos + length / 2) * bw
-            if along_x:
-                box(f"{name}·{mat.name}", bw * length, t, h, cx + center, cy, z, mat)
-            else:
-                box(f"{name}·{mat.name}", t, bw * length, h, cx, cy + center, z, mat)
-            pos += length
-        # 金线（分界）
-        for k in (-0.2, 0.2):
-            if along_x:
-                box(f"{name}·金", 0.12, t + 0.06, h * 0.92, cx + k * bw, cy, z + h * 0.04, MAT["gold"])
-            else:
-                box(f"{name}·金", t + 0.06, 0.12, h * 0.92, cx, cy + k * bw, z + h * 0.04, MAT["gold"])
-
+    """额枋：一根整盒子（局部原点在枋心），交给彩画着色器按 UV 分段。"""
+    green = MAT.get("caihua_uv_green") or MAT.get("caihua_green") or MAT["cai_green"]
+    blue = MAT.get("caihua_uv_blue") or MAT.get("caihua_blue") or MAT["cai_blue"]
+    out = []
     for i in range(len(xs) - 1):
-        bw = xs[i + 1] - xs[i] - t * 1.7
+        bw = xs[i + 1] - xs[i]
         cx = (xs[i] + xs[i + 1]) / 2
-        heart = MAT["cai_green"] if i % 2 == 0 else MAT["cai_blue"]
-        one(f"额枋S{i}", cx, -sum(ys) / 2, bw, t, True, heart)
-        one(f"额枋N{i}", cx, sum(ys) / 2, bw, t, True, heart)
+        mat = green if i % 2 == 0 else blue
+        out.append(box_at(f"额枋S{i}", bw, t, h, cx, ys[0], z, mat))
+        out.append(box_at(f"额枋N{i}", bw, t, h, cx, ys[-1], z, mat))
     for i in range(len(ys) - 1):
-        bw = ys[i + 1] - ys[i] - t * 1.7
+        bw = ys[i + 1] - ys[i]
         cy = (ys[i] + ys[i + 1]) / 2
-        heart = MAT["cai_green"] if i % 2 == 0 else MAT["cai_blue"]
-        one(f"额枋E{i}", sum(xs) / 2, cy, bw, t, False, heart)
-        one(f"额枋W{i}", -sum(xs) / 2, cy, bw, t, False, heart)
+        mat = green if i % 2 == 0 else blue
+        out.append(box_at(f"额枋W{i}", t, bw, h, xs[0], cy, z, mat))
+        out.append(box_at(f"额枋E{i}", t, bw, h, xs[-1], cy, z, mat))
+    return out
 
 
 # ------------------------------------------------------------------ 斗拱
@@ -322,80 +465,30 @@ def hip_height(x, y, w, d, h):
 
 
 def hip_roof(name, w, d, z_eave, h, step=0.55, mat=None):
-    mat = mat or MAT["tile"]
-
-    def f(x, y):
-        return z_eave + hip_height(x, y, w, d, h)
-
-    nx, ny = max(int(w / step), 4), max(int(d / step), 4)
-    verts, faces = [], []
-    for j in range(ny + 1):
-        y = -d / 2 + j * d / ny
-        for i in range(nx + 1):
-            x = -w / 2 + i * w / nx
-            verts.append((x, y, f(x, y)))
-    for j in range(ny):
-        for i in range(nx):
-            a = j * (nx + 1) + i
-            faces.append((a, a + 1, a + nx + 2, a + nx + 1))
-    ob = mesh_from(name, verts, faces, mat, smooth=True)
-    solidify(ob, 0.5)
-    return ob
+    """庑殿屋面（转到 lg_roof；等坡要求 W≥D，近方形时直接对调）。"""
+    ROOF, _, _ = _lg()
+    if d > w:
+        w, d = d, w
+    return ROOF.hip_surface(_self(), name, w, d, z_eave, h,
+                            step=max(0.5, step), lift=0.0, mat=mat)
 
 
 def ring_roof(name, ow, od, iw, id_, z0, h, mat=None, nu=40, nv=7):
-    mat = mat or MAT["tile"]
-    patches = [
-        ((-ow / 2, -od / 2), (ow / 2, -od / 2), (iw / 2, -id_ / 2), (-iw / 2, -id_ / 2)),
-        ((ow / 2, od / 2), (-ow / 2, od / 2), (-iw / 2, id_ / 2), (iw / 2, id_ / 2)),
-        ((ow / 2, -od / 2), (ow / 2, od / 2), (iw / 2, id_ / 2), (iw / 2, -id_ / 2)),
-        ((-ow / 2, od / 2), (-ow / 2, -od / 2), (-iw / 2, -id_ / 2), (-iw / 2, id_ / 2)),
-    ]
-    verts, faces = [], []
-    for (a, b, c, dd) in patches:
-        base = len(verts)
-        elen = math.hypot(b[0] - a[0], b[1] - a[1])
-        for j in range(nv + 1):
-            v = j / nv
-            z = z0 + h * v ** 1.35
-            for i in range(nu + 1):
-                u = i / nu
-                ax, ay = a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u
-                dx, dy = dd[0] + (c[0] - dd[0]) * u, dd[1] + (c[1] - dd[1]) * u
-                x, y = ax + (dx - ax) * v, ay + (dy - ay) * v
-                verts.append((x, y, z + corr(u * elen * 0.62, 0.115 * (0.35 + 0.65 * v))))
-        for j in range(nv):
-            for i in range(nu):
-                p = base + j * (nu + 1) + i
-                faces.append((p, p + 1, p + nu + 2, p + nu + 1))
-    ob = mesh_from(name, verts, faces, mat, smooth=True)
-    solidify(ob, 0.5)
-    return ob
+    """重檐下檐（转到 lg_roof）。"""
+    ROOF, _, _ = _lg()
+    return ROOF.ring_surface(_self(), name, ow, od, iw, id_, z0, h,
+                             step=0.8, lift=1.2, mat=mat)
 
 
-def ridges(w, d, z_eave, h, ridge_len, with_kiss=True):
-    box("正脊", ridge_len + 1.6, 1.0, 1.3, 0, 0, z_eave + h - 0.15, MAT["tile2"])
-    if with_kiss:
-        for s in (-1, 1):
-            box(f"鸱吻{s}", 1.2, 0.95, 2.0, s * (ridge_len / 2 + 0.85), 0,
-                z_eave + h - 0.05, MAT["gold"])
-    if w < 60:
-        return
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            x0, y0 = sx * ridge_len / 2, 0.0
-            x1, y1 = sx * w / 2 * 0.93, sy * d / 2 * 0.93
-            n = 7
-            for i in range(n):
-                t0, t1 = i / n, (i + 1) / n
-                xa, ya = x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0
-                xb, yb = x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1
-                mx, my = (xa + xb) / 2, (ya + yb) / 2
-                mz = z_eave + hip_height(mx, my, w, d, h) - 0.18
-                seg = math.hypot(xb - xa, yb - ya)
-                ob = box(f"垂脊{sx}{sy}{i}", seg + 0.45, 0.55, 0.55,
-                         mx, my, mz, MAT["tile2"])
-                ob.rotation_euler[2] = math.atan2(yb - ya, xb - xa)
+def ridges(w, d, z_eave, h, ridge_len=None, with_kiss=True):
+    """正脊 + 鸱吻 + 垂脊（转到 lg_roof，旧版绕世界原点旋转的 bug 一并修掉）。"""
+    ROOF, _, _ = _lg()
+    if d > w:
+        w, d = d, w
+    mat = MAT.get("glaze_plain_dark") or MAT.get("tile2") or MAT["tile"]
+    return ROOF.ridge_set(_self(), "脊", w, d, z_eave, h, lift=0.0, lod=1,
+                          mat=mat, kiss=with_kiss)
+
 
 
 def balustrade_line(x0, x1, y, z, n=None, along_x=True):
@@ -541,7 +634,8 @@ def rockery(name, w, d, h, z=0.0):
 
 def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
          base_h=3.2, col_h=12.0, plaque=None, lod=1, stairs=True, balustrade=True):
-    """按明官式排一座殿：台基 + 柱网 + 额枋 + 斗拱 + 椽 + 屋顶（单檐/重檐）。"""
+    """按明/清官式排一座殿：台基 → 柱网 → 隔扇外皮 → 额枋 → 斗拱 → 屋面 → 脊吻。"""
+    ROOF, DG, FC = _lg()
     if bays is None:
         n = max(3, int(round(w / 8)))
         bays = [w / n] * n
@@ -552,91 +646,93 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     z0 = z + base_h
     xs, ys = edges(bays), edges(dbays)
     col_h = min(col_h, max(7.0, w * 0.13))
-    columns_ring(xs, ys, z0, z0 + col_h)
-    # 墙身（柱间填充，隔扇在其外侧）
-    box(f"{name}·墙身", w - 1.4, d - 1.4, col_h - 0.2, 0, 0, z0, MAT["wall"])
-    beams(xs, ys, z0 + col_h, 0.9)
-    ring_beam(f"{name}·平板枋", w + 1, d + 1, z0 + col_h + 0.9, 0.28, 0.7, MAT["wall"])
-    eave_lo = z0 + col_h + 1.68   # 檐口抬高，露出斗拱
-    if lod > 0:
-        dougong_ring(w + 1, d + 1, eave_lo - 0.62, lod=lod)
-        rafter_band(f"{name}·椽", w + 1, d + 1, eave_lo - 0.12, depth=3.4)
+    col_r = max(0.26, min(0.48, w / 210.0))
+    unit = unit_for(w)
+    dou_h = 11.0 * unit
+    ov = 10.5 * unit + 1.15                  # 出檐 = 挑檐桁出挑 + 飞椽
+    beam_h = min(1.10, max(0.62, 0.085 * col_h))
+    LOD = min(lod, 2)
+
+    columns_ring(xs, ys, z0, z0 + col_h, r=col_r)
+    if lod >= 1:
+        for x in xs:
+            for y in (ys[0], ys[-1]):
+                FC.column_base(_self(), x, y, z0, col_r)
+        for y in ys[1:-1]:
+            for x in (xs[0], xs[-1]):
+                FC.column_base(_self(), x, y, z0, col_r)
+
+    box(f"{name}·墙身", w - 0.6, d - 0.6, col_h - 0.2, 0, 0, z0, MAT["wall"])
+    beams(xs, ys, z0 + col_h, beam_h)
+    z_ping = z0 + col_h + beam_h
+    ring_beam(f"{name}·平板枋", w + 0.4, d + 0.4, z_ping, 0.26, 0.66, MAT["wall"])
+    dou_z = z_ping + 0.26
+    # 斗拱 LOD 压一档：整宫 100+ 殿时 lod2 的 2200 面/攒会把总面数顶到千万级
+    dou_lod = 1 if lod >= 2 else 0
+    if lod >= 1:
+        merge_ring(_self(), f"{name}·斗拱", DG, w, d, dou_z, unit,
+                   11.0 * unit, dou_lod)
+    else:      # 远距离：一条斗拱带代替整圈构件（102 殿省下 300 万面）
+        ring_beam(f"{name}·斗拱带", w + 1.0, d + 1.0, dou_z + dou_h * 0.18,
+                  dou_h * 0.72, 0.72, MAT["dou"])
+    eave_lo = dou_z + dou_h + 0.34
+
+    if lod >= 2:
+        FC.bay_skin(_self(), name, xs, ys, w, d, z0, col_h, lod=LOD, col_r=col_r)
+    elif lod == 1:      # 中距离：一块隔扇板 + 槛墙，不做棂条
+        dh = min(col_h * 0.72, col_h - 1.2)
+        for i in range(len(xs) - 1):
+            bw = xs[i + 1] - xs[i] - 0.4
+            cx = (xs[i] + xs[i + 1]) / 2
+            box(f"{name}·门S{i}", bw, 0.10, dh, cx, ys[0] - 0.06, z0, MAT["door"])
+            box(f"{name}·门N{i}", bw, 0.10, dh, cx, ys[-1] + 0.06, z0, MAT["door"])
+        for i in range(len(ys) - 1):
+            bw = ys[i + 1] - ys[i] - 0.4
+            cy = (ys[i] + ys[i + 1]) / 2
+            box(f"{name}·门W{i}", 0.10, bw, dh, xs[0] - 0.06, cy, z0, MAT["door"])
+            box(f"{name}·门E{i}", 0.10, bw, dh, xs[-1] + 0.06, cy, z0, MAT["door"])
 
     if storeys == 1:
-        roof_h = max(0.36 * d, 5.0)
-        hip_roof(name + "·顶", w + 8, d + 8, eave_lo + 0.42, roof_h,
-                 step=0.55 if lod >= 2 else 0.8)
-        ridges(w + 8, d + 8, eave_lo + 0.42, roof_h, (w + 8) - (d + 8))
-        # 隔扇
-        for i in range(len(xs) - 1):
-            bw = xs[i + 1] - xs[i] - 1.0
-            cx = (xs[i] + xs[i + 1]) / 2
-            lattice_bay(f"{name}·门S{i}", bw, col_h * 0.62, cx, -d / 2 + 0.15, z0,
-                        bars=4 if lod >= 2 else 3)
-            lattice_bay(f"{name}·门N{i}", bw, col_h * 0.62, cx, d / 2 - 0.15, z0,
-                        bars=4 if lod >= 2 else 3)
-        for i in range(len(ys) - 1):
-            bw = ys[i + 1] - ys[i] - 1.0
-            cy = (ys[i] + ys[i + 1]) / 2
-            lattice_bay(f"{name}·门E{i}", bw, col_h * 0.62, w / 2 - 0.15, cy, z0,
-                        rot=math.pi / 2, bars=3)
-            lattice_bay(f"{name}·门W{i}", bw, col_h * 0.62, -w / 2 + 0.15, cy, z0,
-                        rot=math.pi / 2, bars=3)
+        Wr, Dr = w + 2 * ov, d + 2 * ov
+        ROOF.roof(_self(), name + "·顶", Wr, Dr, eave_lo, 0.73 * Dr / 2,
+                  lift=max(0.9, 0.016 * w), lod=LOD)
     else:
-        up_w, up_d = w * 0.78, d * 0.80
-        ring_z = eave_lo + max(4.2, 0.075 * w)      # 围脊：下檐之上 5~7 m
-        ring_roof(name + "·下檐", w + 8, d + 8, up_w + 1.2, up_d + 1.2,
-                  eave_lo + 0.42, ring_z - eave_lo - 0.42, nu=34, nv=6)
-        for nm, ww, dd, yy, xx in (("S", up_w + 3.4, 0.85, -(up_d / 2 + 0.6), 0),
-                                   ("N", up_w + 3.4, 0.85, (up_d / 2 + 0.6), 0),
-                                   ("E", 0.85, up_d + 1.2, 0, up_w / 2 + 0.6),
-                                   ("W", 0.85, up_d + 1.2, 0, -(up_w / 2 + 0.6))):
-            box(f"{name}·围脊{nm}", ww, dd, 0.8, xx, yy, ring_z - 0.1, MAT["tile2"])
-        box(f"{name}·上檐身", up_w - 2, up_d - 2, 3.0, 0, 0, ring_z, MAT["wall"])
-        ring_beam(f"{name}·上额枋", up_w - 2, up_d - 2, ring_z + 3.0, 0.8, 0.8, MAT["cai_blue"])
-        ring_beam(f"{name}·上平板", up_w - 1.1, up_d - 1.1, ring_z + 3.8, 0.25, 0.65, MAT["wall"])
-        eave_hi = ring_z + 5.2
-        dougong_ring(up_w - 1.1, up_d - 1.1, eave_hi - 0.82, spacing=2.0, lod=lod)
-        rafter_band(f"{name}·上椽", up_w - 1.1, up_d - 1.1, eave_hi - 0.3, depth=2.8)
-        roof_h = max(0.34 * up_d, 6.0)
-        hip_roof(name + "·上顶", up_w + 6, up_d + 6, eave_hi + 0.35, roof_h,
-                 step=0.55 if lod >= 2 else 0.8)
-        ridges(up_w + 6, up_d + 6, eave_hi + 0.35, roof_h, (up_w + 6) - (up_d + 6))
-        for i in range(len(xs) - 1):
-            bw = xs[i + 1] - xs[i] - 1.0
-            cx = (xs[i] + xs[i + 1]) / 2
-            lattice_bay(f"{name}·门S{i}", bw, col_h * 0.68, cx, -d / 2 + 0.15, z0,
-                        bars=4 if lod >= 2 else 3)
-            lattice_bay(f"{name}·门N{i}", bw, col_h * 0.68, cx, d / 2 - 0.15, z0,
-                        bars=4 if lod >= 2 else 3)
+        Wr, Dr = w + 2 * ov, d + 2 * ov
+        # 下檐四边进深相等 → 四面同坡；围脊才是水平的
+        d_in = min(0.42 * Dr, max(5.5, 0.105 * Wr))
+        H_lo = 0.73 * d_in
+        ring_z = eave_lo + H_lo
+        IW, ID = Wr - 2 * d_in, Dr - 2 * d_in
+        up_w, up_d = IW - 0.7, ID - 0.7
+        ROOF.ring_roof(_self(), name + "·下檐", Wr, Dr, IW, ID, eave_lo, H_lo,
+                       lift=max(0.9, 0.014 * w), lod=LOD)
+        z_wall = max(3.4, 0.045 * w)
+        box(f"{name}·上层墙身", up_w - 1.4, up_d - 1.4, z_wall, 0, 0, ring_z,
+            MAT["wall"])
+        unit2 = unit_for(up_w)
+        n2 = max(3, int(round(up_w / 7)))
+        m2 = max(3, int(round(up_d / 8)))
+        up_xs = edges([up_w / n2] * n2)
+        up_ys = edges([up_d / m2] * m2)
+        columns_ring(up_xs, up_ys, ring_z, ring_z + z_wall, r=col_r * 0.95)
+        beams(up_xs, up_ys, ring_z + z_wall, min(0.95, 0.30 + 0.055 * up_w / 10))
+        ring_beam(f"{name}·上平板", up_w + 0.3, up_d + 0.3, ring_z + z_wall + 0.86,
+                  0.24, 0.6, MAT["wall"])
+        dou_z2 = ring_z + z_wall + 1.10
+        merge_ring(_self(), f"{name}·上斗拱", DG, up_w, up_d, dou_z2, unit2,
+                   11.0 * unit2, dou_lod)
+        eave_hi = dou_z2 + 11.0 * unit2 + 0.30
+        W2 = up_w + 2 * (10.5 * unit2 + 1.05)
+        D2 = up_d + 2 * (10.5 * unit2 + 1.05)
+        ROOF.roof(_self(), name + "·上顶", W2, D2, eave_hi, 0.73 * D2 / 2,
+                  lift=max(0.8, 0.014 * up_w), lod=LOD)
 
     if plaque:
-        zz = z0 + col_h * 0.72
-        pw, ph = min(5.2, w * 0.12), min(2.1, col_h * 0.2)
-        box(name + "·匾框", pw, 0.28, ph, 0, -d / 2 - 0.12, zz - ph / 2, MAT["gold"])
-        box(name + "·匾", pw * 0.9, 0.32, ph * 0.82, 0, -d / 2 - 0.16, zz - ph * 0.41,
-            MAT["plaque"])
-        cu = bpy.data.curves.new(name + "·匾文", type="FONT")
-        cu.body = plaque
-        cu.size = ph * 0.52
-        cu.align_x = "CENTER"
-        cu.align_y = "CENTER"
-        cu.extrude = 0.03
-        for fp in (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc"):
-            try:
-                cu.font = bpy.data.fonts.load(fp)
-                break
-            except Exception:
-                continue
-        ob = bpy.data.objects.new(name + "·匾文", cu)
-        _col().objects.link(ob)
-        ob.location = (0, -d / 2 - 0.36, zz)
-        ob.rotation_euler = (math.pi / 2, 0, 0)
-        ob.data.materials.append(MAT["gold"])
-        bpy.ops.object.select_all(action="DESELECT")
-        ob.select_set(True)
-        bpy.context.view_layer.objects.active = ob
-        bpy.ops.object.convert(target="MESH")
+        pw = min(5.6, w * 0.13)
+        ph = min(2.2, col_h * 0.20)
+        FC.plaque(_self(), name, plaque, pw, ph, 0, -d / 2 - 0.02,
+                  z0 + col_h - ph - 0.34, lod=max(1, LOD))
+
 
 
 def gate_house(name, w, d, z=0.0, h=9.0):

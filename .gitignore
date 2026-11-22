@@ -13,3 +13,6 @@ build/
 # Python 缓存
 __pycache__/
 
+
+# 精模资产：法线贴图的 PNG 原件（各 20 MB）不入库，同目录已有 quality 92 的 .jpg 版
+tools/palace/assets/*_nor_gl.png
