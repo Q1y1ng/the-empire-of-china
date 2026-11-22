@@ -163,20 +163,20 @@ def draw_green(ax):
     for s in D.SITES:
         x0, x1 = s["x0"] + 3.0, s["x1"] - 3.0
         y0, y1 = s["y0"] + 3.0, s["y1"] - 3.0
-        rect(ax, x0, y0, x1 - x0, y1 - y0, facecolor="#DCE7C9",
+        rect(ax, x0, y0, x1 - x0, y1 - y0, facecolor="#D8E4C2",
              edgecolor="none", zorder=2.05)
         for x in (s["x0"] + 6.0, s["x1"] - 6.0):
             y = y0 + 12.0
             while y <= y1 - 12.0:
-                ax.add_patch(Circle((x, y), 3.2, facecolor="#75905A",
+                ax.add_patch(Circle((x, y), 2.2, facecolor="#6E8A55",
                                     edgecolor="none", alpha=0.85, zorder=2.2))
-                y += 20.0
+                y += 24.0
         for y in (s["y0"] + 6.0, s["y1"] - 6.0):
             x = x0 + 12.0
             while x <= x1 - 12.0:
-                ax.add_patch(Circle((x, y), 3.2, facecolor="#75905A",
+                ax.add_patch(Circle((x, y), 2.2, facecolor="#6E8A55",
                                     edgecolor="none", alpha=0.85, zorder=2.2))
-                x += 20.0
+                x += 24.0
 
 
 def wall_ring(ax, s, gates):
@@ -280,7 +280,7 @@ def draw_labels(ax):
     label(ax, -425, -1035.5, "中厅\n万人大礼堂 10,000 席", fs=8.2)
     label(ax, -425, -1245.5, "左厅\n八州厅＋宣政厅", fs=8.0)
 
-    # 议事大楼（东，与大会堂镜像同大）
+    # 议事大楼（东，与大会堂同大不同形）
     label(ax, 425, -724, "国家议会议事大楼", fs=9.8, box=True)
     label(ax, 425, -825.5, "北翼", fs=8.0)
     label(ax, 425, -1035.5, "议事厅\n1,100 席", fs=8.2)
@@ -430,7 +430,7 @@ def draw_panel(ax):
         ]),
         ("【判读】", [
             "两楼同为 230 × 600 m（占地 13.8 ha，两层）；博物馆 560 × 170 m；",
-            "原 20 / 8 / 12 ha 建筑面积控制随「对称」调整，待重定。",
+            "原 20 / 8 / 12 ha 建筑面积控制随「同大」调整，待重定。",
         ]),
         ("【推定】", [
             "门廊、围墙、道路、大街断面（8 m 人行道＋84 m 车行道）为推定。",
@@ -446,7 +446,7 @@ def draw_panel(ax):
     # ── 待定
     y = head("待　定", y - 0.012)
     for ln in [
-        "① 对称后两楼同大：原设定大会堂 20 ha、议事 8 ha 不再适用，",
+        "① 同大后两楼同尺：原设定大会堂 20 ha、议事 8 ha 不再适用，",
         "   两楼占地 13.8 ha、建筑约 27.6 ha；是否按此改设定表。",
         "② 广场 45 ha → 48 ha：是否同步改《长安城市志》内城表。",
         "③ 国旗杆：阅兵 09:05 升旗，设定未给位置；本图暂不画。",
