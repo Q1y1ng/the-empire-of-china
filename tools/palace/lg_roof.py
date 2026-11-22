@@ -662,8 +662,9 @@ def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
     for i in range(nseg):
         t = (i + 0.5) / nseg
         x = -L / 2 + t * L
-        _box_t(vv, ff, (x, 0.0, zr + 1.34 - 0.05), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
-               (0.0, 0.0, 1.0), L / nseg - 0.02, 0.46, 0.16)
+        # 抬高 0.12 并加宽到 0.54：原来压在正脊圆弧里，根本看不见分件
+        _box_t(vv, ff, (x, 0.0, zr + 1.34 + 0.07), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0),
+               (0.0, 0.0, 1.0), L / nseg - 0.03, 0.54, 0.19)
     objs.append(pl.mesh_from(name + "·盖脊瓦", vv, ff, mat, merge=False))
     if kiss:
         for s in (-1, 1):
@@ -677,14 +678,28 @@ def ridge_set(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, kiss=True):
             objs.append(_cap_tiles(pl, f"{name}·垂脊瓦{sx}{sy}", hp, 0.66, mat,
                                    step=0.40, w=0.30, h=0.18))
             if lod >= 2:
-                # 翼角走兽：靠檐口一段排 5 个小兽，坐在脊背上
+                # 翼角走兽：靠檐口一段排 5 只，蹲坐姿态用「身＋头」两块拼，
+                # 单块方的在 60 m 外就是一排方块，看不出是兽
+                _gm = pl.MAT.get("gold") or mat
                 for k in range(5):
                     t = 0.86 + 0.024 * k
                     i = min(int(t * (len(hp) - 1)), len(hp) - 2)
-                    p = hp[i]
+                    p, q = hp[i], hp[i + 1]
                     sz = 0.34 - 0.026 * k
-                    pl.box(f"{name}·走兽{k}", sz * 1.4, sz, sz * 1.15,
-                           p[0], p[1], p[2] + 0.60, pl.MAT.get("gold") or mat)
+                    pl.box(f"{name}·走兽{k}", sz * 1.15, sz * 0.92, sz * 0.78,
+                           p[0], p[1], p[2] + 0.60, _gm)
+                    _dx, _dy = q[0] - p[0], q[1] - p[1]
+                    _dl = math.hypot(_dx, _dy) or 1.0
+                    pl.box(f"{name}·兽头{k}", sz * 0.52, sz * 0.52, sz * 0.58,
+                           p[0] + _dx / _dl * sz * 0.42,
+                           p[1] + _dy / _dl * sz * 0.42,
+                           p[2] + 0.60 + sz * 0.74, _gm)
+                    # 仙人骑凤：最外侧一只加高，形成"领队"
+                    if k == 0:
+                        pl.box(f"{name}·仙人", sz * 0.46, sz * 0.46, sz * 0.72,
+                               p[0] + _dx / _dl * sz * 0.10,
+                               p[1] + _dy / _dl * sz * 0.10,
+                               p[2] + 0.60 + sz * 1.30, _gm)
     return [o for o in objs if o]
 
 
