@@ -45,11 +45,11 @@ STAGE = {"x0": -512.0, "x1": -484.0, "half_w": 22.0, "z": 1.5, "h": 22.0}
 PROSCENIUM = {"x": -484.0, "w": 40.0, "h": 22.0}      # 台口
 HALL = {
     "x_front": -484.0, "x_rear": -389.0,
-    "w_front": 40.0, "w_rear": 140.0,
+    "w_front": 40.0, "w_rear": 160.0,
     "depth": 95.0,
     "z_floor": 0.0,        # 台口前第一排地坪
-    "z_apex": 44.0,        # 穹顶最高点（净高 44）
-    "z_spring": 28.0,      # 穹顶与侧墙／后墙交接高度
+    "z_apex": 50.0,        # 穹顶最高点（净高 44）
+    "z_spring": 32.0,      # 穹顶与侧墙／后墙交接高度
     "z_stage_ceiling": 25.0,   # 台口上方天花（台口 22 m，留 3 m 过梁）
 }
 FOCUS = {"x": -514.0, "y": AXIS_Y}   # 扇心：台口后 30 m（几何作图点）
@@ -67,10 +67,10 @@ SEAT = {"pitch": 0.58, "row": 0.95, "aisle": 1.6, "aisle_every": 18.0}
 TIERS = [
     {"key": "pit", "name": "池座", "r0": 37.0, "r1": 79.0,
      "z0": 0.0, "slope": 0.075, "wrap": 0.0, "theta_ref": 0.5, "target": 4690},
-    {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 73.3,
-     "z0": 10.0, "slope": 0.38, "wrap": 44.0, "theta_ref": 0.5, "target": 3020},
-    {"key": "bal2", "name": "三层挑台", "r0": 71.0, "r1": 78.6,
-     "z0": 19.0, "slope": 0.52, "wrap": 30.0, "theta_ref": 0.5, "target": 2500},
+    {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 76.5,
+     "z0": 10.0, "slope": 0.38, "wrap": 0.0, "theta_ref": 0.5, "target": 3020},
+    {"key": "bal2", "name": "三层挑台", "r0": 77.0, "r1": 94.5,
+     "z0": 20.0, "slope": 0.48, "wrap": 0.0, "theta_ref": 0.5, "target": 2500},
 ]
 
 STAGE_SEATS = 400        # 主席台（不计入万人席）

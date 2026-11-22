@@ -18,10 +18,12 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 
 import hall_data as D
 
+FX, FY = D.FOCUS["x"], D.FOCUS["y"]
 EYE = 1.15          # 坐姿眼高
 RAIL = 0.95         # 挑台前缘栏板高
 STAGE_DECK = D.STAGE["z"]
@@ -102,3 +104,53 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------- 全席扫描
+def parapet_r(tier, th):
+    return max(tier["r0"] - tier.get("wrap", 0.0) * (th / tier.get("theta_ref", 0.5)) ** 2,
+               D.tier_rows(tier)[0]["r"])
+
+
+def seat_view(tier, th, r, target):
+    """任意位置的座席（可不在中轴上）望目标点，返回在自身楼板边缘处的视线高度。"""
+    x, y = FX + r * math.cos(th), FY + r * math.sin(th)
+    if not (D.HALL["x_front"] <= x <= D.HALL["x_rear"]):
+        return None
+    if abs(y - D.AXIS_Y) > D.HALL["w_front"] / 2 + (x - D.HALL["x_front"]) * (
+            D.HALL["w_rear"] - D.HALL["w_front"]) / (2 * D.HALL["depth"]):
+        return None
+    z_eye = tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"] + EYE
+    if tier["key"] == "pit":
+        return 999.0            # 池座无上覆栏板，不受挑台遮挡
+    tx, ty, tz = target
+    n = 400
+    for i in range(1, n):
+        t = i / n
+        px, py = x + (tx - x) * t, y + (ty - y) * t
+        pr = math.hypot(px - FX, py - FY)
+        pth = math.atan2(py - FY, px - FX)
+        if pr < parapet_r(tier, pth):
+            z_hit = z_eye + (tz - z_eye) * t
+            return 1.0 if z_hit >= tier["z0"] + RAIL else -1.0
+    return 999.0
+
+
+def scan(target):
+    st = {}
+    for t in D.TIERS:
+        ok = bad = 0
+        arms_ok = arms_bad = 0
+        for th in (-0.52, -0.4, -0.28, -0.14, 0.0, 0.14, 0.28, 0.4, 0.52):
+            for r in [t["r0"] + k * 2.0 for k in range(1, 12)]:
+                v = seat_view(t, th, r, target)
+                if v is None:
+                    continue
+                good = v > 0
+                ok += good
+                bad += (not good)
+                if abs(th) >= 0.28:
+                    arms_ok += good
+                    arms_bad += (not good)
+        st[t["key"]] = (ok, bad, arms_ok, arms_bad)
+    return st
