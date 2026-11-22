@@ -619,7 +619,9 @@ for _sx in (-1, 1):
     for _k in range(12):
         lamp_post(f"广场灯·{_sx}·{_k}", _sx * 286, -700 - _k * 60)
     for _k in range(9):
-        lamp_post(f"轴灯·{_sx}·{_k}", _sx * 24, -720 - _k * 80)
+        _ly = -720 - _k * 80
+        if abs(_ly + 1035.5) > 42:
+            lamp_post(f"轴灯·{_sx}·{_k}", _sx * 24, _ly)
 for _k in range(39):
     _x = -285 + _k * 15
     cyl("广场石墩", 0.17, 0.90, _x, -642, 0.20, MAT["stone_light"], n=8)
@@ -630,6 +632,112 @@ for _sx in (-1, 1):
         box("长凳·座", 0.55, 2.0, 0.12, _x, _y, 0.62, MAT["stone_light"])
         for _dy in (-0.75, 0.75):
             box("长凳·腿", 0.45, 0.18, 0.50, _x, _y + _dy, 0.12, MAT["stone_dark"])
+
+def _taper(name, w0, w1, h, x, y, z0, material):
+    a, b = w0 / 2, w1 / 2
+    verts = [(-a, -a, 0), (a, -a, 0), (a, a, 0), (-a, a, 0),
+             (-b, -b, h), (b, -b, h), (b, b, h), (-b, b, h)]
+    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1),
+             (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    ob = mesh_object(name, verts, faces, material)
+    ob.location = (x, y, z0)
+    return ob
+
+
+def national_monument(cx=0.0, cy=-1035.5):
+    """广场中央的国家纪念碑：三级台基＋碑座＋收分碑身＋石顶。"""
+    box("纪念碑·铺装", 68, 68, 0.05, cx, cy, 0.20, MAT["paving_axis"])
+    z = 0.20
+    for i, w in enumerate((48, 42, 36)):
+        box(f"纪念碑·台{i}", w, w, 0.9, cx, cy, z, MAT["marble"])
+        z += 0.9
+    box("纪念碑·座下", 26, 26, 1.2, cx, cy, z, MAT["stone_light"])
+    z += 1.2
+    _zr = z + 1.3
+    box("纪念碑·碑座", 22, 22, 5.5, cx, cy, z, MAT["stone"])
+    z += 5.5
+    box("纪念碑·座上", 24, 24, 0.8, cx, cy, z, MAT["stone_light"])
+    z += 0.8
+    for nm, w, d, x, y in (("N", 16, 0.4, cx, cy + 11.2), ("S", 16, 0.4, cx, cy - 11.2),
+                            ("E", 0.4, 16, cx + 11.2, cy), ("W", 0.4, 16, cx - 11.2, cy)):
+        box(f"纪念碑·浮雕{nm}", w, d, 3.0, x, y, _zr, MAT["lamp_bronze"])
+    _taper("纪念碑·碑身", 12, 8, 22, cx, cy, z, MAT["stone_light"])
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            box("纪念碑·角柱", 1.2, 1.2, 22, cx + sx * 5.4, cy + sy * 5.4, z, MAT["stone_light"])
+    z += 22
+    box("纪念碑·顶板", 11, 11, 1.2, cx, cy, z, MAT["stone_light"])
+    z += 1.2
+    hip_roof("纪念碑·顶", 12, 12, 3.0, cx, cy, z, MAT["stone_light"], overhang=1.2,
+             ridge_mat=MAT["roof_gold"])
+    z += 3.0
+    box("纪念碑·宝顶", 1.0, 1.0, 2.0, cx, cy, z, MAT["roof_gold"])
+    for sy in (-1, 1):
+        box("纪念碑·碑文底", 6.6, 0.30, 8.6, cx, cy + sy * 6.05, 16.3, MAT["wall_red"])
+        box("纪念碑·碑文", 6.0, 0.35, 8.0, cx, cy + sy * 6.22, 16.5, MAT["stone_dark"])
+        for dz in (-4.0, 4.0):
+            box("纪念碑·碑文金边", 6.8, 0.14, 0.22, cx, cy + sy * 6.38, 16.5 + dz,
+                MAT["roof_gold"])
+        for dx in (-3.4, 3.4):
+            box("纪念碑·碑文金边", 0.22, 0.14, 8.4, cx + dx, cy + sy * 6.38, 16.3,
+                MAT["roof_gold"])
+        _red = cyl("纪念碑·徽底", 2.2, 0.25, 0, 0, 0, MAT["wall_red"], n=24)
+        _red.rotation_euler = (math.pi / 2, 0, 0)
+        _red.location = (cx, cy + sy * 6.0, 27.5)
+        _gold = cyl("纪念碑·金徽", 1.6, 0.35, 0, 0, 0, MAT["roof_gold"], n=24)
+        _gold.rotation_euler = (math.pi / 2, 0, 0)
+        _gold.location = (cx, cy + sy * 6.18, 27.5)
+    rail_edge("纪念碑·栏板N", "x", cy + 18.0, -18.0, 18.0, [(-4.0, 4.0)], z0=2.9)
+    rail_edge("纪念碑·栏板S", "x", cy - 18.0, -18.0, 18.0, [(-4.0, 4.0)], z0=2.9)
+    rail_edge("纪念碑·栏板E", "y", 18.0, cy - 18.0, cy + 18.0, [(cy - 4.0, cy + 4.0)], z0=2.9)
+    rail_edge("纪念碑·栏板W", "y", -18.0, cy - 18.0, cy + 18.0, [(cy - 4.0, cy + 4.0)], z0=2.9)
+
+
+def _pole(name, r0, r1, h, x, y, z0, material, n=12):
+    verts, faces = [], []
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        verts.append((r0 * math.cos(a), r0 * math.sin(a), 0.0))
+    for i in range(n):
+        a = 2 * math.pi * i / n
+        verts.append((r1 * math.cos(a), r1 * math.sin(a), h))
+    faces.append(tuple(range(n - 1, -1, -1)))
+    faces.append(tuple(range(n, 2 * n)))
+    for i in range(n):
+        j = (i + 1) % n
+        faces.append((i, j, n + j, n + i))
+    ob = mesh_object(name, verts, faces, material)
+    ob.location = (x, y, z0)
+    return ob
+
+
+def flag_platform(cx=0.0, cy=-780.0):
+    """升旗台：三级台、汉白玉栏板、30 m 旗杆、国旗。"""
+    box("升旗台·铺装", 30, 30, 0.05, cx, cy, 0.20, MAT["paving_axis"])
+    z = 0.20
+    for i, w in enumerate((24, 20, 16)):
+        box(f"升旗台·台{i}", w, w, 0.30, cx, cy, z, MAT["marble"])
+        z += 0.30
+    box("升旗台·杆座", 2.4, 2.4, 0.8, cx, cy, z, MAT["stone_light"])
+    _pole("升旗台·旗杆", 0.20, 0.10, 30.0, cx, cy, z + 0.8, MAT["lamp_bronze"], n=12)
+    cyl("升旗台·杆顶", 0.22, 0.5, cx, cy, z + 0.8 + 30.0, MAT["roof_gold"], n=12)
+    box("升旗台·旗", 12.0, 0.08, 8.0, cx + 6.2, cy, z + 0.8 + 20.5, MAT["wall_red"])
+    for sy in (-1, 1):
+        _yy = cy + sy * 0.12
+        _specs = ((2.0, 26.0, 0.95), (4.0, 27.0, 0.34), (4.9, 26.2, 0.34),
+                  (4.9, 24.9, 0.34), (4.0, 24.1, 0.34))
+        for k, (dx, hz, rr) in enumerate(_specs):
+            st = cyl(f"升旗台·星{k}{sy}", rr, 0.10, 0, 0, 0, MAT["roof_gold"], n=10)
+            st.rotation_euler = (math.pi / 2, 0, 0)
+            st.location = (cx + dx, _yy, hz + 0.0)
+    rail_edge("升旗台·栏板N", "x", cy + 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
+    rail_edge("升旗台·栏板S", "x", cy - 8.0, -8.0, 8.0, [(-3.0, 3.0)], z0=1.1)
+    rail_edge("升旗台·栏板E", "y", cx + 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
+    rail_edge("升旗台·栏板W", "y", cx - 8.0, cy - 8.0, cy + 8.0, [(cy - 3.0, cy + 3.0)], z0=1.1)
+
+
+flag_platform()
+national_monument()
 
 # 周边道路
 for r in D.ROADS:
@@ -1043,6 +1151,8 @@ if P:
         ("博物馆入口", dict(loc=(0, -1370, 22), target=(0, -1480, 24), lens=50)),
         ("承天门人视", dict(loc=(0, -650, 3.5), target=(0, -468, 15), lens=34)),
         ("广场北口", dict(loc=(0, -720, 6), target=(0, -620, 2), lens=45)),
+        ("中央纪念碑", dict(loc=(0, -1250, 4.5), target=(0, -1035, 20), lens=45)),
+        ("升旗台", dict(loc=(0, -900, 3.5), target=(0, -780, 18), lens=35)),
         ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
     ]
 
