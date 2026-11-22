@@ -405,7 +405,28 @@ if args.precise:
         _f = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
               (2, 6, 7, 3), (3, 7, 4, 0)]
         PL.mesh_from("三台·垂带%+d" % _sx, _v, _f, PL.MAT["stone"])
+    # 三台束腰雕饰：沿束腰一圈排如意头（须弥座的束腰本来就是雕出来的，
+    # 素面线脚在两百米外看着像一块整石头）
     _ms = PL.MAT.get("marble_carved") or PL.MAT["stone"]
+    _zw = D.PLATFORM_H * (1.06 / 3.10)      # 束腰下沿
+    _zh = D.PLATFORM_H * (2.08 / 3.10) - _zw
+    for _i, _p in enumerate(D.PLATFORM_POLY):
+        _q = D.PLATFORM_POLY[(_i + 1) % len(D.PLATFORM_POLY)]
+        _L = math.hypot(_q[0] - _p[0], _q[1] - _p[1])
+        if _L < 2.0:
+            continue
+        _n = max(1, int(_L / 1.6))
+        _dx, _dy = (_q[0] - _p[0]) / _L, (_q[1] - _p[1]) / _L
+        _nx, _ny = -_dy, _dx
+        _side = 1.0 if (_nx * _p[0] + _ny * _p[1]) > 0 else -1.0
+        for _k in range(_n):
+            _t = (_k + 0.5) / _n
+            _x = _p[0] + (_q[0] - _p[0]) * _t + _nx * _side * 0.20
+            _y = _p[1] + (_q[1] - _p[1]) * _t + _ny * _side * 0.20
+            _b = box("三台·束腰%d_%d" % (_i, _k), 0.86, 0.34, _zh * 0.72,
+                     _x, _y, _zw, _ms)
+            _b.rotation_euler[2] = math.atan2(_q[1] - _p[1], _q[0] - _p[0])
+    _ms_keep = _ms
     for _i in range(_n):
         _top = D.PLATFORM_H * (_n - _i) / _n
         _yy = _y_edge - 0.5 - _i * _sd

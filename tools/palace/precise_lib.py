@@ -359,6 +359,8 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None,
             # 地栿 → 栏板 → 寻杖，三层连续（原来栏板顶到 0.76、寻杖悬在 0.82，中间空一道缝）
             obb(cx, cy, z + 0.00, seg - post - 0.04, t * 1.45, 0.16, rot)        # 地栿
             obb(cx, cy, z + 0.16, seg - post - 0.04, t * 1.15, h - 0.44, rot)    # 栏板
+            # 净瓶：栏板中央的小凸起，远看是栏板上的浮雕点
+            obb(cx, cy, z + 0.30, 0.30, t * 1.55, h - 0.78, rot)
             obb(cx, cy, z + h - 0.28, seg - post + 0.06, t * 1.55, 0.16, rot)    # 寻杖
         for j in range(k + 1):
             t0 = j / k
