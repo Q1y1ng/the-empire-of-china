@@ -708,11 +708,23 @@ if P:
         before = set(bpy.data.objects)
         PL.gate_house("承天门·精模", g["w"], g["d"], z=0.1, h=12.0)
         new = [o for o in bpy.data.objects if o not in before]
+        keep = []
         for o in new:
             if any(k in o.name for k in ("城台", "门洞", "券脚", "券脸", "翼墙")):
                 bpy.data.objects.remove(o, do_unlink=True)
             else:
                 o.location.y += g["cy"]
+                keep.append(o)
+        tower = [o for o in keep if "门楼" in o.name]
+        emp = bpy.data.objects.new("承天门·门楼比例", None)
+        col.objects.link(emp)
+        emp.location = (0.0, g["cy"], 12.1)
+        emp.hide_render = True
+        emp.matrix_parent_inverse = Matrix.Translation((0.0, -g["cy"], -12.1))
+        for o in tower:
+            o.parent = emp
+            o.matrix_parent_inverse = emp.matrix_parent_inverse
+        emp.scale = (1.25, 1.15, 1.35)
         five_arch_gate(g)
         for sx in (-1, 1):
             b2 = set(bpy.data.objects)
@@ -977,7 +989,7 @@ if P:
         ("大会堂檐下", dict(loc=(-270, -940, 52), target=(-430, -1035, 42), lens=55)),
         ("议事楼入口", dict(loc=(120, -1035, 26), target=(400, -1035, 28), lens=55)),
         ("博物馆入口", dict(loc=(0, -1370, 22), target=(0, -1480, 24), lens=50)),
-        ("承天门人视", dict(loc=(0, -690, 4.0), target=(0, -470, 14), lens=36)),
+        ("承天门人视", dict(loc=(0, -650, 3.5), target=(0, -468, 15), lens=34)),
         ("中轴", dict(loc=(0, -950, 35), target=(0, -480, 16), lens=40)),
     ]
 
