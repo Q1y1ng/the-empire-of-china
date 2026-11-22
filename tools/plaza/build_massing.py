@@ -612,22 +612,45 @@ while x <= 370:
         box("宫城·垛口", 2.8, 0.9, 1.2, x, PW["south_wall_face"] - 2.2, 10.4, MAT["wall_red"])
     x += 8.0
 g = PW["gate"]
-box("承天门·城台", g["w"], g["d"], 12.0, 0, g["cy"], 0.1, MAT["wall_red"])
-r = D.FEATURES["review"]
-box("承天门·阅兵台", r["x1"] - r["x0"], r["y1"] - r["y0"], r["h"],
-    0, (r["y0"] + r["y1"]) / 2, 12.1, MAT["stone_light"])
-box("承天门·门洞", 26, 1.2, 10.0, 0, g["cy"] - g["d"] / 2 - 0.4, 0.1, MAT["stone_dark"])
-for (ww, dd, xx, yy) in ((g["w"], 0.5, 0, g["cy"] - g["d"] / 2 + 0.3),
-                          (g["w"], 0.5, 0, g["cy"] + g["d"] / 2 - 0.3),
-                          (0.5, g["d"], -g["w"] / 2 + 0.3, g["cy"]),
-                          (0.5, g["d"], g["w"] / 2 - 0.3, g["cy"])):
-    box("承天门·城台栏板", ww, dd, 1.2, xx, yy, 12.1, MAT["marble"])
-box("承天门·城楼", 62, 26, 13.0, 0, g["cy"], 12.1, MAT["wall_red"])
-box("承天门·城楼窗", 50, 0.5, 3.6, 0, g["cy"] - 13.0, 16.8, MAT["glass"])
-hip_roof("承天门·城楼顶", 62, 26, 6.0, 0, g["cy"], 25.1, MAT["roof_gold"], overhang=5)
-for sx in (-1, 1):
-    box("承天门·雁翅楼", 38, 20, 11.0, sx * 62, -497, 0.1, MAT["wall_red"])
-    hip_roof("承天门·雁翅楼顶", 38, 20, 4.2, sx * 62, -497, 11.1, MAT["roof_gold"], overhang=3)
+if not P:
+    box("承天门·城台", g["w"], g["d"], 12.0, 0, g["cy"], 0.1, MAT["wall_red"])
+    r = D.FEATURES["review"]
+    box("承天门·阅兵台", r["x1"] - r["x0"], r["y1"] - r["y0"], r["h"],
+        0, (r["y0"] + r["y1"]) / 2, 12.1, MAT["stone_light"])
+    box("承天门·门洞", 26, 1.2, 10.0, 0, g["cy"] - g["d"] / 2 - 0.4, 0.1, MAT["stone_dark"])
+    for (ww, dd, xx, yy) in ((g["w"], 0.5, 0, g["cy"] - g["d"] / 2 + 0.3),
+                              (g["w"], 0.5, 0, g["cy"] + g["d"] / 2 - 0.3),
+                              (0.5, g["d"], -g["w"] / 2 + 0.3, g["cy"]),
+                              (0.5, g["d"], g["w"] / 2 - 0.3, g["cy"])):
+        box("承天门·城台栏板", ww, dd, 1.2, xx, yy, 12.1, MAT["marble"])
+    box("承天门·城楼", 62, 26, 13.0, 0, g["cy"], 12.1, MAT["wall_red"])
+    box("承天门·城楼窗", 50, 0.5, 3.6, 0, g["cy"] - 13.0, 16.8, MAT["glass"])
+    hip_roof("承天门·城楼顶", 62, 26, 6.0, 0, g["cy"], 25.1, MAT["roof_gold"], overhang=5)
+    for sx in (-1, 1):
+        box("承天门·雁翅楼", 38, 20, 11.0, sx * 62, -497, 0.1, MAT["wall_red"])
+        hip_roof("承天门·雁翅楼顶", 38, 20, 4.2, sx * 62, -497, 11.1, MAT["roof_gold"], overhang=3)
+if P:
+    try:
+        sys.path.insert(0, os.path.join(HERE, "..", "palace"))
+        import precise_lib as PL
+        PL.set_collection(col)
+        PL.make_materials()
+        before = set(bpy.data.objects)
+        PL.gate_house("承天门·精模", g["w"], g["d"], z=0.1, h=12.0)
+        new = [o for o in bpy.data.objects if o not in before]
+        for o in new:
+            o.location.y += g["cy"]
+            if "翼墙" in o.name:
+                bpy.data.objects.remove(o, do_unlink=True)
+        for sx in (-1, 1):
+            b2 = set(bpy.data.objects)
+            PL.wall_tower("承天门·雁翅楼" + ("东" if sx > 0 else "西"), 38, 20, z=0.1, body_h=11)
+            for o in [x for x in bpy.data.objects if x not in b2]:
+                o.location.x += sx * 62
+                o.location.y += -497
+        print("PRECISE_GATE", len(new), flush=True)
+    except Exception as e:
+        print("PRECISE_GATE_FAIL", e, flush=True)
 
 # ------------------------------------------------------------------ 建筑群
 SITES = {s["key"]: s for s in D.SITES}
