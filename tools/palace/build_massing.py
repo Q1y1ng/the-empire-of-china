@@ -704,7 +704,9 @@ for _i, s in enumerate(D.STRUCTS):
     if s["kind"] == "bridge":
         if args.precise:
             before = set(col.objects)
-            PL.bridge(s["name"], s["w"], s["d"], z=-0.4)
+            # 桥面要浮在水面之上（水面 z=0.36）：原来 z=-0.4 只有 0.19 露在水上，
+            # 看着像"横在水里"；抬到 0.40，桥底离水 0.04，再从两端各加一段桥台接地面
+            PL.bridge(s["name"], s["w"], s["d"], z=0.40)
             new = set(col.objects) - before
             # 桥面要垂直于河道：取离桥心最近的河段，按其法向旋转
             # 桥要落在河心上：取河道折线上离桥最近的点，投影过去（原来只用数据坐标，
@@ -727,6 +729,16 @@ for _i, s in enumerate(D.STRUCTS):
                 ob.rotation_euler[2] = _ang
                 ob.location.x += _px
                 ob.location.y += _py
+            # 两端桥台（把 0.40 的桥面接回地面）
+            _nx2, _ny2 = -_vy, _vx
+            _nl2 = math.hypot(_nx2, _ny2) or 1.0
+            _nx2, _ny2 = _nx2 / _nl2, _ny2 / _nl2
+            for _s2 in (-1, 1):
+                _bx = _px + _nx2 * _s2 * (s["d"] / 2 + 1.6)
+                _by = _py + _ny2 * _s2 * (s["d"] / 2 + 1.6)
+                _b2 = box(s["name"] + "·桥台%d" % _s2, s["w"] + 1.2, 3.2, 0.40,
+                          _bx, _by, 0.0, PL.MAT.get("stone2") or PL.MAT["stone"])
+                _b2.rotation_euler[2] = _ang
         else:
             box(s["name"], s["w"], s["d"], s["h"], s["cx"], s["cy"], -0.4, MAT["stone"])
         continue
