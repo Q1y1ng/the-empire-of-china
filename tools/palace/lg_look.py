@@ -441,6 +441,11 @@ def _marble(g, base=BAI_YU, veins=0.85, bump=0.0005, carve=False):
     dirt = M(g, "ADD", M(g, "MULTIPLY", M(g, "SUBTRACT", 1.0, ao), 0.55),
              M(g, "MULTIPLY", side, 0.30))
     col = MIXC(g, M(g, "MULTIPLY", dirt, 0.55), col, (0.235, 0.225, 0.195))
+    # 台面积垢：水平面按十几米一档的噪声压暗压黄（三台两百多米的台面不能是一张白纸）
+    _wear = NOISE(g, obj, scale=0.062, detail=5.0, rough=0.55, distortion=0.3)
+    _top = M(g, "MAXIMUM", M(g, "SUBTRACT", 1.0, side), 0.0)
+    _wf = M(g, "MULTIPLY", _top, M(g, "MULTIPLY", STEP(g, _wear, 0.34, 0.74), 0.62))
+    col = MIXC(g, _wf, col, (0.68, 0.655, 0.60), "MULTIPLY")
     # 大尺度色差：3~20 m 一档，远看（八米高台、两百米外）才有东西
     big = NOISE(g, obj, scale=0.11, detail=4.0, rough=0.5, distortion=0.2)
     col = MIXC(g, M(g, "MULTIPLY", STEP(g, big, 0.42, 0.72), 0.55), col,
@@ -525,6 +530,18 @@ def _wood(g, base, rough=0.52, grain=0.16, coat=0.10):
     gr = M(g, "ADD", M(g, "MULTIPLY", gr, 0.74), M(g, "MULTIPLY", fine, 0.26))
     fmul = M(g, "MULTIPLY_ADD", gr, 2.0 * grain, 1.0 - grain)  # 1-grain .. 1+grain
     col = MIXC(g, 1.0, base, fmul, "MULTIPLY")
+    # 雨痕：竖向拉长的噪声（柱、墙常年淋雨，纯色面最"塑料"）
+    mp2 = g.node("ShaderNodeMapping")
+    g.link(tc.outputs["Object"], mp2.inputs["Vector"])
+    mp2.inputs["Scale"].default_value = (7.5, 7.5, 0.42)
+    st = NOISE(g, mp2.outputs["Vector"], scale=2.2, detail=7.0, rough=0.58,
+               distortion=0.25)
+    col = MIXC(g, 1.0, col, M(g, "MULTIPLY_ADD", st, 0.22, 0.89), "MULTIPLY")
+    # 墙脚积灰：地面往上 1.7 m 内压暗压脏（object 坐标 z 即离地高度）
+    osp2 = g.node("ShaderNodeSeparateXYZ")
+    g.link(tc.outputs["Object"], osp2.inputs[0])
+    foot = M(g, "SUBTRACT", 1.0, STEP(g, osp2.outputs["Z"], 0.2, 1.7))
+    col = MIXC(g, M(g, "MULTIPLY", foot, 0.50), col, (0.42, 0.37, 0.32), "MULTIPLY")
     g.put(g.bsdf.inputs["Base Color"], col)
     rn = NOISE(g, mp.outputs["Vector"], scale=2.0, detail=6.0)
     g.put(g.bsdf.inputs["Roughness"], M(g, "MULTIPLY_ADD", rn, 0.10, rough))

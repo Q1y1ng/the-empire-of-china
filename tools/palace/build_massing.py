@@ -470,15 +470,14 @@ for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
         box(f"值房{i:02d}", w, d, hh, cx, cy, 0.0, MAT["service"])
         gable_roof(f"值房{i:02d}_顶", w, d, 1.7, cx, cy, hh, MAT["tile"], overhang=0.9)
 
-for i, (x, y) in enumerate(D.trees()):
-    # 每棵按序号取一个确定性的"随机"尺度，避免一片棒棒糖
+def _plant(i, x, y):
+    """种一棵树：柱身 + 三层错位树冠（确定性尺度，避免一片棒棒糖）。"""
     sv = 0.78 + 0.50 * ((i * 37) % 11) / 10.0
     bpy.ops.mesh.primitive_cylinder_add(radius=0.34 * sv, depth=2.8 * sv,
                                         location=(x, y, 1.4 * sv))
     tr = bpy.context.object
     tr.name = "树%d·干" % i
     tr.data.materials.append(MAT["trunk"])
-    # 树冠用 3 个错位的球叠出轮廓，单个球在鸟瞰里就是一个糖果
     for k, (dx, dy, dz, rr) in enumerate(((0.0, 0.0, 0.0, 3.1),
                                           (1.5, -1.0, 0.8, 2.1),
                                           (-1.3, 1.2, 0.5, 1.9))):
@@ -490,6 +489,26 @@ for i, (x, y) in enumerate(D.trees()):
         cr.scale = (1.0, 0.95, 0.80)
         cr.rotation_euler = (0, 0, math.radians(47 * k + 23 * i))
         cr.data.materials.append(MAT["tree"])
+
+
+_planted = 0
+for x, y in D.trees():
+    _plant(_planted, x, y)
+    _planted += 1
+# 沿宫墙内侧一圈行道树（卫星照片里最明显的那圈绿）
+_yin, _xin = HD - 15.0, HW - 15.0
+for _x in range(int(-HW + 46), int(HW - 45), 15):
+    for _yy in (_yin, -_yin):
+        if abs(_x) < 74:                    # 让开南北宫门
+            continue
+        _plant(_planted, _x, _yy)
+        _planted += 1
+for _y in range(int(-HD + 46), int(HD - 45), 15):
+    for _xx in (_xin, -_xin):
+        if abs(_y) < 70:                    # 让开东西宫门
+            continue
+        _plant(_planted, _xx, _y)
+        _planted += 1
 
 # ------------------------------------------------------------------ 单体
 def add_struct_precise(st):
@@ -561,7 +580,19 @@ for _i, s in enumerate(D.STRUCTS):
         if args.precise:
             before = set(col.objects)
             PL.bridge(s["name"], s["w"], s["d"], z=-0.4)
-            for ob in set(col.objects) - before:
+            new = set(col.objects) - before
+            # 桥面要垂直于河道：取离桥心最近的河段，按其法向旋转
+            _pts = D.RIVER["points"]
+            _best, _bd = (1.0, 0.0), 1e18
+            for _i in range(len(_pts) - 1):
+                (_x0, _y0), (_x1, _y1) = _pts[_i], _pts[_i + 1]
+                _mx, _my = (_x0 + _x1) / 2, (_y0 + _y1) / 2
+                _dd = (_mx - s["cx"]) ** 2 + (_my - s["cy"]) ** 2
+                if _dd < _bd:
+                    _bd, _best = _dd, (_x1 - _x0, _y1 - _y0)
+            _ang = math.atan2(_best[0], -_best[1])
+            for ob in new:
+                ob.rotation_euler[2] = _ang
                 ob.location.x += s["cx"]
                 ob.location.y += s["cy"]
         else:

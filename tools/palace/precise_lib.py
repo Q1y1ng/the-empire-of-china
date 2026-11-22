@@ -338,6 +338,8 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None,
                       (b, b + 4, b + 5, b + 1), (b + 2, b + 3, b + 7, b + 6),
                       (b, b + 2, b + 6, b + 4), (b + 1, b + 5, b + 7, b + 3)])
 
+    _cx0 = sum(p[0] for p in poly) / len(poly)
+    _cy0 = sum(p[1] for p in poly) / len(poly)
     n = len(poly)
     for i in range(n):
         x0, y0 = poly[i]
@@ -366,6 +368,13 @@ def railing_poly(name, poly, z, step=2.4, h=1.02, post=0.34, t=0.18, mat=None,
                 continue
             obb(cx, cy, z, post, post, h, rot)                                  # 望柱
             obb(cx, cy, z + h, post * 0.86, post * 0.86, 0.12, rot)             # 柱头
+            # 螭首：从望柱根部向外挑出的龙头石（真实照片里最醒目的细节之一）
+            _nx, _ny = cx - _cx0, cy - _cy0
+            _nl = math.hypot(_nx, _ny) or 1.0
+            _nx, _ny = _nx / _nl, _ny / _nl
+            _ar = math.atan2(_ny, _nx)
+            obb(cx + _nx * 0.42, cy + _ny * 0.42, z - 0.42, 0.46, 0.62, 0.30, _ar)
+            obb(cx + _nx * 0.62, cy + _ny * 0.62, z - 0.36, 0.30, 0.34, 0.20, _ar)
     return mesh_from(name + "·栏板", verts, faces, mat, merge=False)
 
 
@@ -659,24 +668,30 @@ def gable_roof(name, w, d, z_eave, h, mat=None, overhang=1.2):
 
 
 def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
-    """廊庑：两排柱 + 阑额 + 两坡瓦顶。"""
+    """廊庑：石台明 + 两排檐柱 + 阑额 + 墙身 + 两坡瓦顶。
+
+    原来柱、墙、闌额全部直接落在 z 上、且墙比柱线内收 0.8 m，远看是一排
+    "悬在柱子上的红盒子"；补一层 0.30 m 石台明并把墙收到 0.35 m。
+    """
     long_x = w >= d
     span = w if long_x else d
     n = bays or max(3, int(span / 4.5))
+    box(f"{name}·台明", w + 0.9, d + 0.9, 0.30, 0, 0, z,
+        MAT.get("stone2") or MAT["stone"])
+    zz = z + 0.30
     for i in range(n + 1):
         t = -span / 2 + i * span / n
         if long_x:
-            column(t, -(d / 2 - 0.7), z, z + h, 0.20)
-            column(t, d / 2 - 0.7, z, z + h, 0.20)
+            column(t, -(d / 2 - 0.7), zz, zz + h, 0.20)
+            column(t, d / 2 - 0.7, zz, zz + h, 0.20)
         else:
-            column(-(w / 2 - 0.7), t, z, z + h, 0.20)
-            column(w / 2 - 0.7, t, z, z + h, 0.20)
-    ring_beam(name + "·阑额", w, d, z + h, 0.34, 0.30, MAT["cai_blue"])
-    box(name + "·墙", w - 1.6, d - 1.6, h - 0.3, 0, 0, z, MAT["wall"])
-    gable_roof(name + "·顶", w + 0.6, d + 0.6, z + h + 0.34,
+            column(-(w / 2 - 0.7), t, zz, zz + h, 0.20)
+            column(w / 2 - 0.7, t, zz, zz + h, 0.20)
+    ring_beam(name + "·阑额", w, d, zz + h, 0.34, 0.30,
+              MAT.get("wood_dark") or MAT["cai_blue"])
+    box(name + "·墙", w - 0.7, d - 0.7, h - 0.28, 0, 0, zz, MAT["wall"])
+    gable_roof(name + "·顶", w + 0.6, d + 0.6, zz + h + 0.34,
                max(1.4, (d if long_x else w) * 0.26), overhang=1.0)
-
-
 
 
 def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
