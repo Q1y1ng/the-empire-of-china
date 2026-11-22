@@ -768,6 +768,8 @@ def roof(pl, name, W, D, z0, H, lift=1.35, lod=2, mat=None, thick=0.36):
     """
     fix = pl.MAT.get("glaze_plain") or mat or pl.MAT["tile"]
     fix_dark = pl.MAT.get("glaze_plain_dark") or pl.MAT.get("tile2") or fix
+    if D > W:                      # 等坡要求脊向为长边，近方形时直接对调
+        W, D = D, W
     objs = []
     objs.append(hip_surface(pl, name, W, D, z0, H, step=0.9 if lod < 2 else 0.7,
                             lift=lift, mat=mat, thick=thick))
@@ -786,6 +788,9 @@ def ring_roof(pl, name, OW, OD, IW, ID, z0, H, lift=1.2, lod=2, mat=None):
     """重檐下檐整套。"""
     fix = pl.MAT.get("glaze_plain") or mat or pl.MAT["tile"]
     fix_dark = pl.MAT.get("glaze_plain_dark") or pl.MAT.get("tile2") or fix
+    if OD > OW:
+        OW, OD = OD, OW
+        IW, ID = ID, IW
     objs = [ring_surface(pl, name, OW, OD, IW, ID, z0, H, step=0.9,
                          lift=lift, mat=mat)]
     if lod >= 2:

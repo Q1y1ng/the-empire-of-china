@@ -972,8 +972,10 @@ def gate_house(name, w, d, z=0.0, h=9.0):
               (2, 6, 7, 3), (3, 7, 4, 0)]
         mesh_from(f"{name}·券脸{i}", vv, ff, mat_s, merge=False)
 
-    roof_h = max(0.30 * d, 3.0)
-    hip_roof(name + "·顶", w + 4, d + 4, z + h + 0.3, roof_h, step=0.7)
-    ridges(w + 4, d + 4, z + h + 0.3, roof_h, (w + 4) - (d + 4))
+    # 门楼：城台之上的柱廊、隔扇、斗拱与屋顶（复用 hall）
+    tw, td = w * 0.56, d * 0.62
+    hall(name + "·门楼", tw, td, z=z + h, storeys=1, base_h=0.55,
+         col_h=min(6.2, tw * 0.16), plaque=None, lod=2,
+         stairs=False, balustrade=False)
 
 
