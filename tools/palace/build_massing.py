@@ -387,6 +387,18 @@ if args.precise:
     _y_edge = min(_ys)
     _n, _dep, _hw = 30, 22.0, 23.0
     _sd = _dep / _n
+    # 垂带：两侧各一条通长斜面石带（逐级小方块会露出锯齿状侧面）
+    _y_f = _y_edge - 0.5
+    _y_b = _y_edge - 0.5 - _dep
+    for _sx in (-1, 1):
+        _cx, _w, _t = _sx * (_hw + 0.85), 1.7, 0.42
+        _zf, _zb = D.PLATFORM_H + 0.22, 0.30      # 靠台身高、外端低
+        _v = [(_cx - _w / 2, _y_f, _zf), (_cx + _w / 2, _y_f, _zf),
+              (_cx + _w / 2, _y_b, _zb), (_cx - _w / 2, _y_b, _zb)]
+        _v += [(a, b, c - _t) for (a, b, c) in _v]
+        _f = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+              (2, 6, 7, 3), (3, 7, 4, 0)]
+        PL.mesh_from("三台·垂带%+d" % _sx, _v, _f, PL.MAT["stone"])
     _ms = PL.MAT.get("marble_carved") or PL.MAT["stone"]
     for _i in range(_n):
         _top = D.PLATFORM_H * (_n - _i) / _n
@@ -395,10 +407,7 @@ if args.precise:
             PL.MAT["stone"])
         # 御路石：每级顶面一条 5 m 宽石带（不是整块斜板）
         box("三台·御路%02d" % _i, 5.0, _sd * 0.86, 0.09, 0, _yy, _top - 0.09, _ms)
-        # 垂带：随级抬高的石边
-        for _sx in (-1, 1):
-            box("三台·垂带%+d%02d" % (_sx, _i), 1.7, _sd + 0.04, _top + 0.22,
-                _sx * (_hw + 0.85), _yy, 0.0, PL.MAT["stone"])
+
 else:
     PL.balustrade_line(-118, 118, -215.5, D.PLATFORM_H)
     PL.balustrade_line(-60, 60, 11.5, D.PLATFORM_H)
@@ -552,8 +561,7 @@ if args.precise:
     glass = PL.MAT["glass"]
     metal = PL.MAT["metal"]
     # 金瓯殿南侧玻璃门厅 + 金属雨棚（三台前陛之下）
-    box("改造·金瓯殿门厅", 26, 9, 4.2, 0, -236, 0.0, glass)
-    box("改造·金瓯殿雨棚", 30, 11, 0.5, 0, -236, 4.2, metal)
+    # （金瓯殿前玻璃门厅已按作者意见删除）
     # 承天门内安检棚
     box("改造·安检棚", 14, 7, 3.4, 26, -448, 0.0, glass)
     box("改造·安检棚顶", 16, 9, 0.4, 26, -448, 3.4, metal)
