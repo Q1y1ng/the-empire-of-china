@@ -27,9 +27,9 @@ C = dict(
     plaza="#F0E9D7", plaza_edge="#C8BBA0", terrace="#E8DCC2",
     axis="#DFD0AE", water="#A8C8D8", water_edge="#5B8CA6",
     wall="#9E2B25", wall_edge="#6E1B17", stone="#D9D2C0", stone_edge="#B3A88F",
-    hall="#DCC9A2", hall_edge="#8A7752", chamber="#D3BC8A", chamber_edge="#8A7440",
-    portico="#E7DABC", portico_edge="#A99772",
-    council="#D6C49E", museum="#DACAA6", site_edge="#6B5B45",
+    hall="#D9C08C", hall_edge="#7E6A42", chamber="#C9A868", chamber_edge="#7A5C22",
+    portico="#E8DCC0", portico_edge="#A99772",
+    council="#D3B981", museum="#D8C391", site_edge="#6B5B45",
     ink="#33302B", muted="#6B6257", axis_red="#B03027",
 )
 
@@ -78,10 +78,10 @@ def draw_context(ax):
     for x in (-34, 34):
         ax.plot([x, x], [b["y0"], b["y1"]], color=C["stone_edge"], lw=0.5, zorder=2.7)
 
-    ax.text(0, -493, "承天门", ha="center", va="bottom", fontsize=10.5,
+    ax.text(0, -443, "承天门", ha="center", va="bottom", fontsize=10.5,
             color=C["ink"], zorder=9,
             bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.85))
-    ax.text(0, -433, "宫城（皇宫）南墙", ha="center", va="bottom", fontsize=8.2,
+    ax.text(-262, -440, "宫城（皇宫）南墙", ha="center", va="bottom", fontsize=8.0,
             color=C["muted"], zorder=9,
             bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8))
 
@@ -218,22 +218,22 @@ def draw_labels(ax):
           fs=8.0, color=C["muted"], box=False)
     label(ax, -210, -560, "仪典台区", fs=7.4, color=C["muted"], box=False)
 
-    label(ax, 0, -790, "中轴御道 40 m", fs=7.2, color=C["muted"], rot=90, box=False)
-    label(ax, 282, -1160, "广场东侧道 12 m", fs=7.0, color=C["muted"], rot=90, box=False)
-    label(ax, 0, -1320, "南端（博物馆前）", fs=7.4, color=C["muted"])
+    label(ax, 32, -1150, "中轴御道 40 m", fs=7.2, color=C["muted"], rot=90, box=False)
+    label(ax, 282, -1150, "广场东侧道 12 m", fs=7.0, color=C["muted"], rot=90, box=False)
+    label(ax, 0, -1322, "南端（博物馆前）", fs=7.2, color=C["muted"])
 
     # 大会堂三厅
-    label(ax, -440, -913, "国家大会堂", fs=12.0, box=True)
-    label(ax, -440, -935, "20 ha · 三厅", fs=7.8, color=C["muted"])
-    label(ax, -440, -962, "中厅", fs=8.6)
-    label(ax, -440, -980, "万人大礼堂 10,000 席", fs=7.2)
+    label(ax, -440, -895, "国家大会堂", fs=11.5, box=True)
+    label(ax, -440, -917, "20 ha · 三厅", fs=7.6, color=C["muted"])
+    label(ax, -440, -948, "中厅", fs=8.4)
+    label(ax, -440, -966, "万人大礼堂 10,000 席", fs=7.1)
     label(ax, -440, -1052, "左厅\n八州厅＋宣政厅", fs=7.6)
     label(ax, -440, -818, "右厅\n宴会厅 3,000 席", fs=7.6)
 
     # 议事大楼
-    label(ax, 350, -918, "国家议会\n议事大楼", fs=10.2, box=True)
-    label(ax, 350, -948, "8 ha · 1,100 席", fs=7.4, color=C["muted"])
-    label(ax, 350, -972, "议事厅", fs=7.4)
+    label(ax, 350, -905, "国家议会\n议事大楼", fs=10.2, box=True)
+    label(ax, 350, -936, "8 ha · 1,100 席", fs=7.4, color=C["muted"])
+    label(ax, 350, -968, "议事厅", fs=7.4)
 
     # 博物馆
     label(ax, 0, -1452, "国家政治博物馆", fs=11.5)
@@ -311,13 +311,13 @@ def draw_panel(ax):
     st = D.stats()
 
     y = 0.99
-    ax.text(0, y, "图　例", fontsize=12.5, color=C["ink"], fontweight="bold", va="top")
-    y -= 0.042
+    ax.text(0, y, "图　例", fontsize=11.0, color=C["ink"], fontweight="bold", va="top")
+    y -= 0.034
     items = [
         ("广场铺装（45 ha）", C["plaza"], C["plaza_edge"]),
         ("仪典台区 / 阅兵台", C["terrace"], C["plaza_edge"]),
         ("御道 · 广场东侧道", C["axis"], "#C9B891"),
-        ("国家大会堂（主体 / 中部大礼堂 / 门廊）", C["hall"], C["hall_edge"]),
+        ("国家大会堂", C["hall"], C["hall_edge"]),
         ("国家议会议事大楼", C["council"], C["hall_edge"]),
         ("国家政治博物馆", C["museum"], C["hall_edge"]),
         ("建筑群外墙", C["site_edge"], None),
@@ -325,15 +325,15 @@ def draw_panel(ax):
         ("护城河", C["water"], C["water_edge"]),
     ]
     for txt, fc, ec in items:
-        ax.add_patch(Rectangle((0.0, y - 0.011), 0.085, 0.021, facecolor=fc,
-                               edgecolor=ec or fc, lw=0.7, clip_on=False))
-        ax.text(0.115, y, txt, fontsize=7.6, va="center", color=C["ink"])
-        y -= 0.030
+        ax.add_patch(Rectangle((0.0, y - 0.008), 0.070, 0.016, facecolor=fc,
+                               edgecolor=ec or fc, lw=0.6, clip_on=False))
+        ax.text(0.095, y, txt, fontsize=7.8, va="center", color=C["ink"])
+        y -= 0.0245
 
-    y -= 0.012
-    ax.text(0, y, "占地（本图实测）", fontsize=11.2, color=C["ink"],
+    y -= 0.014
+    ax.text(0, y, "占地（本图实测）", fontsize=11.0, color=C["ink"],
             fontweight="bold", va="top")
-    y -= 0.030
+    y -= 0.034
     rows = [
         ("广场铺装", f'{st["paving_ha"]:.1f} ha'),
         ("仪典台区", f'{st["terrace_ha"]:.1f} ha'),
@@ -342,39 +342,65 @@ def draw_panel(ax):
         ("政治博物馆（用地 / 建筑）", f'{st["sites"]["museum"]:.1f} / {st["floor_ha"]["museum"]:.1f} ha'),
     ]
     for name, val in rows:
-        ax.text(0.0, y, name, fontsize=7.5, va="center", color=C["ink"])
-        ax.text(1.0, y, val, fontsize=7.5, va="center", ha="right", color=C["muted"])
-        y -= 0.0255
+        ax.text(0.0, y, name, fontsize=7.8, va="center", color=C["ink"])
+        ax.text(1.0, y, val, fontsize=7.8, va="center", ha="right", color=C["muted"])
+        y -= 0.0225
 
     y -= 0.014
-    ax.text(0, y, "口径", fontsize=11.2, color=C["ink"], fontweight="bold", va="top")
-    y -= 0.028
-    notes = [
-        ("【设定】", "广场东西 600 m、南北 800 m；大会堂三厅（左厅八州厅＋宣政厅、中厅万人\n"
-                    "大礼堂、右厅宴会厅）；议事大楼 8 ha、约 1,100 席；博物馆 12 ha。"),
-        ("【判读】", "表列广场 45 ha ＝ 600 × 750；北端 50 m（600 × 50＝3 ha）读作仪典台区，\n"
-                    "阅兵台设于承天门外。45＋3＝48 ha，与 600 × 800 相合。"),
-        ("【推定】", "三块建筑占地（20 / 8 / 12 ha）按「广场两侧带状用地」反推：西 250 m、\n"
-                    "东 100 m、南 200 m；单体面宽进深、层数、门廊、外墙、周边道路均为推定。"),
-    ]
-    for tag, txt in notes:
-        ax.text(0.0, y, tag, fontsize=7.2, color=C["axis_red"], va="top", fontweight="bold")
-        ax.text(0.11, y, txt, fontsize=6.8, color=C["muted"], va="top", linespacing=1.55)
-        y -= 0.038 + 0.028 * txt.count("\n")
+    ax.text(0, y, "三厅与两馆", fontsize=11.0, color=C["ink"], fontweight="bold", va="top")
+    y -= 0.034
+    for name, val in [
+        ("左厅", "八州厅 8 间 · 宣政厅 140 席"),
+        ("中厅", "无立柱万人大礼堂 10,000 席"),
+        ("右厅", "无立柱宴会厅 3,000 席"),
+        ("议事大楼", "议事厅 1,100 席（议员 720）"),
+        ("政治博物馆", "大革命主题馆（2021 开馆）"),
+    ]:
+        ax.text(0.0, y, name, fontsize=7.8, va="center", color=C["ink"])
+        ax.text(0.30, y, val, fontsize=7.6, va="center", color=C["muted"])
+        y -= 0.0225
 
-    y -= 0.012
-    ax.text(0, y, "待　定", fontsize=11.2, color=C["ink"], fontweight="bold", va="top")
-    y -= 0.028
-    todo = [
-        "① 大会堂三厅：设定写「贴靠在中厅东西两侧」，与「面东朝广场」的三厅南北排不合；\n"
-        "   本图按面东立面读作右厅（北）—中厅—左厅（南），待作者定。",
-        "② 国旗杆：阅兵 09:05 升旗，但设定未给位置；本图暂不画。",
-        "③ 内城 2,700 m：广场 800 m＋博物馆 200 m 已 1,000 m，加上皇城 1,950 m 超过 2,700 m；\n"
-        "   本模型只做广场建筑群，内城城墙与永宁门不在范围内，口径另核。",
+    y -= 0.014
+    ax.text(0, y, "口径", fontsize=11.0, color=C["ink"], fontweight="bold", va="top")
+    y -= 0.034
+    lh = 0.0132
+    blocks = [
+        ("【设定】", [
+            "广场 600 × 800 m；大会堂三厅：左厅（八州厅＋宣政厅），",
+            "中厅（无立柱万人大礼堂，约 10,000 席），右厅（宴会厅，约 3,000 席）。",
+            "议事大楼 8 ha、约 1,100 席；政治博物馆 12 ha，内设大革命主题馆。",
+        ]),
+        ("【判读】", [
+            "表列广场 45 ha ＝ 600 × 750。北端 50 m（600 × 50 ＝ 3 ha）读作",
+            "仪典台区，阅兵台设于承天门外；45＋3 ＝ 48 ha，与 600 × 800 相合。",
+        ]),
+        ("【推定】", [
+            "建筑占地 20 / 8 / 12 ha 按「广场两侧带状用地」反推：西 250 m、",
+            "东 100 m、南 200 m。单体面宽进深、层数、门廊、外墙、周边道路为推定。",
+        ]),
     ]
-    for txt in todo:
-        ax.text(0.0, y, txt, fontsize=6.7, color=C["muted"], va="top", linespacing=1.55)
-        y -= 0.036 + 0.026 * txt.count("\n")
+    for tag, lines in blocks:
+        ax.text(0.0, y, tag, fontsize=7.3, color=C["axis_red"], va="top", fontweight="bold")
+        for ln in lines:
+            ax.text(0.105, y, ln, fontsize=7.1, color=C["muted"], va="top")
+            y -= lh
+        y -= 0.006
+
+    ax.text(0, y, "待　定", fontsize=11.0, color=C["ink"], fontweight="bold", va="top")
+    y -= 0.034
+    for ln in [
+        "① 大会堂三厅：设定写「贴靠在中厅东西两侧」，与「面东朝广场」的",
+        "   三厅南北排不合；本图读作右厅（北）—中厅—左厅（南），待作者定。",
+        "② 国旗杆：阅兵 09:05 升旗，设定未给位置；本图暂不画。",
+        "③ 内城 2,700 m：广场 800 m＋博物馆 200 m 已 1,000 m，加皇城 1,950 m",
+        "   超过 2,700 m；本模型只做广场建筑群，内城城墙与永宁门不在范围内。",
+    ]:
+        ax.text(0.0, y, ln, fontsize=7.0, color=C["muted"], va="top")
+        y -= lh
+
+    ax.text(0.0, y - 0.012,
+            "本图只定格局；立面、屋顶、铺装与构件见后续白模、精模。",
+            fontsize=6.9, color=C["muted"], va="top")
 
 
 # ------------------------------------------------------------------ main
