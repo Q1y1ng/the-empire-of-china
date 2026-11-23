@@ -104,7 +104,9 @@ def _red_mat():
     m.use_nodes = True
     b = m.node_tree.nodes.get("Principled BSDF")
     if b:
-        b.inputs["Base Color"].default_value = (0.300, 0.048, 0.028, 1.0)
+        # 土朱比柱红更暗一档：垫拱板面积大，刷得跟柱子一样亮，
+        # 远看整条檐下就是"红砖墙 + 青绿小块"，拱反而退到后面去了
+        b.inputs["Base Color"].default_value = (0.235, 0.038, 0.024, 1.0)
         b.inputs["Roughness"].default_value = 0.66
     return m
 
@@ -361,11 +363,12 @@ def _bank(b, y, z0, z1, seg_x0, seg_x1, m=4):
     b.box(seg_x0 + 0.10, seg_x1 - 0.10, y - 0.55, y + 0.30, z0, z1, m)
 
 
-def _sup(b, x, y, z0, lod, m=0, ears=2):
+def _sup(b, x, y, z0, lod, m=3, ears=2):
+    """斗：清式斗拱里「斗」刷青、「拱」刷绿，同色就全糊成一格一格的瓷砖。"""
     _dou(b, SUP_L, SUP_D, SUP_HH, z0, ears=ears if lod >= 2 else 0, lod=lod, m=m)
 
 
-def _sup_lo(b, x, y, z0, lod, m=0):
+def _sup_lo(b, x, y, z0, lod, m=3):
     """lod0 极简档不摆三才升（远看只是碎块，省面数）。"""
     if lod >= 1:
         _sup(b, x, y, z0, lod, m=m)
@@ -379,9 +382,9 @@ def _build(b, lod, seg):
 
     # 1) 栌斗
     if lod >= 1:
-        _dou(b, DOU_S, DOU_S, DOU_H, 0.0, ears=4 if lod >= 2 else 0, lod=lod, m=0)
+        _dou(b, DOU_S, DOU_S, DOU_H, 0.0, ears=4 if lod >= 2 else 0, lod=lod, m=3)
     else:
-        b.box(-DOU_S / 2, DOU_S / 2, -DOU_S / 2, DOU_S / 2, 0.0, DOU_H, 0)
+        b.box(-DOU_S / 2, DOU_S / 2, -DOU_S / 2, DOU_S / 2, 0.0, DOU_H, 3)
 
     # 2) 第一层：正心瓜拱 + 头翘（十字相交于栌斗口内）
     _gong(b, GONG_LEN["gua"], 0.0, Z0, lod)

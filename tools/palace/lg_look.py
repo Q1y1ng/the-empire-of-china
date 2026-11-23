@@ -904,9 +904,11 @@ def make_materials():
     add("glazed_green", "琉璃绿", lambda g: _glaze_tile(g, GLAZE_GREEN,
                                                        (0.008, 0.085, 0.028),
                                                        coat=0.13, dirt=0.8))
+    # 釉面糙度 0.20、清漆 0.20 时，檐口那圈瓦件在掠射角直接 Fresnel 打爆，
+    # 渲染成一条奶白亮带（比瓦当本身还显眼）。糙度提到 0.30–0.40、清漆降到 0.06。
     add("glaze_plain", "琉璃黄·素面",
         lambda g: _glaze_plain(g, GLAZE_YELLOW, GLAZE_YELLOW_DARK,
-                               rough=(0.20, 0.30), grime=0.55, coat=0.20))
+                               rough=(0.30, 0.40), grime=0.55, coat=0.06))
     add("glaze_plain_dark", "琉璃黄·素面暗",
         lambda g: _glaze_plain(g, (0.360, 0.195, 0.007), (0.185, 0.080, 0.003),
                                rough=(0.24, 0.36), grime=0.95, coat=0.14))

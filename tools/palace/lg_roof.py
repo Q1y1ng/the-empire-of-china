@@ -428,11 +428,13 @@ def eave_trim(pl, name, W, D, z0, H, lift=1.35, lod=2, mat_tile=None, mat_wood=N
         # ---- 连檐：檐口下一道 0.26 m 高的板（截面 4 点沿檐口挤出）
         b0 = len(wv)
         for (x, y, z) in pts:
-            ox, oy = x - nrm[0] * 0.06, y - nrm[1] * 0.06
-            wv.append((ox, oy, z - 0.02))
-            wv.append((ox, oy, z - 0.28))
-            wv.append((ox - nrm[0] * 0.10, oy - nrm[1] * 0.10, z - 0.30))
-            wv.append((ox - nrm[0] * 0.10, oy - nrm[1] * 0.10, z - 0.04))
+            # 瓦口/连檐要**略微探出**檐口：原来内缩 0.06，屋面壳体 0.36 厚的边
+            # 就整个露在外面 —— 那是檐口那条奶白亮带的真身（掠射角吃满高光）。
+            ox, oy = x + nrm[0] * 0.015, y + nrm[1] * 0.015
+            wv.append((ox, oy, z + 0.03))
+            wv.append((ox, oy, z - 0.30))
+            wv.append((ox - nrm[0] * 0.10, oy - nrm[1] * 0.10, z - 0.32))
+            wv.append((ox - nrm[0] * 0.10, oy - nrm[1] * 0.10, z + 0.01))
         for k in range(len(pts) - 1):
             a = b0 + k * 4
             c = a + 4
