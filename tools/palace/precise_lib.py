@@ -745,9 +745,14 @@ def gable_roof(name, w, d, z_eave, h, mat=None, overhang=1.2):
     long_x = w >= d
     span = (d if long_x else w) + 2 * overhang
     ridge = (w if long_x else d) + 2 * overhang
+    # two_slope() 只会把正脊排在 X 向。d > w 的廊庑/值房必须把整顶绕 Z 转 90°，
+    # 否则屋顶与墙身成 90° 错位——东庑的顶因此横跨 201 m、压在三台正中。
+    before = set(_col().objects)
+    ob = ROOF.two_slope(_self(), name, ridge, span, z_eave, h, mat=mat)
     if not long_x:
-        span, ridge = span, ridge
-    return ROOF.two_slope(_self(), name, ridge, span, z_eave, h, mat=mat)
+        for _o in set(_col().objects) - before:
+            _o.rotation_euler[2] = math.pi / 2.0
+    return ob
 
 
 def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
