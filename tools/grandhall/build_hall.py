@@ -458,53 +458,55 @@ def build_stage():
         E = Mesh("国徽", MAT["gold"], "stage")
         Dm = D.EMBLEM["d"]
         R = Dm / 2.0
-        E.cyl(0, 0, -0.10, 0.14, R, n=56)          # 底盘
-        Z0, ZD = -0.38, 0.26                        # 浮雕出挑层
+        E.cyl(0, 0, -0.10, 0.14, R, n=72)          # 底盘
+        Z0, ZD = -0.46, 0.36                        # 浮雕出挑层
 
-        def blk(u, v, w=0.28, h=0.30):
-            E.box(u, v, Z0, w, h, ZD)
+        def stud(u, v, r, n=12):
+            E.cyl(u, v, Z0, Z0 + ZD, r, n=n)
 
-        # 城墙：宽 0.42D，居中偏下，城台 + 四垛口 + 瓮城外凸
+        # 城墙：宽 0.42D，居中偏下；城台 + 五垛口 + 瓮城外凸
         ww = 0.21 * Dm
-        for i in range(13):                          # 墙身分砌
-            blk(-ww + 2 * ww * i / 12, -1.85, 2 * ww / 12 + 0.02, 1.05)
-        for dy in (-ww * 0.95, -ww * 0.32, ww * 0.32, ww * 0.95):
-            blk(dy, -1.22, 0.34, 0.46)               # 垛口
-        blk(0, -1.18, ww * 1.15, 0.30)               # 瓮城顶线
+        E.box(0, -1.80, Z0, 2 * ww, 1.30, ZD)
+        for i in range(6):
+            stud(-ww + 2 * ww * i / 5, -1.10, 0.20, n=10)
+        E.box(0, -1.00, Z0, ww * 1.10, 0.30, ZD)   # 瓮城顶线
 
-        # 齿轮：居中偏下，8 齿，外径 0.26D
+        # 齿轮：外径 0.26D，8 齿 + 轮缘
         gr = 0.13 * Dm
-        blk(0, -2.62, gr * 1.06, gr * 0.55)          # 轮心
+        E.cyl(0, -2.60, Z0, Z0 + ZD, gr * 0.80, n=32)
         for i in range(8):
-            a = 2 * math.pi * i / 8
-            blk(gr * 0.92 * math.cos(a), -2.62 + gr * 0.92 * math.sin(a), 0.24, 0.24)
+            a = 2 * math.pi * i / 8 + math.pi / 8
+            stud(gr * 0.98 * math.cos(a), -2.60 + gr * 0.98 * math.sin(a), 0.19, n=6)
 
-        # 稻穗：左右各五粒，自下向上外弧
+        # 稻穗：左右各五粒，沿二次曲线成弧
         for sgn in (-1, 1):
             for i in range(5):
                 t = i / 4.0
-                u = sgn * (0.62 + 1.55 * t)
-                v = -2.10 + 2.55 * t - 0.55 * t * t
-                blk(u, v, 0.20, 0.34)
+                u = sgn * (0.58 + 1.62 * t)
+                v = -2.15 + 2.70 * t - 0.62 * t * t
+                stud(u, v, 0.24 - 0.05 * t, n=10)
 
-        # 金蟠龙：S 形盘绕，自城墙顶向上（总高 0.50D）
-        for i in range(46):
-            t = i / 45.0
-            u = 0.95 * math.sin(t * 1.9 * math.pi - 0.35)
-            v = -1.05 + 3.20 * t
-            blk(u, v, 0.22 + 0.09 * (1 - t), 0.26)
-        blk(0.86, 2.16, 0.46, 0.40)                  # 龙首
+        # 金蟠龙：S 形盘绕（60 段圆柱，半径渐收），总高 0.50D
+        NR = 60
+        for i in range(NR):
+            t = i / (NR - 1.0)
+            u = 0.96 * math.sin(t * 1.85 * math.pi - 0.35)
+            v = -1.05 + 3.10 * t
+            r = 0.32 - 0.13 * t
+            stud(u, v, r, n=12)
+        stud(0.86, 2.05, 0.42, n=16)                # 龙首
+        stud(0.72, 2.26, 0.17, n=8)                 # 龙角
+        stud(1.02, 2.24, 0.17, n=8)
 
         # 绶带「金瓯永固」
-        blk(0, -3.12, 1.92, 0.34)
+        E.box(0, -3.10, Z0, 2.10, 0.42, ZD)
         for sgn in (-1, 1):
-            blk(sgn * 1.02, -3.02, 0.30, 0.42)
+            E.box(sgn * 1.06, -2.98, Z0, 0.34, 0.52, ZD)
 
         ob = emit(E, (0, 0, 1))
         if ob:
             ob.rotation_euler = (0, math.radians(-90), 0)
             ob.location = (S["x0"] + 1.0, AX, 12.0)
-
         # ---- 主席台陈设（精模）----
         FUR = Mesh("主席台陈设", MAT["stage"], "stage")
         GLD = Mesh("陈设金饰", MAT["gold"], "stage")
@@ -523,6 +525,12 @@ def build_stage():
             GLD.box(bx + 1.06, AX - 13.5 + k * 2.7, 2.20, 0.16, 0.10, 6.30)
         GLD.box(bx + 1.06, AX, 3.05, 0.18, 27.0, 0.16)   # 下部纹样带
         GLD.box(bx + 1.06, AX, 7.60, 0.18, 27.0, 0.16)   # 上部纹样带
+        # 后墙木饰板（替掉整片灰墙）
+        WDP = Mesh("后墙木饰", MAT["stage"], "stage")
+        WDP.box(bx + 0.86, AX, 0.20, 0.12, 39.0, 21.2)
+        for k in range(14):                       # 竖向凹缝
+            WDP.box(bx + 0.94, AX - 18.2 + k * 2.80, 0.20, 0.06, 0.08, 21.2)
+        emit(WDP)
         # 后墙线脚：通高竖带 + 上楣 + 檐口，压住大片素墙
         for dy in (-16.0, 16.0):
             GLD.box(bx + 1.06, AX + dy, 2.20, 0.20, 0.26, 19.2)
