@@ -382,9 +382,60 @@ def prism(name, poly, h, z0, mat):
     return mesh_from(name, verts, faces, mat)
 
 
+def prism_profile(name, poly, prof, mat):
+    """沿多边形挤出一个带线脚的截面（须弥座）：prof = [(内收米数, 绝对 z)]。
+
+    三台原来只有 `prism()` —— 一个直上直下的方盒子，8 m 高的台帮在「人视·金瓯殿」
+    里就是一片白墙，束腰的如意头（件件都做出来了）根本没有凹进去的束腰可坐。
+    """
+    n = len(poly)
+    area = sum(poly[i][0] * poly[(i + 1) % n][1] - poly[(i + 1) % n][0] * poly[i][1]
+               for i in range(n))
+    sgn = 1.0 if area > 0 else -1.0
+    nrm = []
+    for i in range(n):
+        ax, ay = poly[i]
+        bx, by = poly[(i + 1) % n]
+        ex, ey = bx - ax, by - ay
+        L = math.hypot(ex, ey) or 1.0
+        nrm.append((-ey * sgn / L, ex * sgn / L))     # 逆时针时内法向
+    rings = []
+    for (ins, z) in prof:
+        ring = []
+        for i in range(n):
+            n0, n1 = nrm[i - 1], nrm[i]
+            mx, my = n0[0] + n1[0], n0[1] + n1[1]
+            ml = math.hypot(mx, my) or 1.0
+            mx, my = mx / ml, my / ml
+            c = max(0.35, mx * n1[0] + my * n1[1])     # miter 补偿（直角处 1.41）
+            px, py = poly[i]
+            ring.append((px + mx * ins / c, py + my * ins / c, z))
+        rings.append(ring)
+    verts, faces = [], []
+    for r in rings:
+        verts.extend(r)
+    for k in range(len(rings) - 1):
+        a, b = k * n, (k + 1) * n
+        for i in range(n):
+            j = (i + 1) % n
+            faces.append((a + i, a + j, b + j, b + i))
+    faces.append(tuple(range(n - 1, -1, -1)))
+    top = (len(rings) - 1) * n
+    faces.append(tuple(top + i for i in range(n)))
+    return mesh_from(name, verts, faces, mat)
+
+
 PL.make_materials()
-prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0,
-      PL.MAT["stone"] if args.precise else MAT["platform"])
+if args.precise:
+    # 须弥座截面（与 1.06/3.10、2.08/3.10 那套束腰雕饰同一个口径）
+    _k = D.PLATFORM_H / 3.10
+    _prof = [(t * _k, z * _k) for (t, z) in
+             ((0.00, 0.00), (0.00, 0.34), (0.30, 0.40), (0.30, 0.92),
+              (0.54, 1.06), (0.54, 2.08), (0.30, 2.22), (0.30, 2.80),
+              (0.10, 2.94), (0.00, 3.10))]
+    prism_profile("三台", D.PLATFORM_POLY, _prof, PL.MAT["stone"])
+else:
+    prism("三台", D.PLATFORM_POLY, D.PLATFORM_H, 0.0, MAT["platform"])
 if args.precise:
     _ys = [b for a, b in D.PLATFORM_POLY]
     _y_edge = min(_ys)
@@ -423,15 +474,18 @@ if args.precise:
         _L = math.hypot(_q[0] - _p[0], _q[1] - _p[1])
         if _L < 2.0:
             continue
-        _n = max(1, int(_L / 1.6))
+        _n = max(1, int(_L / 1.15))
         _dx, _dy = (_q[0] - _p[0]) / _L, (_q[1] - _p[1]) / _L
         _nx, _ny = -_dy, _dx
         _side = 1.0 if (_nx * _p[0] + _ny * _p[1]) > 0 else -1.0
         for _k in range(_n):
             _t = (_k + 0.5) / _n
-            _x = _p[0] + (_q[0] - _p[0]) * _t + _nx * _side * 0.20
-            _y = _p[1] + (_q[1] - _p[1]) * _t + _ny * _side * 0.20
-            _b = box("三台·束腰%d_%d" % (_i, _k), 0.86, 0.34, _zh * 0.72,
+            # 束腰已凹进去 0.54 m，如意头要跟着往里挪，否则变成 0.9 m 高的鼓包
+            _x = _p[0] + (_q[0] - _p[0]) * _t + _nx * _side * (-0.34)
+            _y = _p[1] + (_q[1] - _p[1]) * _t + _ny * _side * (-0.34)
+            # 如意头要**连续**排，留 5 cm 缝：每 1.6 m 一块 0.86 宽，
+            # 中间露出 0.74 m 素面束腰，整圈读成一排白栅栏
+            _b = box("三台·束腰%d_%d" % (_i, _k), _L / _n - 0.05, 0.34, _zh * 0.72,
                      _x, _y, _zw, _ms)
             _b.rotation_euler[2] = math.atan2(_q[1] - _p[1], _q[0] - _p[0])
     _ms_keep = _ms
