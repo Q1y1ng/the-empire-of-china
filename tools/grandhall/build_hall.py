@@ -108,7 +108,7 @@ else:
         "gold": mat("金饰", L(D.SRGB["gold"]), 0.28, metal=0.95),
         "dark": mat("深色金属", (0.045, 0.042, 0.038), 0.4, metal=0.7),
         "lamp": mat("灯具", (1.0, 0.95, 0.85), 0.4, emit=(1.0, 0.93, 0.80),
-                    emit_str=7.0),
+                    emit_str=8.5),
         "red": mat("地毯·帝国红", L(D.SRGB["imperial_red"]), 0.95),
         "bronze": mat("铜门", L(D.SRGB["bronze"]), 0.35, metal=0.9),
         "marble_w": mat("汉白玉柱", L(D.SRGB["white_marble"]), 0.28),
@@ -482,11 +482,11 @@ def build_stage():
                 blk(u, v, 0.20, 0.34)
 
         # 金蟠龙：S 形盘绕，自城墙顶向上（总高 0.50D）
-        for i in range(30):
-            t = i / 29.0
+        for i in range(46):
+            t = i / 45.0
             u = 0.95 * math.sin(t * 1.9 * math.pi - 0.35)
             v = -1.05 + 3.20 * t
-            blk(u, v, 0.26 + 0.10 * (1 - t), 0.30)
+            blk(u, v, 0.22 + 0.09 * (1 - t), 0.26)
         blk(0.86, 2.16, 0.46, 0.40)                  # 龙首
 
         # 绶带「金瓯永固」
@@ -498,6 +498,39 @@ def build_stage():
         if ob:
             ob.rotation_euler = (0, math.radians(-90), 0)
             ob.location = (S["x0"] + 1.0, AX, 12.0)
+
+        # ---- 主席台陈设（精模）----
+        FUR = Mesh("主席台陈设", MAT["stage"], "stage")
+        GLD = Mesh("陈设金饰", MAT["gold"], "stage")
+        RED = Mesh("屏风", MAT["red"], "stage")
+        bx = S["x0"]
+        # 屏风：国徽之下的整片红底，外圈金框
+        RED.box(bx + 1.1, AX, 2.20, 0.22, 27.0, 6.30)
+        for dy in (-13.6, 13.6):                      # 左右立框
+            GLD.box(bx + 1.0, AX + dy, 2.10, 0.34, 0.36, 6.50)
+        GLD.box(bx + 1.0, AX, 8.50, 0.34, 27.6, 0.34)   # 上框
+        GLD.box(bx + 1.0, AX, 2.10, 0.34, 27.6, 0.34)   # 下框
+        for k in range(1, 10):                          # 竖向金分隔
+            GLD.box(bx + 1.06, AX - 13.5 + k * 2.7, 2.20, 0.16, 0.10, 6.30)
+        GLD.box(bx + 1.06, AX, 3.05, 0.18, 27.0, 0.16)   # 下部纹样带
+        GLD.box(bx + 1.06, AX, 7.60, 0.18, 27.0, 0.16)   # 上部纹样带
+        # 主席团桌案：长桌 + 前挡板 + 桌面板
+        FUR.box(bx + 5.4, AX, 2.10, 1.05, 22.0, 0.16)
+        FUR.box(bx + 5.4, AX, 1.50, 0.90, 22.0, 0.60)
+        GLD.box(bx + 5.0, AX, 2.04, 0.06, 22.2, 0.24)
+        # 主席团座椅：9 把
+        for k in range(9):
+            yy = AX - 9.6 + k * 2.4
+            FUR.box(bx + 6.8, yy, 2.26, 0.62, 0.56, 0.12)
+            FUR.box(bx + 7.05, yy, 2.30, 0.12, 0.56, 0.72)
+        # 台唇与踏步
+        FUR.box(D.PROSCENIUM["x"] + 0.35, AX, 1.34, 0.70, D.PROSCENIUM["w"], 0.20)
+        for i in range(3):
+            FUR.box(D.PROSCENIUM["x"] + 0.9 + i * 0.42, AX, 0.0,
+                    0.42, 9.0, 1.50 - i * 0.42)
+        emit(FUR)
+        emit(GLD)
+        emit(RED)
         if D.FLAGS_AT_PROSCENIUM:
             F = Mesh("红底金龙旗", MAT["red"], "stage")
             for dy in (-16.5, -11.0, -5.5, 5.5, 11.0, 16.5,
@@ -865,19 +898,22 @@ def setup_lights():
     # 观众厅：沿轴线六组大面光，均匀铺开（灯具面积大、功率低，减少热点）
     for i, (lx, lz, lw) in enumerate(((-470, 30, 40), (-452, 33, 44), (-434, 36, 48),
                                       (-416, 36, 48), (-398, 33, 44), (-382, 30, 40))):
-        area(f"顶光{i}", (lx, AX, lz), (0, 0, 0), lw, 1500)
-        area(f"顶光N{i}", (lx, AX + 46, lz - 2), (0, a(90), 0), lw * 0.7, 700)
+        area(f"顶光{i}", (lx, AX, lz), (0, 0, 0), lw, 2300)
+        area(f"顶光N{i}", (lx, AX + 50, lz - 2), (0, a(90), 0), lw * 0.7, 1150)
         area(f"顶光S{i}", (lx, AX - 46, lz - 2), (0, a(-90), 0), lw * 0.7, 700)
     # 侧向补光（贴侧墙，向内）
-    area("侧光N", (-440, AX + 52, 14), (a(90), 0, 0), 50, 900)
-    area("侧光S", (-440, AX - 52, 14), (a(-90), 0, 0), 50, 900)
+    area("侧光N", (-440, AX + 52, 14), (a(90), 0, 0), 50, 1300)
+    area("侧光S", (-440, AX - 52, 14), (a(-90), 0, 0), 50, 1300)
+    # 地面反弹（向上，模拟石材反射，补挑台底与天花的暗部）
+    for i, lx in enumerate((-458, -428, -398)):
+        area(f"反弹{i}", (lx, AX, 2.2), (a(180), 0, 0), 70, 850)
     # 台口与主席台
     area("台口光", (-496, AX, 17), (0, a(-90), 0), 34, 1200)
-    area("台面光", (-506, AX, 21), (0, 0, 0), 30, 700)
+    area("台面光", (-506, AX, 21), (0, 0, 0), 30, 330)
     if P:
         # 打亮主席台后墙与国徽
         area("台口面光", (-472, AX, 9), (0, a(90), 0), 30, 2600)
-        area("台面补光", (-495, AX, 3.4), (0, 0, 0), 26, 900)
+        area("台面补光", (-496, AX, 4.2), (0, 0, 0), 26, 220)
     if args.cut:
         for xx in (-500, -430, -360):
             area(f"剖面光{xx}", (xx, AX + 70, 20), (a(90), 0, 0), 60, 5200)
@@ -943,7 +979,7 @@ def setup_render():
     sc.view_settings.view_transform = "AgX" if P else "Standard"
     sc.view_settings.look = "AgX - Medium High Contrast" if P else "None"
     sc.view_settings.exposure = (args.exposure if args.exposure is not None
-                                 else (-0.35 if P else -2.4))
+                                 else (0.25 if P else -2.4))
     return cam
 
 
@@ -955,7 +991,7 @@ SHOTS = [
     ("池座坐姿", dict(loc=(-459.0, AX, 2.50), target=(-500, AX + 2, 6.0), lens=26)),
     ("二层坐姿", dict(loc=(-447.5, AX, 13.62), target=(-500, AX + 2, 6.0), lens=26)),
     ("三层坐姿", dict(loc=(-439.2, AX, 22.13), target=(-500, AX + 2, 6.0), lens=26)),
-    ("主席台立姿", dict(loc=(-488, AX, 3.15), target=(-420, AX, 11.0), lens=24)),
+    ("主席台立姿", dict(loc=(-485.5, AX, 3.00), target=(-430, AX, 13.2), lens=15)),
     ("主席台俯瞰", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
     ("仰望穹顶", dict(loc=(-452, AX + 5, 4.3), target=(-427, AX + 1, 43.0), lens=19)),
     ("中央前厅", dict(loc=(-324, AX - 34, 7.0), target=(-389, AX + 8, 12.0), lens=26)),
