@@ -95,6 +95,20 @@ def _dark_mat():
     return m
 
 
+def _red_mat():
+    """垫拱板：刷红（清式斗拱之间那道竖板，多为土朱红）。"""
+    m = bpy.data.materials.get("斗拱·垫板")
+    if m:
+        return m
+    m = bpy.data.materials.new("斗拱·垫板")
+    m.use_nodes = True
+    b = m.node_tree.nodes.get("Principled BSDF")
+    if b:
+        b.inputs["Base Color"].default_value = (0.300, 0.048, 0.028, 1.0)
+        b.inputs["Roughness"].default_value = 0.66
+    return m
+
+
 def _mats(main=None):
     pl = _lib()
     m = pl.make_materials()
@@ -102,7 +116,7 @@ def _mats(main=None):
     key = main.name
     if key in _MAT_CACHE:
         return _MAT_CACHE[key]
-    out = [main, _dark_mat(), m["cai_blue"], m["cai_green"]]
+    out = [main, _dark_mat(), m["cai_blue"], m["cai_green"], _red_mat()]
     _MAT_CACHE[key] = out
     return out
 
@@ -338,6 +352,14 @@ def _shuatou(b, y_root, y_head, z0, lod=2, m=1):
     b.profile_x(prof, -SLOT / 2, SLOT / 2, m)
 
 
+def _bank(b, y, z0, z1, seg_x0, seg_x1, m=4):
+    """垫拱板：填在相邻拱之间的竖板，正面比拱身前脸退 0.2 斗口。
+
+    没有它，檐下一眼能透过攒与攒之间的缝看到天，整排斗拱就读成「一排散块」；
+    有了它才是连续的一道板带，斗与拱从板前凸出，明暗层次立刻出来。"""
+    b.box(seg_x0, seg_x1, y - 0.55, y + 0.30, z0, z1, m)
+
+
 def _sup(b, x, y, z0, lod, m=0, ears=2):
     _dou(b, SUP_L, SUP_D, SUP_HH, z0, ears=ears if lod >= 2 else 0, lod=lod, m=m)
 
@@ -402,6 +424,14 @@ def _build(b, lod, seg):
         _sup_lo(b, 2.3, -3.0, Z0 + LAYER + GONG_H, lod)
         _sup_lo(b, -2.3, -3.0, Z0 + LAYER + GONG_H, lod)
         _gong(b, GONG_LEN["wan"], -3.0, Z0 + 2 * LAYER, lod)
+
+    # 5b) 垫拱板：把拱与拱之间补成连续板带（否则檐下透空，整排读成散块）
+    _bank(b, 0.0, Z0, 9.2, seg_x0, seg_x1)
+    _bank(b, 3.0, Z0 + LAYER, 10.6, seg_x0, seg_x1)
+    _bank(b, 6.0, Z0 + 2 * LAYER, 10.6, seg_x0, seg_x1)
+    if lod >= 1:
+        _bank(b, 9.0, Z_TOP, 10.6, seg_x0, seg_x1)
+        _bank(b, -3.0, Z0 + LAYER, Z0 + 2 * LAYER + GONG_H, seg_x0, seg_x1)
 
     # 6) 十八斗（出跳构件下的斗）
     _sup(b, 0.0, 3.0, Z0 + GONG_H, lod, ears=4)

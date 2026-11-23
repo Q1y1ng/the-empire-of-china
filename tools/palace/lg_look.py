@@ -739,35 +739,65 @@ def _caihua_uv(g, heart, zhaotou, kuto, edge_v=0.12, kuto_u=0.07, gline=0.006):
     col = MIXC(g, M(g, "MULTIPLY", v_edge, 0.75), col,
                MIXC(g, 1.0, kuto, (0.62, 0.62, 0.62), "MULTIPLY"))
 
-    # ---- 枋心卷草（用 U/V 折成米制观感：按 8 m 间宽、0.85 m 高折算）
+    # ---- 枋心云纹（很淡的一条波形带，压在龙身下面当底色层次）
     ux = M(g, "MULTIPLY", u, 8.0)
     vz = M(g, "MULTIPLY", v, 0.85)
     zz = M(g, "FRACT", M(g, "DIVIDE", vz, 0.22))
     wob = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", ux, 2.6)), 0.16, 0.5)
     orn = BAND(g, M(g, "ABSOLUTE", M(g, "SUBTRACT", zz, wob)), 0.0, 0.10)
     orn = M(g, "MULTIPLY", orn, in_heart)
-    # ---- 藻头旋子（金点）
-    dx = M(g, "ABSOLUTE", M(g, "SUBTRACT", M(g, "FRACT", M(g, "DIVIDE", ux, 0.46)), 0.5))
-    dz = M(g, "ABSOLUTE", M(g, "SUBTRACT", M(g, "FRACT", M(g, "DIVIDE", vz, 0.26)), 0.5))
-    rr = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", dx, dx), M(g, "MULTIPLY", dz, dz)))
-    dots = M(g, "MULTIPLY", M(g, "SUBTRACT", 1.0, STEP(g, rr, 0.10, 0.16)), in_zhao)
-    # ---- 枋心金龙（写意）：一条 S 形金带 + 头部团块，只落在枋心范围内。
-    # 和玺彩画的枋心本来就是「青地金龙」，之前只有一块平色，远看像没画完。
+    # ---- 藻头旋子（清式「一整二破」）：藻头内一个整圆 + 两端各半个圆
+    # 沿枋长：左右两个藻头的中心分别落在 u 轴向两侧 2.704 m 处（8 m 开间折算），
+    # 藻头宽 1.472 m；把 |du| 折回藻头局部坐标后，圆心在局部 0 与 ±1（±1 就是半个）。
+    du_m = M(g, "SUBTRACT", ux, 4.0)
+    pu = M(g, "DIVIDE", M(g, "SUBTRACT", M(g, "ABSOLUTE", du_m), 2.704), 1.472)
+    cu = M(g, "ABSOLUTE", M(g, "SUBTRACT", M(g, "FRACT", M(g, "ADD", pu, 0.5)), 0.5))
+    dxm = M(g, "MULTIPLY", cu, 1.472)
+    dzm = M(g, "MULTIPLY", M(g, "SUBTRACT", v, 0.5), 0.85)
+    rr = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", dxm, dxm),
+                       M(g, "MULTIPLY", dzm, dzm)))
+    rim = BAND(g, rr, 0.300, 0.012)          # 外缘金圈（旋子轮廓）
+    ring2 = BAND(g, rr, 0.212, 0.010)        # 道瓣圈
+    ring3 = BAND(g, rr, 0.132, 0.009)        # 内瓣圈
+    core = M(g, "SUBTRACT", 1.0, STEP(g, rr, 0.048, 0.062))   # 花心
+    swirl = M(g, "MAXIMUM", M(g, "MAXIMUM", rim, ring2),
+              M(g, "MAXIMUM", ring3, core))
+    dots = M(g, "MULTIPLY", swirl, in_zhao)
+    # ---- 枋心金龙（写意）：细身 S 形 + 头 + 四爪 + 尾叉，只落在枋心范围内。
+    # 和玺彩画的枋心本来就是「青地金龙」；先前那条金带太粗，读成一条缎子。
     uu = M(g, "MULTIPLY", M(g, "SUBTRACT", u, 0.26), 1.0 / 0.48)
     vv = M(g, "MULTIPLY", M(g, "SUBTRACT", v, 0.18), 1.0 / 0.64)
-    sp = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", uu, 6.60)), 0.135, 0.50)
+    sp = M(g, "MULTIPLY_ADD", M(g, "SINE", M(g, "MULTIPLY", uu, 6.60)), 0.125, 0.50)
     dv = M(g, "ABSOLUTE", M(g, "SUBTRACT", vv, sp))
-    dbody = M(g, "SUBTRACT", 1.0, STEP(g, dv, 0.150, 0.215))
+    dbody = M(g, "SUBTRACT", 1.0, STEP(g, dv, 0.056, 0.084))     # 细身（约 6 cm）
     hdu = M(g, "SUBTRACT", uu, 0.150)
-    hdv = M(g, "SUBTRACT", vv, 0.500)
+    hdv = M(g, "SUBTRACT", vv, 0.600)
     hd = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", hdu, hdu),
                        M(g, "MULTIPLY", hdv, hdv)))
-    dhead = M(g, "SUBTRACT", 1.0, STEP(g, hd, 0.230, 0.300))
-    dragon = M(g, "MULTIPLY", M(g, "MAXIMUM", dbody, dhead), inner)
+    dhead = M(g, "SUBTRACT", 1.0, STEP(g, hd, 0.100, 0.148))
+    # 四爪 + 尾叉：若干小团块，靠它们把「一条带子」读成「一条龙」
+    limb = None
+    for (lu, side) in ((0.315, 1), (0.455, -1), (0.600, 1), (0.735, -1)):
+        su = M(g, "SUBTRACT", uu, lu)
+        sv = M(g, "ADD", sp, side * 0.128)
+        sw = M(g, "SUBTRACT", vv, sv)
+        ld = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", su, su),
+                           M(g, "MULTIPLY", sw, sw)))
+        blob = M(g, "SUBTRACT", 1.0, STEP(g, ld, 0.030, 0.052))
+        limb = blob if limb is None else M(g, "MAXIMUM", limb, blob)
+    for side in (1, -1):
+        tu = M(g, "SUBTRACT", uu, 0.885)
+        tv = M(g, "SUBTRACT", vv, M(g, "ADD", sp, side * 0.105))
+        tt = M(g, "SQRT", M(g, "ADD", M(g, "MULTIPLY", tu, tu),
+                          M(g, "MULTIPLY", tv, tv)))
+        blob = M(g, "SUBTRACT", 1.0, STEP(g, tt, 0.024, 0.044))
+        limb = blob if limb is None else M(g, "MAXIMUM", limb, blob)
+    dragon = M(g, "MAXIMUM", M(g, "MAXIMUM", dbody, dhead), limb)
+    dragon = M(g, "MULTIPLY", dragon, inner)
     gold = M(g, "MAXIMUM",
              M(g, "MAXIMUM", M(g, "MAXIMUM", gold_line, v_gold),
-               M(g, "MAXIMUM", M(g, "MULTIPLY", orn, 0.85),
-                 M(g, "MULTIPLY", dots, 0.62))),
+               M(g, "MAXIMUM", M(g, "MULTIPLY", orn, 0.22),
+                 M(g, "MULTIPLY", dots, 0.82))),
              M(g, "MULTIPLY", dragon, 0.95))
     _caihua_finish(g, col, gold, tc)
 
@@ -901,6 +931,10 @@ def make_materials():
                                            grain=0.28, coat=0.06))
     add("soffit", "椽望", lambda g: _wood(g, (0.115, 0.082, 0.058), rough=0.78,
                                           grain=0.35, coat=0.0))
+    # 隔扇格心背板：透空的菱花后面是殿内，几乎见不到光；不压暗就会透出砖红墙，
+    # 整排隔扇在正立面上读成一大片糊红（曾是最显眼的"不像现实"）
+    add("window_void", "格心背板", lambda g: _wood(g, (0.030, 0.024, 0.019),
+                                                  rough=0.88, grain=0.08, coat=0.0))
     add("plaque", "匾", _plaque)
     add("dou", "斗拱", _dou)
     # ---- 彩画

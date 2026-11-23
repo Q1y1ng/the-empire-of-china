@@ -31,12 +31,12 @@ LEAF_T = 0.09        # 隔扇整体厚
 LEAF_STILE = 0.12    # 边梃宽
 LEAF_RAIL = 0.10     # 抹头高
 LEAF_GAP = 0.02      # 扇与扇之间
-BAR_W = 0.028        # 棂条宽
+BAR_W = 0.042        # 棂条宽（原 0.028 太细，隔扇格心远看像铁丝网）
 BAR_T = 0.03         # 棂条厚
 SILL_H = 0.20        # 下槛高
 ZC_SKIRT = 0.28      # 裙板下界（占全高比例）
 ZC_KUAN = 0.42       # 绦环板上界（28% + 14%）
-DIAG_STEP = 0.155    # 菱花斜棂的垂直间距
+DIAG_STEP = 0.235    # 菱花斜棂的垂直间距（格眼放大，才对得上三交六椀的尺度）
 EMBED = 0.010        # 同材质木构件之间的微量叠压，只为躲开共面 z-fighting
 
 FONT_PATHS = (r"C:\Windows\Fonts\simhei.ttf", r"C:\Windows\Fonts\msyh.ttc")
@@ -283,13 +283,18 @@ def _transom_win(fr, lt, w, h, lod, t=TRANSOM_T, b=TRANSOM_B):
     if lod <= 0:
         fr.box(ix0, ix1, -0.02, 0.02, iz0, iz1)
     elif lod == 1:
+        fr.box(ix0, ix1, 0.020, 0.042, iz0, iz1)      # 背板，同框色
         _lat_step(lt, ix0, ix1, iz0, iz1, sx=0.34, sz=0.50)
     else:
-        _lat_diamond(lt, ix0, ix1, iz0, iz1, step=0.30)
+        fr.box(ix0, ix1, 0.020, 0.042, iz0, iz1)      # 背板，同框色
+        _lat_diamond(lt, ix0, ix1, iz0, iz1, step=0.235)
 
 
-def _leaf(fr, lt, x0, lw, h, lod):
-    """单扇：边梃 / 抹头 / 格心 / 绦环板 / 裙板，局部 x0 为扇左沿。"""
+def _leaf(fr, lt, bd, x0, lw, h, lod):
+    """单扇：边梃 / 抹头 / 格心 / 绦环板 / 裙板 / 格心背板，局部 x0 为扇左沿。
+
+    bd = 格心背板缓冲。菱花后面必须有一层暗板：以前格心是透空的，背后就是
+    砖红墙身，整排隔扇在正立面上直接糊成一大片死红，看不出是门。"""
     st, ra, t = LEAF_STILE, LEAF_RAIL, LEAF_T
     x1 = x0 + lw
     ht = t / 2.0
@@ -328,8 +333,11 @@ def _leaf(fr, lt, x0, lw, h, lod):
     # ---- 格心
     gz0, gz1 = zk + ra / 2, h - ra
     if lod >= 2:
+        # 背板：落在菱花之后（Y 向里侧），稍退一档，让棂条有投影
+        bd.box(ix0 - EMBED, ix1 + EMBED, 0.020, 0.042, gz0 - EMBED, gz1 + EMBED)
         _lat_diamond(lt, ix0 - EMBED, ix1 + EMBED, gz0 - EMBED, gz1 + EMBED)
     elif lod == 1:
+        bd.box(ix0 - EMBED, ix1 + EMBED, 0.020, 0.042, gz0 - EMBED, gz1 + EMBED)
         _lat_step(lt, ix0 - EMBED, ix1 + EMBED, gz0 - EMBED, gz1 + EMBED)
 
 
@@ -347,11 +355,14 @@ def lattice_door(pl, name, w, h, x, y, z, rot=0.0, lod=2, leaves=None,
     while n > 1 and (w - (n - 1) * LEAF_GAP) / n < 2 * LEAF_STILE + 0.05:
         n -= 1
     lw = (w - (n - 1) * LEAF_GAP) / n
-    fr, lt = _Buf(), _Buf()
+    fr, lt, bd = _Buf(), _Buf(), _Buf()
     for i in range(n):
-        _leaf(fr, lt, -w / 2 + i * (lw + LEAF_GAP), lw, h, lod)
+        _leaf(fr, lt, bd, -w / 2 + i * (lw + LEAF_GAP), lw, h, lod)
     frame = mat_frame or pl.MAT["door"]
-    objs = _flush(pl, name, [("框", frame, fr), ("格心", pl.MAT["lattice"], lt)])
+    back = (pl.MAT.get("window_void") or pl.MAT.get("soffit")
+            or pl.MAT["door"])
+    objs = _flush(pl, name, [("框", frame, fr), ("格心", pl.MAT["lattice"], lt),
+                             ("背板", back, bd)])
     for ob in objs:
         ob.location = (x, y, z)
         ob.rotation_euler = (0.0, 0.0, rot)
@@ -390,12 +401,14 @@ def _baypos(side, pf, u, dep):
 
 def bay_skin(pl, name, xs, ys, w, d, z0, col_h, lod=2,
              col_r=0.46, gap=0.03, base_k=2.3,
-             sides=("S", "N", "E", "W"), door_frac=0.66, sill_h=SILL_H,
+             sides=("S", "N", "E", "W"), door_frac=0.80, sill_h=SILL_H,
              top_rail=0.16, wall_h=1.05, wall_stone=0.12, transom=True,
              base_h=0.28, leaves=None, mat_frame=None):
     """按开间铺一殿的外皮。
 
     南/北面：抱框 + 下槛（0.2）+ 隔扇 + 上槛（0.16）+ 横披窗（到额枋下皮 - 0.03）；
+    door_frac = 隔扇顶高 / 檐柱高。0.66 时横披窗高达 3.6 m，大半面墙都是暗格，
+    改 0.80 才对得上故宫实物的窄横披。
     东/西面：抱框 + 槛墙（1.05，含 0.12 石活压面）+ 隔扇 + 上槛 + 横披窗。
     柱轴线 xs/ys（含两端）是唯一权威；w/d 只用于命名与校验。
     base_k = 柱础直径/柱半径（与 column_base 同口径），用来把外皮从柱础边上让开（0 = 只让柱）；

@@ -411,6 +411,87 @@ def columns_ring(xs, ys, z0, z1, r=0.46):
             column(x, y, z0, z1, r)
 
 
+def window_band(name, w, d, z0, h, pane_w=1.35, mat_frame=None, mat_pane=None,
+                t=0.16):
+    """重檐上层一圈槛窗（三交六椀菱花）：下槛 / 上槛 / 两端边框 / 分扇边梃 /
+    格心暗底 / 棂条网格。整圈合成**一个**网格对象，两个材质槽（棂、格心）。
+
+    以前这里只是四块贴片 box，重檐上层看着就是四条无细节的灰板；故宫上檐
+    那一圈是混金菱花窗，远看是一条金色格网，得靠棂条才立得住。
+    """
+    fr = mat_frame or MAT.get("gold") or MAT["lattice"]
+    pn = mat_pane or MAT.get("glass") or MAT["soffit"]
+    verts, faces, fmat = [], [], []
+    hw, hd, ht = w / 2.0, d / 2.0, t / 2.0
+
+    def bx(rot, cx, cy, x0, x1, zz0, zz1, y0, y1, mi=0):
+        if x1 - x0 < 1e-4 or zz1 - zz0 < 1e-4 or y1 - y0 < 1e-4:
+            return
+        c, s = math.cos(rot), math.sin(rot)
+        b = len(verts)
+        for yy in (y0, y1):
+            for (xx, zz) in ((x0, zz0), (x1, zz0), (x1, zz1), (x0, zz1)):
+                verts.append((cx + xx * c - yy * s, cy + xx * s + yy * c, zz))
+        for f in ((0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1),
+                  (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)):
+            faces.append(tuple(b + i for i in f))
+            fmat.append(mi)
+
+    # 四边：(转角, 中心, 长度)。+Y / -Y 沿 X，+X / -X 沿 Y。
+    for rot, cx, cy, run in ((0.0, 0.0, hd, w), (math.pi, 0.0, -hd, w),
+                             (-math.pi / 2, hw, 0.0, d), (math.pi / 2, -hw, 0.0, d)):
+        L = run
+        hl = L / 2.0
+        n = max(1, int(round(L / pane_w)))
+        pw = L / n
+        zt = h
+        # 下槛 + 上槛 + 两端边框
+        bx(rot, cx, cy, -hl, hl, 0.0, 0.14, -ht, ht, 0)
+        bx(rot, cx, cy, -hl, hl, zt - 0.13, zt, -ht, ht, 0)
+        bx(rot, cx, cy, -hl, -hl + 0.15, 0.14, zt - 0.13, -ht, ht, 0)
+        bx(rot, cx, cy, hl - 0.15, hl, 0.14, zt - 0.13, -ht, ht, 0)
+        # 格心暗底（后退半档，形成窗洞的纵深感）
+        bx(rot, cx, cy, -hl + 0.12, hl - 0.12, 0.15, zt - 0.14,
+           -ht * 0.45, ht * 0.10, 1)
+        zb0, zb1 = 0.30, zt - 0.26
+        # 分扇边梃
+        for i in range(1, n):
+            u = -hl + i * pw
+            bx(rot, cx, cy, u - 0.055, u + 0.055, 0.14, zt - 0.13,
+               -ht - 0.025, ht + 0.025, 0)
+        # 棂条：每扇两竖三横（三交六椀的骨架）
+        for i in range(n):
+            u0 = -hl + i * pw + 0.16
+            u1 = -hl + (i + 1) * pw - 0.16
+            if u1 - u0 < 0.10:
+                continue
+            for k in (1, 2):
+                uu = u0 + (u1 - u0) * k / 3.0
+                bx(rot, cx, cy, uu - 0.028, uu + 0.028, zb0, zb1,
+                   -ht - 0.025, ht + 0.025, 0)
+            for j in (1, 2, 3):
+                zz = zb0 + (zb1 - zb0) * j / 4.0
+                bx(rot, cx, cy, u0, u1, zz - 0.028, zz + 0.028,
+                   -ht - 0.025, ht + 0.025, 0)
+
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    me.validate(verbose=False)
+    me.materials.append(fr)
+    me.materials.append(pn)
+    for i, p in enumerate(me.polygons):
+        if i < len(fmat):
+            p.material_index = fmat[i]
+    me.update()
+    for p in me.polygons:          # 金棂微反光，别做成死平
+        if p.material_index == 0:
+            p.use_smooth = False
+    ob = bpy.data.objects.new(name, me)
+    _col().objects.link(ob)
+    ob.location = (0.0, 0.0, z0)
+    return ob
+
+
 def ring_beam(name, w, d, z, h, t, mat):
     box(name + "_S", w, t, h, 0, -d / 2, z, mat)
     box(name + "_N", w, t, h, 0, d / 2, z, mat)
@@ -869,7 +950,12 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
     # 墙身要顶到柱网线：原来内收 0.3 m，四个转角处隔扇外皮之间就露出缝
     # （作者看到"楼的墙没有拼合"就是这四个角）
-    box(f"{name}·墙身", w - 0.05, d - 0.05, col_h - 0.2, 0, 0, z0, MAT["wall"])
+    # 但 lod>=2 时外面还有一层真隔扇（bay_skin 铺在柱轴上，只凸出墙 5 mm），
+    # 墙身贴着柱轴会把整排隔扇埋进墙里 —— 正立面就糊成一大片死红。
+    # 所以精模档把墙身退到柱轴内 0.35 m，让隔扇真正站在墙面之前，才有投影。
+    _wall_in = 0.70 if lod >= 2 else 0.05
+    box(f"{name}·墙身", w - _wall_in, d - _wall_in, col_h - 0.2, 0, 0, z0,
+        MAT["wall"])
     beams(xs, ys, z0 + col_h, beam_h)
     z_ping = z0 + col_h + beam_h
     ring_beam(f"{name}·平板枋", w + 0.4, d + 0.4, z_ping, 0.26, 0.66, MAT["wall"])
@@ -937,13 +1023,10 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
         # 上层槛窗一圈：重檐上层的墙身本该是一排窗，否则就是一整片朱红
         _wh = min(3.4, z_wall * 0.52)
         _wz = ring_z + z_wall * 0.26
-        _ml = MAT.get("door") or MAT.get("lattice") or MAT["wall"]
-        for _sy in (-1, 1):
-            box(f"{name}·上窗{'SN'[_sy > 0]}", up_w - 1.8, 0.14, _wh, 0,
-                _sy * (up_d - 1.4) / 2, _wz, _ml)
-        for _sx in (-1, 1):
-            box(f"{name}·上窗{'WE'[_sx > 0]}", 0.14, up_d - 1.8, _wh,
-                _sx * (up_w - 1.4) / 2, 0, _wz, _ml)
+        # 一度只是四块 0.14 厚的贴片 → 上檐看着是四条无细节的灰板；
+        # 换成真槛窗（边框 + 边梃 + 菱花金棂 + 后退的格心暗底）。
+        window_band(f"{name}·上层槛窗", up_w - 1.32, up_d - 1.32, _wz, _wh,
+                    pane_w=max(1.05, min(1.55, up_w / 46.0)))
         unit2 = unit_for(up_w)
         n2 = max(3, int(round(up_w / 7)))
         m2 = max(3, int(round(up_d / 8)))
