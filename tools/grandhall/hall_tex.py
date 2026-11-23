@@ -120,7 +120,7 @@ def _fabric(tile_m=0.6, res=512, base=(0.30, 0.035, 0.045)):
     weave = (wf * wt) ** 1.6
     rng = np.random.default_rng(3)
     noise = rng.random((res, res), dtype=np.float32)
-    alb = np.array(base, np.float32)[None, None, :] * (0.80 + 0.42 * weave[..., None])
+    alb = np.array(base, np.float32)[None, None, :] * (0.60 + 0.75 * weave[..., None])
     alb = alb * (0.94 + 0.12 * noise[..., None])
     return np.clip(alb, 0, 1).astype(np.float32), (0.5 + 0.5 * weave).astype(np.float32)
 

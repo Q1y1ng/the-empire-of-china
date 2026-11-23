@@ -609,6 +609,25 @@ def build_balcony(tier, idx):
             prev = cur
         emit(R)
 
+        # 栏板竖向分格肋：沿前缘每 1.6 m 一道，出挑 0.06
+        RIB = Mesh(f"挑台{idx}·栏板肋", MAT["gold"], g)
+        acc = 0.0
+        for i in range(1, n + 1):
+            th0 = th_lo + 2 * -th_lo * (i - 1) / n
+            th1 = th_lo + 2 * -th_lo * i / n
+            r = max(tier_front_r(tier, th1), r_first)
+            acc += (th1 - th0) * r
+            if acc < 1.6:
+                continue
+            acc = 0.0
+            x = FX + r * math.cos(th1)
+            y = FY + r * math.sin(th1)
+            if not in_hall(x, y, 0.6):
+                continue
+            z = tier["z0"]
+            RIB.box(x, y, z - 1.55, 0.10, 0.10, 2.40, rz=th1 + math.pi / 2)
+        emit(RIB)
+
 
 # ------------------------------------------------------------------ 4 座席
 def build_seats(tier, idx, desks=True):
@@ -863,11 +882,29 @@ def build_foyer():
 
     # 铜门
     DM = Mesh("铜门", MAT["bronze"] if P else MAT["wall"], "foyer_door")
-    for (dx, dy, w, hh) in D.DOORS["foyer"]:
-        DM.box(dx - 0.15, dy, 0, 0.3, w, hh)
-    for (dx, dy, w, hh) in D.DOORS["hall"]:
-        DM.box(dx - 0.15, dy, 0, 0.3, w, hh)
+    HD = Mesh("铜门把手", MAT["gold"], "foyer_door") if P else None
+    for (dx, dy, w, hh) in D.DOORS["foyer"] + D.DOORS["hall"]:
+        DM.box(dx - 0.15, dy, 0, 0.30, w, hh)          # 门扇基体
+        if not P:
+            continue
+        # 门套：左右立框 + 上框，出挑 0.10
+        for sgn in (1, -1):
+            DM.box(dx + 0.02, dy + sgn * (w / 2 - 0.08), 0, 0.44, 0.24, hh + 0.30)
+        DM.box(dx + 0.02, dy, hh + 0.06, 0.44, w + 0.32, 0.26)
+        DM.box(dx + 0.02, dy, 0.0, 0.44, w + 0.32, 0.14)   # 门槛
+        # 双扇门缝 + 每扇 2×3 凸板
+        for sg in (1, -1):
+            cw = (w - 0.24) / 2
+            for col in range(2):
+                cy = dy + sg * (0.10 + cw * (col + 0.5))
+                for row in range(3):
+                    cz = 0.42 + (hh - 1.10) * row / 2.0
+                    DM.box(dx + 0.16, cy, cz, 0.06, cw - 0.12, (hh - 1.30) / 3.0)
+            # 竖向拉手
+            HD.box(dx + 0.26, dy + sg * 0.14, hh * 0.38, 0.07, 0.07, hh * 0.30)
     emit(DM)
+    if HD:
+        emit(HD)
 
 
 # ------------------------------------------------------------------ 7 后厅栏杆
