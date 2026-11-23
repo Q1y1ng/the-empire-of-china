@@ -188,26 +188,40 @@ SPECS = [
                                 mc=(0.62, 0.60, 0.55)), 0.65),
     ("stage", 2.4, _plank, dict(n=6), 0.45),
     ("seat", 0.6, _fabric, dict(), 0.85),
+    ("seat_dark", 0.6, _fabric, dict(base=(0.150, 0.017, 0.024)), 0.9),
+    ("red", 0.6, _fabric, dict(base=(0.30, 0.035, 0.045)), 0.95),
+    ("bronze", 1.2, _gold, dict(base=(0.34, 0.21, 0.09)), 0.35),
     ("gold", 1.2, _gold, dict(), 0.28),
 ]
 
 
-def setup(MAT, texdir, res=1024):
+def setup(MAT, texdir, res=512):
     """生成贴图并改写材质；返回 {材质名: 平铺尺寸(m)}，供 apply_uv 用。"""
     os.makedirs(texdir, exist_ok=True)
+    ALIAS = {"dome": "ceil", "soffit": "ceil", "marble_w": "wall"}
     tiles = {}
+    made = {}
     for key, tile_m, fn, params, rough in SPECS:
         m = MAT.get(key)
         if m is None:
             continue
-        alb, hgt = fn(tile_m=tile_m, res=res if key != "seat" else 512, **params)
+        alb, hgt = fn(tile_m=tile_m, res=res, **params)
         a = os.path.join(texdir, f"{key}_albedo.png")
         n = os.path.join(texdir, f"{key}_normal.png")
         _write_png(a, _rgb8(alb))
         _write_png(n, _nrm8(hgt, strength=2.2 if key != "seat" else 1.2))
         _load_material(m, a, n, rough)
+        made[key] = (a, n, rough, tile_m)
         tiles[m.name] = tile_m
         print(f"TEX {key} tile={tile_m} m", flush=True)
+    for alias, src in ALIAS.items():
+        m = MAT.get(alias)
+        if m is None or src not in made:
+            continue
+        a, n, rough, tile_m = made[src]
+        _load_material(m, a, n, rough)
+        tiles[m.name] = tile_m
+        print(f"TEX {alias} -> {src} tile={tile_m} m", flush=True)
     return tiles
 
 

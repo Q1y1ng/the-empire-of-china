@@ -1172,12 +1172,15 @@ if TEXTURE_TILES:
 glb = os.path.join(args.out, f"国家广场(2026)·万人大礼堂·{prefix}.glb")
 if not args.no_glb:
     kw = {}
+    if TEXTURE_TILES:
+        # 内嵌贴图转 JPEG（法线也一并转，质量 90 足够），glb 体积可降一半以上
+        kw.update(export_image_format="JPEG", export_image_quality=90)
     if args.draco:
-        kw = dict(export_draco_mesh_compression_enable=True,
+        kw.update(dict(export_draco_mesh_compression_enable=True,
                   export_draco_mesh_compression_level=6,
                   export_draco_position_quantization=14,
                   export_draco_normal_quantization=10,
-                  export_draco_texcoord_quantization=12)
+                  export_draco_texcoord_quantization=12))
     bpy.ops.export_scene.gltf(filepath=glb, export_format="GLB", export_apply=True, **kw)
 
 tris = 0
