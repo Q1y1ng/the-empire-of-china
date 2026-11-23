@@ -117,7 +117,8 @@ else:
 
 if not WHITE:
     MAT["dome"] = MAT["ceil"]
-    MAT["soffit"] = MAT["ceil"]
+    MAT["soffit"] = mat("挑台底·灯槽", L(D.SRGB["plaster"]), 0.7,
+                        emit=(1.0, 0.94, 0.84), emit_str=0.55)
 
 # 精模：把程序化材质换成烘好的可平铺贴图（glTF 不认节点）
 TEXTURE_TILES = TX.setup(MAT, os.path.join(HERE, "tex")) if P else {}
@@ -726,6 +727,26 @@ def build_dome():
             petals.cyl(bx, by, z - 0.55, z, 0.9, n=8, r1=0.5)
         emit(petals)
 
+        # 穹顶放射分格肋（金），0.50R—0.94R
+        ribs = Mesh("穹顶分格肋", MAT["gold"], "dome")
+        for i in range(72):
+            ang = 2 * math.pi * i / 72 + math.pi / 144
+            prev = None
+            for k in range(6):
+                rho = 0.50 + (0.94 - 0.50) * k / 5
+                pt = ring_pt(c, rho, ang)
+                if pt is None:
+                    prev = None
+                    continue
+                if prev:
+                    nx, ny = -math.sin(ang) * 0.11, math.cos(ang) * 0.11
+                    (x0, y0, z0), (x1, y1, z1) = prev, pt
+                    ribs.add([(x0 - nx, y0 - ny, z0 + 0.05), (x0 + nx, y0 + ny, z0 + 0.05),
+                              (x1 + nx, y1 + ny, z1 + 0.05), (x1 - nx, y1 - ny, z1 + 0.05)],
+                             [(0, 1, 2, 3)])
+                prev = pt
+        emit(ribs, (0, 0, 1))
+
 
 def ring_pt(c, rho, ang):
     """穹顶上的一点（按形心径向参数）。"""
@@ -993,7 +1014,7 @@ SHOTS = [
     ("三层坐姿", dict(loc=(-439.2, AX, 22.13), target=(-500, AX + 2, 6.0), lens=26)),
     ("主席台立姿", dict(loc=(-485.5, AX, 3.00), target=(-430, AX, 13.2), lens=15)),
     ("主席台俯瞰", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
-    ("仰望穹顶", dict(loc=(-452, AX + 5, 4.3), target=(-427, AX + 1, 43.0), lens=19)),
+    ("仰望穹顶", dict(loc=(-468, AX + 6, 3.6), target=(-440, AX + 1, 44.0), lens=17)),
     ("中央前厅", dict(loc=(-324, AX - 34, 7.0), target=(-389, AX + 8, 12.0), lens=26)),
     ("剖视鸟瞰", dict(loc=(-322, AX + 104, 74), target=(-462, AX - 8, 12), lens=34,
                    hide=("dome", "wall_n", "foyer_ceil"))),
