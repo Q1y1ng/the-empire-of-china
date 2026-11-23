@@ -381,13 +381,37 @@ def _glaze_tile(g, base, dark, r_lo=0.28, r_hi=0.42, coat=0.12, bump=TILE_BUMP,
     g.put(g.bsdf.inputs["Normal"], n_ridge)
 
 
+def _rock(g):
+    """假山石（太湖石）：深灰带苔、风化凹坑，比汉白玉暗两三档。
+
+    原来假山用的是 `material("假山石", (0.45,0.43,0.39))` —— 一个 0.45 的平色方块，
+    线性反照率接近汉白玉，御花园里那几块石头在鸟瞰下是一团白纸。
+    """
+    tc = TEXCO(g)
+    obj = tc.outputs["Object"]
+    n1 = NOISE(g, obj, 2.2, 10.0, 0.68, distortion=0.9)
+    n2 = NOISE(g, obj, 8.0, 8.0, 0.60)
+    base = (0.170, 0.165, 0.152)
+    col = MIXC(g, 1.0, base, M(g, "MULTIPLY_ADD", n1, 0.55, 0.72), "MULTIPLY")
+    moss = STEP(g, NOISE(g, obj, 1.4, 7.0, 0.70, distortion=0.5), 0.52, 0.80)
+    col = MIXC(g, M(g, "MULTIPLY", moss, 0.60), col, (0.055, 0.085, 0.040))
+    ao = AO(g, distance=0.35, samples=8)
+    col = MIXC(g, M(g, "MULTIPLY", M(g, "SUBTRACT", 1.0, ao), 0.50), col,
+               (0.045, 0.043, 0.040))
+    g.put(g.bsdf.inputs["Base Color"], col)
+    g.put(g.bsdf.inputs["Roughness"], M(g, "MULTIPLY_ADD", n2, 0.18, 0.72))
+    g.put(g.bsdf.inputs["Normal"], BUMP(g, n1, 0.55, 0.02))
+
+
 def _gray_tile(g):
     """青瓦：暗灰、很哑、苔藓与灰尘用噪波混入，复用同一套瓦垄几何。"""
     tc = TEXCO(g)
     u, v, _ = surf_uv(g, tc)
     obj = tc.outputs["Object"]
     height, seam, rnd_v, rnd_c, arc = _tile_layers(g, u, v, 0.24, 0.22)
-    base = (0.030, 0.034, 0.036)
+    # 原值 0.030/0.034/0.036 只有约 3% 反照率，值房与廊庑的瓦顶在鸟瞰里是纯黑条；
+    # 实物青瓦约 10—13% 线性反照率，抬到这一档才读得出「青瓦」而不是「黑洞」。
+    base = (0.098, 0.107, 0.114)
     var = M(g, "MULTIPLY_ADD", rnd_v, 0.16, 0.90)
     col = MIXC(g, 1.0, base, var, "MULTIPLY")
     fade = view_fade(g, lo=0.20)
@@ -913,6 +937,7 @@ def make_materials():
         lambda g: _glaze_plain(g, (0.360, 0.195, 0.007), (0.185, 0.080, 0.003),
                                rough=(0.24, 0.36), grime=0.95, coat=0.14))
     add("tile_gray", "青瓦", _gray_tile)
+    add("rock", "假山石", _rock)
     # ---- 石作
     add("stone", "汉白玉", lambda g: _marble(g, veins=1.45, bump=0.0011))
     add("marble_carved", "汉白玉·雕花", lambda g: _marble(g, veins=1.75, bump=0.0016,

@@ -753,7 +753,8 @@ for _i, s in enumerate(D.STRUCTS):
     if s["kind"] == "rock":
         if args.precise:
             before = set(col.objects)
-            PL.rockery(s["name"], s["w"], s["d"], s["h"], z=0.0, mat=MAT["rock"])
+            PL.rockery(s["name"], s["w"], s["d"], s["h"], z=0.0,
+                        mat=PL.MAT.get("rock") or MAT["rock"])
             for ob in set(col.objects) - before:
                 ob.location.x += s["cx"]
                 ob.location.y += s["cy"]
