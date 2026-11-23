@@ -761,6 +761,7 @@ def build_dome():
 
         # 40 组宝相花灯
         petals = Mesh("宝相花灯", MAT["lamp"], "dome")
+        PLT = Mesh("宝相花·金瓣", MAT["gold"], "dome")
         for i in range(40):
             a = 0.28 + 2 * math.pi * i / 40
             rr = 0.80
@@ -769,8 +770,17 @@ def build_dome():
             if not in_hall(bx, by, 3):
                 continue
             z = D.dome_height(bx, by) - 0.25
-            petals.cyl(bx, by, z - 0.55, z, 0.9, n=8, r1=0.5)
+            # 宝相花：花心一朵 + 内外两圈各八瓣，做成莲瓣式盘
+            petals.cyl(bx, by, z - 0.30, z - 0.02, 0.34, n=16)
+            for ring, (rr, ln, wd, dz) in enumerate(((0.50, 0.62, 0.34, 0.06),
+                                                    (0.86, 0.74, 0.30, 0.16))):
+                for k in range(8):
+                    a = 2 * math.pi * k / 8 + (math.pi / 8 if ring else 0.0)
+                    px = bx + rr * math.cos(a)
+                    py = by + rr * math.sin(a)
+                    PLT.box(px, py, z - 0.26 + dz, wd, ln, 0.09, rz=a)
         emit(petals)
+        emit(PLT, (0, 0, -1))
 
         # 穹顶放射分格肋（金），0.50R—0.94R
         ribs = Mesh("穹顶分格肋", MAT["gold"], "dome")
