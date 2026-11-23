@@ -108,7 +108,10 @@ else:
         "gold": mat("金饰", L(D.SRGB["gold"]), 0.28, metal=0.95),
         "dark": mat("深色金属", (0.045, 0.042, 0.038), 0.4, metal=0.7),
         "lamp": mat("灯具", (1.0, 0.95, 0.85), 0.4, emit=(1.0, 0.93, 0.80),
-                    emit_str=8.5),
+                    emit_str=6.0),
+        "cove": mat("灯槽发光", (1.0, 0.96, 0.88), 0.5, emit=(1.0, 0.92, 0.78),
+                    emit_str=2.6),
+        "seat_dark": mat("座椅织物·深", (0.150, 0.017, 0.024), 0.9),
         "red": mat("地毯·帝国红", L(D.SRGB["imperial_red"]), 0.95),
         "bronze": mat("铜门", L(D.SRGB["bronze"]), 0.35, metal=0.9),
         "marble_w": mat("汉白玉柱", L(D.SRGB["white_marble"]), 0.28),
@@ -390,11 +393,13 @@ def build_shell():
         for (y0, y1) in ((AX - pw - 1.6, AX - pw), (AX + pw, AX + pw + 1.6)):
             G.box(px + 0.7, (y0 + y1) / 2, 0, 0.36, 1.6, h, 0)
         G.box(px + 0.7, AX, h, 0.36, 2 * pw + 3.2, 1.6)
+        BR = Mesh("台口门套", MAT["stage"], "shell")
         # 台口门套：两侧壁柱 + 上口横梁（出挑 0.7 m）
         for sgn in (1, -1):
-            G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.70, 0.70, h)
-            G.box(px + 0.55, AX + sgn * (pw - 0.35), 0, 0.90, 0.90, 0.55)
-        G.box(px + 0.55, AX, h - 0.75, 0.70, 2 * pw, 0.75)
+            BR.box(px + 0.42, AX + sgn * (pw - 0.28), 0, 0.52, 0.56, h)
+            BR.box(px + 0.42, AX + sgn * (pw - 0.28), 0, 0.66, 0.70, 0.45)
+        BR.box(px + 0.42, AX, h - 0.62, 0.52, 2 * pw, 0.62)
+        emit(BR)
         # 墙面分格：侧墙与后墙的汉白玉壁柱（12 m 一柱）＋ 1.2 m 墙裙
         W2 = Mesh("墙面分格", MAT["wall"], "shell")
         for x in range(-474, -392, 12):
@@ -504,9 +509,12 @@ def build_stage():
         FUR = Mesh("主席台陈设", MAT["stage"], "stage")
         GLD = Mesh("陈设金饰", MAT["gold"], "stage")
         RED = Mesh("屏风", MAT["red"], "stage")
+        DRK = Mesh("屏风暗板", MAT["seat_dark"], "stage")
         bx = S["x0"]
         # 屏风：国徽之下的整片红底，外圈金框
-        RED.box(bx + 1.1, AX, 2.20, 0.22, 27.0, 6.30)
+        for k in range(10):
+            T = RED if k % 2 == 0 else DRK
+            T.box(bx + 1.10, AX - 12.15 + k * 2.70, 2.20, 0.22, 2.58, 6.30)
         for dy in (-13.6, 13.6):                      # 左右立框
             GLD.box(bx + 1.0, AX + dy, 2.10, 0.34, 0.36, 6.50)
         GLD.box(bx + 1.0, AX, 8.50, 0.34, 27.6, 0.34)   # 上框
@@ -515,6 +523,11 @@ def build_stage():
             GLD.box(bx + 1.06, AX - 13.5 + k * 2.7, 2.20, 0.16, 0.10, 6.30)
         GLD.box(bx + 1.06, AX, 3.05, 0.18, 27.0, 0.16)   # 下部纹样带
         GLD.box(bx + 1.06, AX, 7.60, 0.18, 27.0, 0.16)   # 上部纹样带
+        # 后墙线脚：通高竖带 + 上楣 + 檐口，压住大片素墙
+        for dy in (-16.0, 16.0):
+            GLD.box(bx + 1.06, AX + dy, 2.20, 0.20, 0.26, 19.2)
+        GLD.box(bx + 1.06, AX, 16.05, 0.22, 32.0, 0.28)
+        GLD.box(bx + 1.06, AX, 21.30, 0.34, 38.0, 0.45)
         # 主席团桌案：长桌 + 前挡板 + 桌面板
         FUR.box(bx + 5.4, AX, 2.10, 1.05, 22.0, 0.16)
         FUR.box(bx + 5.4, AX, 1.50, 0.90, 22.0, 0.60)
@@ -532,6 +545,7 @@ def build_stage():
         emit(FUR)
         emit(GLD)
         emit(RED)
+        emit(DRK)
         if D.FLAGS_AT_PROSCENIUM:
             F = Mesh("红底金龙旗", MAT["red"], "stage")
             for dy in (-16.5, -11.0, -5.5, 5.5, 11.0, 16.5,
@@ -600,6 +614,7 @@ def build_balcony(tier, idx):
 def build_seats(tier, idx, desks=True):
     g = f"seat{idx}"
     S = Mesh(f"座席{idx}", MAT["seat"], g)
+    BKD = Mesh(f"椅背{idx}", MAT["seat_dark"], g) if P else None
     DD = Mesh(f"桌板{idx}", MAT["stage"] if P else MAT["seat"], g) if desks else None
     for row in D.tier_rows(tier):
         r, z = row["r"], row["z"]
@@ -613,8 +628,9 @@ def build_seats(tier, idx, desks=True):
                 y = FY + (r + 0.12) * math.sin(th)
                 # 椅座 + 靠背（靠背在座席后方，即 +r 一侧）
                 S.box(x, y, z + 0.40, 0.52, 0.50, 0.09, rz=th + math.pi / 2)
-                S.box(x + 0.26 * math.cos(th), y + 0.26 * math.sin(th), z + 0.44,
-                      0.52, 0.10, 0.52, rz=th + math.pi / 2)
+                BK = BKD if (P and BKD) else S
+                BK.box(x + 0.26 * math.cos(th), y + 0.26 * math.sin(th), z + 0.44,
+                       0.52, 0.10, 0.52, rz=th + math.pi / 2)
                 if P:
                     for sgn in (1, -1):
                         S.box(x + sgn * 0.27 * math.cos(th + math.pi / 2),
@@ -638,6 +654,8 @@ def build_seats(tier, idx, desks=True):
                                [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
                                 (2, 6, 7, 3), (3, 7, 4, 0)])
     emit(S)
+    if BKD:
+        emit(BKD)
     if DD:
         emit(DD)
 
@@ -653,7 +671,7 @@ def build_dome():
     c = D.hall_centroid()
     top = D.HALL["z_apex"]
     for k, rho in enumerate((0.86, 0.62, 0.40) if P else ()):
-        ring = Mesh(f"灯槽{k}", MAT["lamp"] if P else MAT["ceil"], "dome")
+        ring = Mesh(f"灯槽{k}", MAT["cove"] if P else MAT["ceil"], "dome")
         trim = Mesh(f"灯槽压边{k}", MAT["gold"], "dome")
         n = 96
         for i in range(n):
