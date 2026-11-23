@@ -659,10 +659,15 @@ def build_seats(tier, idx, desks=True):
                 BK.box(x + 0.26 * math.cos(th), y + 0.26 * math.sin(th), z + 0.44,
                        0.52, 0.10, 0.52, rz=th + math.pi / 2)
                 if P:
+                    # 扶手：面（前后向）+ 前支座 + 竖向连接，做成实心扶手而非细条
                     for sgn in (1, -1):
-                        S.box(x + sgn * 0.27 * math.cos(th + math.pi / 2),
-                              y + sgn * 0.27 * math.sin(th + math.pi / 2),
-                              z + 0.42, 0.05, 0.5, 0.05, rz=th + math.pi / 2)
+                        ax = x + sgn * 0.27 * math.cos(th + math.pi / 2)
+                        ay = y + sgn * 0.27 * math.sin(th + math.pi / 2)
+                        S.box(ax, ay, z + 0.58, 0.08, 0.50, 0.06, rz=th + math.pi / 2)
+                        S.box(ax - 0.20 * math.cos(th), ay - 0.20 * math.sin(th),
+                              z + 0.40, 0.06, 0.06, 0.18)
+                        S.box(ax + 0.20 * math.cos(th), ay + 0.20 * math.sin(th),
+                              z + 0.44, 0.06, 0.06, 0.14, rz=th + math.pi / 2)
             if DD:
                 # 桌板按弧分段，避免大块用弦直连、中段凹进舞台
                 rr_out, rr_in = r - 0.28, r - 0.62
