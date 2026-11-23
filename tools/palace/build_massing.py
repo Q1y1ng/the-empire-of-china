@@ -732,7 +732,18 @@ for _i, s in enumerate(D.STRUCTS):
                 if _dd < _bd:
                     _bd, _best = _dd, (_px, _py, _vx, _vy)
             _px, _py, _vx, _vy = _best
-            _ang = math.atan2(_vx, -_vy)
+            # 桥的长向（局部 +Y，length=d）要**横跨**河道，即对齐河道的法向：
+            # R(θ)(0,1)=(-sinθ,cosθ)=(-vy,vx)/L  →  θ=atan2(vy, vx)。
+            # 原来写 atan2(vx,-vy)，对东西向的内金水河正好转成 90°，
+            # 五座金水桥就并排躺在河心里像五块踏石。
+            _ang = math.atan2(_vy, _vx)
+            # 只在**法向**上把桥挪到河心，沿河方向保留数据里的 cx/cy：
+            # 否则五座金水桥各自吸到折线最近点，成一串斜错位的桥。
+            _nl = math.hypot(_vx, _vy) or 1.0
+            _nxb, _nyb = -_vy / _nl, _vx / _nl
+            _tb = (_px - s["cx"]) * _nxb + (_py - s["cy"]) * _nyb
+            _px = s["cx"] + _nxb * _tb
+            _py = s["cy"] + _nyb * _tb
             for ob in new:
                 ob.rotation_euler[2] = _ang
                 ob.location.x += _px
