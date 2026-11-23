@@ -972,6 +972,21 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     else:      # 远距离：一条斗拱带代替整圈构件（102 殿省下 300 万面）
         ring_beam(f"{name}·斗拱带", w + 1.0, d + 1.0, dou_z + dou_h * 0.18,
                   dou_h * 0.72, 0.72, MAT["dou"])
+    # 角梁：两向挑檐桁在转角处各断一头，两个端面相差 9√2 斗口（90 m 殿约 2 m），
+    # 中间什么都没有，仰视时就是两根悬空的蓝管子。补一根 45° 角梁把它们接上。
+    if lod >= 1:
+        _l45 = 9.0 * math.sqrt(2.0) * unit + 0.30
+        for _sx in (-1, 1):
+            for _sy in (-1, 1):
+                _ob = box_at(f"{name}·角梁{'E' if _sx > 0 else 'W'}"
+                             f"{'N' if _sy > 0 else 'S'}",
+                             _l45, 1.9 * unit, 1.6 * unit,
+                             _sx * (w / 2 + 4.5 * unit),
+                             _sy * (d / 2 + 4.5 * unit),
+                             dou_z + 9.4 * unit,
+                             MAT.get("wood_dark") or MAT["column"])
+                if _ob:
+                    _ob.rotation_euler[2] = math.atan2(-_sy, _sx)
     eave_lo = dou_z + dou_h + 0.34
 
     if lod >= 2:

@@ -546,7 +546,9 @@ def rafters(pl, name, W, D, z0, H, lift=1.35, lod=2, depth=3.4, mat=None):
             ey = _norm(_cross(ex, (0, 0, 1.0)))
             mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2)
             seg = math.dist(a, b)
-            _box_t(verts, faces, mid, ex, ey, (0, 0, 1.0), 0.15, seg + 0.06, 0.15)
+            # 沿 ex 方向才是椽长：原来 sx/sy 写反，每根椽被拉成 1.2 m 宽的薄板，
+            # 檐下一排排叠起来像百叶窗，是「一眼假」的主要来源
+            _box_t(verts, faces, mid, ex, ey, (0, 0, 1.0), seg + 0.06, 0.15, 0.15)
 
     n_x = max(8, int(W / TILE_U))
     n_y = max(8, int(D / TILE_U))
