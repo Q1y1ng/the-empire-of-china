@@ -108,7 +108,7 @@ else:
         "gold": mat("金饰", L(D.SRGB["gold"]), 0.28, metal=0.95),
         "dark": mat("深色金属", (0.045, 0.042, 0.038), 0.4, metal=0.7),
         "lamp": mat("灯具", (1.0, 0.95, 0.85), 0.4, emit=(1.0, 0.93, 0.80),
-                    emit_str=18.0),
+                    emit_str=7.0),
         "red": mat("地毯·帝国红", L(D.SRGB["imperial_red"]), 0.95),
         "bronze": mat("铜门", L(D.SRGB["bronze"]), 0.35, metal=0.9),
         "marble_w": mat("汉白玉柱", L(D.SRGB["white_marble"]), 0.28),
@@ -841,7 +841,7 @@ def setup_lights():
     sc.world = bpy.data.worlds.new("World")
     sc.world.use_nodes = True
     bg = sc.world.node_tree.nodes["Background"]
-    bg.inputs[0].default_value = (0.05, 0.055, 0.07, 1.0)
+    bg.inputs[0].default_value = (0.075, 0.080, 0.095, 1.0)
     bg.inputs[1].default_value = 1.0
 
     def area(name, loc, rot, size, power, color=(1.0, 0.96, 0.90)):
@@ -862,13 +862,15 @@ def setup_lights():
     so = bpy.data.objects.new("Sun", sd)
     so.rotation_euler = (a(38), a(6), a(215))
     col.objects.link(so)
-    # 观众厅：顶部三组大面光
-    area("顶光A", (-462, AX, 36), (0, 0, 0), 56, 4200)
-    area("顶光B", (-430, AX, 34), (0, 0, 0), 56, 4200)
-    area("顶光C", (-404, AX, 30), (0, 0, 0), 46, 2600)
+    # 观众厅：沿轴线六组大面光，均匀铺开（灯具面积大、功率低，减少热点）
+    for i, (lx, lz, lw) in enumerate(((-470, 30, 40), (-452, 33, 44), (-434, 36, 48),
+                                      (-416, 36, 48), (-398, 33, 44), (-382, 30, 40))):
+        area(f"顶光{i}", (lx, AX, lz), (0, 0, 0), lw, 1500)
+        area(f"顶光N{i}", (lx, AX + 46, lz - 2), (0, a(90), 0), lw * 0.7, 700)
+        area(f"顶光S{i}", (lx, AX - 46, lz - 2), (0, a(-90), 0), lw * 0.7, 700)
     # 侧向补光（贴侧墙，向内）
-    area("侧光N", (-440, AX + 40, 20), (a(90), 0, 0), 40, 1200)
-    area("侧光S", (-440, AX - 40, 20), (a(-90), 0, 0), 40, 1200)
+    area("侧光N", (-440, AX + 52, 14), (a(90), 0, 0), 50, 900)
+    area("侧光S", (-440, AX - 52, 14), (a(-90), 0, 0), 50, 900)
     # 台口与主席台
     area("台口光", (-496, AX, 17), (0, a(-90), 0), 34, 1200)
     area("台面光", (-506, AX, 21), (0, 0, 0), 30, 700)
@@ -934,14 +936,14 @@ def setup_render():
     pick_gpu()
     sc.cycles.samples = args.samples
     sc.cycles.use_denoising = True
-    sc.cycles.max_bounces = 5
+    sc.cycles.max_bounces = 8
     sc.cycles.transparent_max_bounces = 4
     sc.render.image_settings.file_format = "WEBP"
     sc.render.image_settings.quality = 92
     sc.view_settings.view_transform = "AgX" if P else "Standard"
-    sc.view_settings.look = "None"
+    sc.view_settings.look = "AgX - Medium High Contrast" if P else "None"
     sc.view_settings.exposure = (args.exposure if args.exposure is not None
-                                 else (-1.0 if P else -2.4))
+                                 else (-0.35 if P else -2.4))
     return cam
 
 
