@@ -156,9 +156,16 @@ for w in sorted(seam, key=lambda o: -o["worst"][0])[:20]:
     print("  %-30s gap=%5.3f 承托=%s" % (w["name"], w["worst"][0], w["worst"][1]))
 
 # ---------------------------------------------------------------- C. 埋没
+# 树是两个合并网格（树·干 / 树·冠，一棵树的几何塞进同一个 mesh），
+# 它的包围盒等于整座宫城 —— 包围盒法在这里必然误报，直接排除。
+_MERGED = ("树·冠", "树·干")
 buried = []
 for w in walls:
+    if w["name"] in _MERGED:
+        continue
     s = support_at((w["x0"] + w["x1"]) / 2, (w["y0"] + w["y1"]) / 2, w["z0"], w["id"], True)
+    if s and s[1] in _MERGED:
+        s = None
     if s and s[3] >= w["z1"] - 0.05 and (s[3] - s[2]) > 1.0:
         buried.append((w["name"], w["z0"], w["z1"], s[1], s[2], s[3]))
 print("\n===== C. 整段被实体埋没的墙 %d 段 =====" % len(buried))
@@ -269,3 +276,28 @@ with open(os.path.join(WORK, "wall_audit3.json"), "w", encoding="utf-8") as f:
                          "near": [(round(d, 2), n, round(z0, 2), round(z1, 2)) for d, n, z0, z1 in c]}
                         for e, c in detail]}, f, ensure_ascii=False, indent=1)
 print("\nAUDIT3_DONE")
+
+# ---------------------------------------------------------------- E. 树 vs 墙
+# 树是两个合并网格，包围盒法查不出来（见 C 段说明）；改查落位表 trees.csv：
+# 每棵树心到任一墙/城墙矩形的平面距离必须 ≥ 树冠半径 4.3 m。
+_TCSV = os.path.join(WORK, "trees.csv")
+if os.path.exists(_TCSV):
+    trees = []
+    with open(_TCSV, encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            trees.append((float(row["x"]), float(row["y"])))
+    bad = []
+    for (tx, ty) in trees:
+        for w in walls:
+            dx = max(w["x0"] - tx, 0.0, tx - w["x1"])
+            dy = max(w["y0"] - ty, 0.0, ty - w["y1"])
+            if math.hypot(dx, dy) < 4.3:
+                bad.append((round(tx, 1), round(ty, 1), w["name"],
+                            round(math.hypot(dx, dy), 2)))
+                break
+    print("\n===== E. 树 vs 墙：%d 棵，侵入墙/城墙 4.3 m 内 %d 棵 =====" % (len(trees), len(bad)))
+    for b in bad[:15]:
+        print("   树(%s,%s) ↮ %s  距 %.2f m" % b)
+    if not bad:
+        print("   OK：全部行道树都在禁区之外（树冠半径 4.3 m）")
+

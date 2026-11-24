@@ -299,9 +299,20 @@ def add_struct(s):
         top = tt
 
 
+# 树冠禁区：墙身/瓦帽/城门的平面矩形。行道树原来是按「离墙 3.5 m」摆的，
+# 而树冠最大半径到 4.2 m —— 于是树冠从墙帽里长出来（体检里 71 段墙的瓦
+# 帽被 树·冠 整个盖住）。改成按禁区查，树自己避开墙。
+_KEEP = []
+
+
+def keep_add(x0, x1, y0, y1):
+    _KEEP.append((min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)))
+
+
 def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
     """院墙：朱红墙身 + **两坡瓦帽**（出檐 0.4 m、脊高 0.55 m）。"""
     mat = mat or MAT["wall"]
+    keep_add(x0, x1, y0, y1)
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     Lx, Ly = x1 - x0, y1 - y0
     box(name, Lx, Ly, h, cx, cy, 0.0, mat)
@@ -417,6 +428,7 @@ def _gate_open(g):
 
 
 def wall_bar(name, w, d, x, y, along_x=True):
+    keep_add(x - w / 2, x + w / 2, y - d / 2, y + d / 2)
     box(name, w, d, H, x, y, 0.0, MAT["citywall"])
     box(name + "_顶", w + 0.6, d + 0.6, 0.7, x, y, H, MAT["ridge"])
     if args.precise:
@@ -445,6 +457,17 @@ for _g in D.GATES:
             if _s1 - _s0 < 0.05:
                 continue
             wall_bar(f"城墙{_side}{_i + 1}", T, _s1 - _s0, _x, (_s0 + _s1) / 2, along_x=False)
+
+for _g in D.GATES:
+    _st = _GATE_ST[_g["name"]]
+    if _g["side"] in ("S", "N"):
+        keep_add(_st["cx"] - _st["w"] / 2 - PL.GATE_WING,
+                 _st["cx"] + _st["w"] / 2 + PL.GATE_WING,
+                 _st["cy"] - _st["d"] / 2, _st["cy"] + _st["d"] / 2)
+    else:
+        keep_add(_st["cx"] - _st["d"] / 2, _st["cx"] + _st["d"] / 2,
+                 _st["cy"] - _st["w"] / 2 - PL.GATE_WING,
+                 _st["cy"] + _st["w"] / 2 + PL.GATE_WING)
 
 ct = D.CORNER_TOWER
 for sx in (-1, 1):
@@ -706,6 +729,7 @@ box("琼苑·中路", 4.0, _gd - 6, 0.10, _gx, _gy, 0.68, MAT["path"])
 box("琼苑·横路", _gw - 6, 4.0, 0.10, _gx, _gy, 0.68, MAT["path"])
 
 for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
+    keep_add(cx - w / 2 - 0.9, cx + w / 2 + 0.9, cy - d / 2 - 0.9, cy + d / 2 + 0.9)
     if args.precise:
         before = set(col.objects)
         PL.small_house(f"值房{i:02d}", w, d, z=0.0, h=hh)
@@ -729,12 +753,36 @@ _ICO_F = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11),
 _TV, _TF, _LV, _LF = [], [], [], []
 
 
-def _plant(i, x, y):
+_PIDX = [0]
+_TXY = []          # 每棵树的落位（导出 trees.csv，供体检核对禁区）
+
+
+def _try_plant(x, y, nx, ny, steps=6, step=3.6):
+    """沿 (nx, ny) 方向逐级内移找空位：撞禁区就往里挪一档，不直接丢掉这棵树。
+
+    宫墙内侧那圈树正好压在沿墙的值房上——只查禁区会一棵不剩（611 → 210）。
+    往里挪一两档就落在值房后面，读起来反而是"值房前植树、树后还有一排绿"的正经排法。
+    """
+    for _k in range(max(1, steps)):
+        if _plant(x + nx * step * _k, y + ny * step * _k):
+            return True
+    return False
+
+
+def _plant(x, y):
     """种一棵树：把几何塞进两个大数组，最后只建 2 个网格。
 
     原来每棵树用 bpy.ops 建 1 柱 + 3 球 = 4 个对象，700 多棵就是 2,800 次算子
     调用，构建时间全耗在这上面（构建从 3 分钟涨到 10 分钟的主因）。
+
+    落位前先查 _KEEP：树冠最大水平半径 ≈ 3.1×1.28 + 1.5 ≈ 4.3 m，
+    命中任何墙/城门的禁区就跳过（宁可少一棵树，也不让树从墙帽里长出来）。
     """
+    for (kx0, kx1, ky0, ky1) in _KEEP:
+        if kx0 - 4.3 < x < kx1 + 4.3 and ky0 - 4.3 < y < ky1 + 4.3:
+            return False
+    i = _PIDX[0]
+    _PIDX[0] += 1
     sv = 0.78 + 0.50 * ((i * 37) % 11) / 10.0
     r, h = 0.34 * sv, 2.8 * sv
     b0 = len(_TV)
@@ -757,46 +805,55 @@ def _plant(i, x, y):
                         cz + vz * rr * sv * 0.80))
         for (a_, b_, c_) in _ICO_F:
             _LF.append((b + a_, b + b_, b + c_))
+    _TXY.append((x, y))
+    return True
 
 
 _planted = 0
 for x, y in D.trees():
-    _plant(_planted, x, y)
-    _planted += 1
+    _plant(x, y)
+# 殿宇的占地也进禁区：单体是**在树之后**建的，此时还没有对象可量，
+# 所以按数据登记（含台基外沿 1.2 m）。
+for _s in D.STRUCTS:
+    _ex = max(_s["w"], (_s.get("base") or {}).get("w", 0.0)) / 2 + 1.2
+    _ey = max(_s["d"], (_s.get("base") or {}).get("d", 0.0)) / 2 + 1.2
+    keep_add(_s["cx"] - _ex, _s["cx"] + _ex, _s["cy"] - _ey, _s["cy"] + _ey)
+
 # 沿宫墙内侧一圈行道树（卫星照片里最明显的那圈绿）
 _yin, _xin = HD - 15.0, HW - 15.0
 for _x in range(int(-HW + 46), int(HW - 45), 15):
     for _yy in (_yin, -_yin):
         if abs(_x) < 74:                    # 让开南北宫门
             continue
-        _plant(_planted, _x, _yy)
-        _planted += 1
+        _try_plant(_x, _yy, 0.0, -1.0 if _yy > 0 else 1.0)
 for _y in range(int(-HD + 46), int(HD - 45), 15):
     for _xx in (_xin, -_xin):
         if abs(_y) < 70:                    # 让开东西宫门
             continue
-        _plant(_planted, _xx, _y)
-        _planted += 1
+        _try_plant(_xx, _y, -1.0 if _xx > 0 else 1.0, 0.0)
 
 # 各院落沿墙内一圈行道树（卫星图里六宫/五所的院子里都有）
 for _c in D.COMPOUNDS:
     if _c["name"] == "琼苑":
         continue
-    _x0, _x1, _y0, _y1 = _c["x0"] + 3.5, _c["x1"] - 3.5, _c["y0"] + 3.5, _c["y1"] - 3.5
+    # 距墙 8.0 m 摆：墙半厚 1.5 + 树冠 4.3 + 余量 2.2。原来 3.5 m，
+    # 树冠整个骑在院墙瓦帽上（体检里 71 段墙的瓦帽被 树·冠 盖住）
+    _x0, _x1, _y0, _y1 = _c["x0"] + 8.0, _c["x1"] - 8.0, _c["y0"] + 8.0, _c["y1"] - 8.0
     if (_x1 - _x0) < 12 or (_y1 - _y0) < 12:
         continue
     for _x in range(int(_x0), int(_x1) + 1, 13):
-        _plant(_planted, _x, _y1)
-        _planted += 1
+        _try_plant(_x, _y1, 0.0, -1.0)          # 北墙一侧往院里挪
     for _y in range(int(_y0) + 13, int(_y1), 13):
-        _plant(_planted, _x0, _y)
-        _planted += 1
-        _plant(_planted, _x1, _y)
-        _planted += 1
+        _try_plant(_x0, _y, 1.0, 0.0)           # 西墙一侧往院里挪
+        _try_plant(_x1, _y, -1.0, 0.0)          # 东墙一侧往院里挪
 
 mesh_from("树·干", _TV, _TF, MAT["trunk"])
 mesh_from("树·冠", _LV, _LF, MAT["tree"])
-print("TREES", _planted, "trunk_tris", len(_TF), "leaf_tris", len(_LF))
+print("TREES", _PIDX[0], "trunk_tris", len(_TF), "leaf_tris", len(_LF))
+with open(os.path.join(WORK, "trees.csv"), "w", encoding="utf-8") as _f:
+    _f.write("x,y\n")
+    for _tx, _ty in _TXY:
+        _f.write("%.2f,%.2f\n" % (_tx, _ty))
 
 # ------------------------------------------------------------------ 单体
 def add_struct_precise(st):
