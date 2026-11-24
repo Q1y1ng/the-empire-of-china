@@ -919,7 +919,7 @@ def add_struct_precise(st):
         # 八字墙要朝院内回折：南门、东门在本地 +y，北门、西门在 −y
         _face = 1 if ((not _rot and y < 0) or (_rot and x > 0)) else -1
         PL.gate_house(st["name"], w, d, z=z, h=h, n_arch=_na,
-                      wing_off=_wing_off, face=_face)
+                      wing_off=_wing_off, face=_face, wing=st.get("wing"))
         new = set(col.objects) - before
         if _rot:
             _a = math.radians(_rot)
@@ -938,9 +938,15 @@ def add_struct_precise(st):
         for sx in (-1, 1):
             for sy in (-1, 1):
                 PL.column(x + sx * (w / 2 - 0.7), y + sy * (d / 2 - 0.7), z, z + h, 0.20)
+        # 亭顶与脊是按原点造的：原来这一支没有把新对象挪到亭位，
+        # 于是四座御花园亭子只有四根柱子、顶上什么都没有，屋脊全堆在宫城正中。
+        _pb = set(col.objects)
         PL.hip_roof(st["name"] + "·顶", w + 2.6, d + 2.6, z + h, max(2.4, h * 0.55), step=0.5)
         PL.ridges(w + 2.6, d + 2.6, z + h, max(2.4, h * 0.55), (w + 2.6) - (d + 2.6),
-                 with_kiss=False)
+                  with_kiss=False)
+        for ob in set(col.objects) - _pb:
+            ob.location.x += x
+            ob.location.y += y
         return
     storeys = 2 if (w >= 64 and h >= 11 and k in ("hall", "tower")) else 1
     lod = 2 if w >= 64 else (1 if w >= 30 else 0)

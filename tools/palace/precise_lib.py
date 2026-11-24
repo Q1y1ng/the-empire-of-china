@@ -840,6 +840,17 @@ def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
             z0 + 0.26 + lh * 0.44, MAT.get("gold") or md)
     return w
 
+def _roof_offset(before, x, y):
+    """把刚造出来的整顶（含 two_slope() 额外生成的独立「·正脊」对象）一起落位。
+
+    two_slope() 返回的是**屋身**，正脊是另一个对象：调用方只设返回值的 location 时，
+    全宫的院门/翼墙帽/八字帽正脊就都留在原点 —— 实测原点附近堆了 **90 根脊**。
+    """
+    for _o in set(_col().objects) - before:
+        _o.location.x = x
+        _o.location.y = y
+
+
 def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1,
                wall_t=2.5, wall_h=None):
     """院门（随墙门楼）：门垛 + 门楣 + 板门 + 小两坡顶 + 垂带台阶。
@@ -869,10 +880,10 @@ def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1,
     # 小两坡顶：进深盖过墙帽、檐口抬到墙帽之上
     ROOF, _, _ = _lg()
     _zr = z + max(h + 0.45, wh + 0.58)
+    _rb = set(_col().objects)
     _rf = ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, wt + 1.3, _zr, 0.95,
                          mat=MAT.get("tile_gray") or MAT["tile_gray"])
-    _rf.location.x = x
-    _rf.location.y = ys
+    _roof_offset(_rb, x, ys)
     # 台阶
     for i in range(3):
         box(f"{name}·阶{i}", w + 1.0, 0.40, 0.50 - i * 0.15, x,
@@ -1224,25 +1235,25 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1, wing=No
     for sx in (-1, 1):
         cxw = sx * (w / 2 + sw / 2)
         box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cxw, yo, z, mat_w)
+        _cb = set(_col().objects)
         _cap = ROOF.two_slope(_self(), f"{name}·翼墙帽{'EW'[sx > 0]}",
                               sw + 0.9, st + 0.9, z + shh - 0.16, _rise,
                               mat=MAT.get("glaze_plain_dark") or MAT.get("tile_gray")
                               or MAT["tile_gray"])
-        _cap.location.x = cxw
-        _cap.location.y = yo
+        _roof_offset(_cb, cxw, yo)
         box(f"{name}·墙端{'EW'[sx > 0]}", 2.4, st + 1.0, shh + 0.6,
             sx * (w / 2 + sw - 1.2), yo, z, mat_w)
         # 八字墙：翼墙到头后向内折回一段，收成有交代的门口，而不是截断在半空
         box(f"{name}·八字墙{'EW'[sx > 0]}", st, 12.0, shh * 0.94,
             sx * (w / 2 + sw - st / 2), yo + face * (12.0 + st / 2), z, mat_w)
+        _c2b = set(_col().objects)
         _cap2 = ROOF.two_slope(_self(), f"{name}·八字帽{'EW'[sx > 0]}",
                                st + 0.9, 12.9, z + shh * 0.94, max(0.48, _rise * 0.8),
                                mat=MAT.get("glaze_plain_dark") or MAT.get("tile_gray")
                               or MAT["tile_gray"])
-        _cap2.location.x = sx * (w / 2 + sw - st / 2)
         # 帽要落在八字墙上（墙中心 y = 12 + st/2）。原来写死 6.0，
         # 帽子就整块盖在翼墙顶上、被翼墙帽压住——S/N 门看不见，E/W 门一转 90° 就飞到护城河上。
-        _cap2.location.y = yo + face * (12.0 + st / 2)
+        _roof_offset(_c2b, sx * (w / 2 + sw - st / 2), yo + face * (12.0 + st / 2))
 
     # 门楼：城台上复用 hall()
     tw, td = w * 0.56, d * 0.62
