@@ -901,8 +901,13 @@ def wall_tower(name, w, d, z=0.0, body_h=10.0):
 
 
 def bridge(name, w, d, z=0.0):
-    """石桥：桥面 + 两侧望柱栏板。"""
+    """石桥：桥面 + 桥台 + 两侧望柱栏板。"""
     box(name + "·面", w, d, 0.95, 0, 0, z, MAT["stone2"])
+    # 桥台：桥面两端原来直接悬在铺装面上方 0.10 m，人视能看见一条影子缝。
+    # 两端各垫一块 0.9 m 高的桥台，压进地坪 0.8 m、托住桥面。
+    for sy in (-1, 1):
+        box(f"{name}·桥台{'SN'[sy > 0]}", w + 0.24, 1.9, 0.9,
+            0, sy * (d / 2 - 0.95), z - 0.9, MAT["stone2"])
     for sx in (-1, 1):
         n = max(2, int(w / 2.4))
         for i in range(n + 1):
@@ -1110,7 +1115,7 @@ def gate_wing(w):
     return min(GATE_WING, max(12.0, 0.55 * float(w)))
 
 
-def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1):
+def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1, wing=None):
     """宫门：砖城台（**多券洞**）＋ 重檐门楼 ＋ 两侧翼墙。
 
     n_arch=5 用于正门（承天门那种"中间高大、两侧递小"的五券洞）；3 / 1 用于侧门。
@@ -1212,7 +1217,8 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1):
     # wing_off：翼墙组沿**墙厚方向**平移到城墙中线上。承天门 / 玄武门的城台中心
     # 比城墙线各内收 10.5 m（城台有意往外挑），翼墙若还跟着城台中心走，
     # 翼墙端头就与 6 m 厚的城墙错开半米多，接口处露一条竖缝。
-    sw, st, shh = gate_wing(w), max(3.2, min(d * 0.42, 8.0)), h * 0.90
+    sw = float(wing) if wing else gate_wing(w)
+    st, shh = max(3.2, min(d * 0.42, 8.0)), h * 0.90
     yo = wing_off
     _rise = max(0.38, st * 0.24)          # 墙帽要有真正的坡，不然 8~18 m 宽的翼墙顶就是块平板
     for sx in (-1, 1):

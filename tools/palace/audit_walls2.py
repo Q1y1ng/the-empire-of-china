@@ -280,6 +280,42 @@ with open(os.path.join(WORK, "wall_audit3.json"), "w", encoding="utf-8") as f:
                         for e, c in detail]}, f, ensure_ascii=False, indent=1)
 print("\nAUDIT3_DONE")
 
+# ---------------------------------------------------------------- F. 值房・殿身墙 vs 院墙
+# 值房沿墙成排，所以值房落位时**故意**不避院墙（避了整排就没了）；代价是它们的
+# 台身可能扎进墙身。这里按包围盒做一次三轴相交检查（墙/台身都是盒子，够准）。
+_HOUSE = ("值房", "之间")
+_walls_f = [w for w in walls if not w["name"].startswith(_HOUSE)]
+_houses_f = [w for w in walls if w["name"].startswith("值房")]
+_pairs = []
+for h in _houses_f:
+    for w in _walls_f:
+        px = min(h["x1"], w["x1"]) - max(h["x0"], w["x0"])
+        py = min(h["y1"], w["y1"]) - max(h["y0"], w["y0"])
+        pz = min(h["z1"], w["z1"]) - max(h["z0"], w["z0"])
+        if px > 0.3 and py > 0.3 and pz > 0.3:
+            _pairs.append((h["name"], w["name"], round(px, 2), round(py, 2), round(pz, 2)))
+print("\n===== F. 值房墙 vs 院墙/城墙：%d 段值房墙，三轴相交 %d 对 =====" % (
+    len(_houses_f), len(_pairs)))
+for p in _pairs[:12]:
+    print("   %-10s × %-22s 穿入 x%.2f y%.2f z%.2f" % p)
+if not _pairs:
+    print("   OK：没有一段值房墙扎进院墙")
+
+# 值房之间自撞（两套构件共面 = z-fighting；排布规则重叠时最容易出）
+_self = []
+for _i in range(len(_houses_f)):
+    for _j in range(_i + 1, len(_houses_f)):
+        a, b = _houses_f[_i], _houses_f[_j]
+        px = min(a["x1"], b["x1"]) - max(a["x0"], b["x0"])
+        py = min(a["y1"], b["y1"]) - max(a["y0"], b["y0"])
+        pz = min(a["z1"], b["z1"]) - max(a["z0"], b["z0"])
+        if px > 0.3 and py > 0.3 and pz > 0.3:
+            _self.append((a["name"], b["name"], round(px, 2), round(py, 2), round(pz, 2)))
+print("   值房互撞：%d 对" % len(_self))
+for p in _self[:8]:
+    print("   %-10s × %-10s 穿入 x%.2f y%.2f z%.2f" % p)
+
+
 # ---------------------------------------------------------------- E. 树 vs 墙
 # 树是两个合并网格，包围盒法查不出来（见 C 段说明）；改查落位表 trees.csv：
 # 每棵树心到任一墙/城墙矩形的平面距离必须 ≥ 树冠半径 4.3 m。

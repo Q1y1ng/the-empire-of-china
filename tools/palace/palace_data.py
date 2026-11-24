@@ -104,9 +104,9 @@ STRUCTS = [
      "roof": "gable", "note": "【宫式】前庭东西朝房"},
     {"name": "西朝房", "kind": "corridor", "cx": -176, "cy": -370, "w": 14, "d": 140, "h": 5,
      "roof": "gable", "note": ""},
-    {"name": "协和门", "kind": "gate", "cx": 150, "cy": -330, "w": 26, "d": 18, "h": 8,
+    {"name": "协和门", "kind": "gate", "cx": 150, "cy": -330, "w": 26, "d": 18, "h": 8, "wing": 6.0,
      "roof": "gable", "note": "【宫式】前庭东侧门"},
-    {"name": "熙和门", "kind": "gate", "cx": -150, "cy": -330, "w": 26, "d": 18, "h": 8,
+    {"name": "熙和门", "kind": "gate", "cx": -150, "cy": -330, "w": 26, "d": 18, "h": 8, "wing": 6.0,
      "roof": "gable", "note": "【宫式】前庭西侧门"},
     {"name": "宣政门", "kind": "gate", "cx": 0, "cy": -295, "w": 66, "d": 26, "h": 9,
      "base": {"w": 78, "d": 38, "h": 2}, "roof": "none",
@@ -372,6 +372,11 @@ def _blockers():
         out.append({"x0": p["cx"] - p["w"] / 2, "x1": p["cx"] + p["w"] / 2,
                     "y0": p["cy"] - p["d"] / 2, "y1": p["cy"] + p["d"] / 2})
     out.append({"x0": -344, "x1": 344, "y0": -432, "y1": -366})   # 前庭与河
+    # 内廷墙这条横墙原来不在避让表里：内廷东西夹道那两排值房（x=±333、y 从 60 起、
+    # 进深 40 m）的南端正好扎进 3 m 厚的墙身，平面相交 3.0 m、竖向 3.7 m。
+    out.append({"x0": INNER_LINE["x0"], "x1": INNER_LINE["x1"],
+                "y0": INNER_LINE["y"] - INNER_LINE["t"] / 2,
+                "y1": INNER_LINE["y"] + INNER_LINE["t"] / 2})
     return out
 
 
@@ -431,7 +436,23 @@ def service_blocks():
             if abs(x) > 70 and free(x, y, 40, 12):
                 out.append((x, y, 40.0, 12.0, 5.0))
             x += 46.0
-    return out
+    # 去重：几条排布规则（沿墙成排 / 两厢内排 / 夹道成排 / 班房）会算出**互相重叠**的位置
+    # —— 实测有 13 对值房整座叠在一起（44×16 与 40×12 的中心差几米、尺寸不同，
+    # 只比坐标查不出来），两套构件共面 → z-fighting。这里按平面重叠做贪心剔除。
+    keep = []
+    for b in out:
+        rx0, rx1 = b[0] - b[2] / 2, b[0] + b[2] / 2
+        ry0, ry1 = b[1] - b[3] / 2, b[1] + b[3] / 2
+        dup = False
+        for k in keep:
+            ox = min(rx1, k[0] + k[2] / 2) - max(rx0, k[0] - k[2] / 2)
+            oy = min(ry1, k[1] + k[3] / 2) - max(ry0, k[1] - k[3] / 2)
+            if ox > 0.5 and oy > 0.5:
+                dup = True
+                break
+        if not dup:
+            keep.append(b)
+    return keep
 
 
 def roof_mat_for(kind, w=0, d=0):
