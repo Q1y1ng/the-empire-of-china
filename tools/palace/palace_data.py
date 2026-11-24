@@ -80,10 +80,14 @@ STRUCTS = [
      "roof": "gable", "note": "【宫式】午门两观"},
     {"name": "玄武门", "kind": "gate", "cx": 0, "cy": 470, "w": 84, "d": 40, "h": 12,
      "roof": "none", "tower": {"w": 54, "d": 24, "h": 12}, "tower_roof": "hip", "note": "宫城正北"},
-    {"name": "东华门", "kind": "gate", "cx": 376.5, "cy": -90, "w": 40, "d": 66, "h": 11,
-     "roof": "none", "tower": {"w": 24, "d": 46, "h": 9}, "tower_roof": "gable", "note": ""},
-    {"name": "西华门", "kind": "gate", "cx": -376.5, "cy": -90, "w": 40, "d": 66, "h": 11,
-     "roof": "none", "tower": {"w": 24, "d": 46, "h": 9}, "tower_roof": "gable", "note": ""},
+    {"name": "东华门", "kind": "gate", "cx": 376.5, "cy": -90, "w": 66, "d": 30, "h": 11,
+     "rot": 90,
+     "roof": "none", "tower": {"w": 24, "d": 46, "h": 9}, "tower_roof": "gable",
+     "note": "w 沿城墙、d 为城台进深；原来 w=40 / d=66 把 66 m 当门洞、城台往河里挑了 33 m"},
+    {"name": "西华门", "kind": "gate", "cx": -376.5, "cy": -90, "w": 66, "d": 30, "h": 11,
+     "rot": 90,
+     "roof": "none", "tower": {"w": 24, "d": 46, "h": 9}, "tower_roof": "gable",
+     "note": "同东华门"},
 
     # ── 前庭：内金水河五桥、朝房、协和门 / 熙和门
     {"name": "金水桥·中", "kind": "bridge", "cx": 0, "cy": -392, "w": 12, "d": 30, "h": 1.6,

@@ -835,10 +835,11 @@ def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
             z0 + 0.26 + lh * 0.44, MAT.get("gold") or md)
     return w
 
-def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1):
+def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1):
     """院门（随墙门楼）：门垛 + 门楣 + 板门 + 小两坡顶 + 垂带台阶。
 
     face = -1 表示门朝南（门楼向 -y 凸出）。
+    leaves > 1 时把门扇分成几扇（宽洞口不能是一整块板门）。
     """
     md = MAT.get("wood_dark") or MAT.get("door") or MAT["wall"]
     mk = MAT.get("soffit") or MAT["wall"]
@@ -852,6 +853,9 @@ def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1):
     box(f"{name}·门楣", w + 1.3, 0.80, 0.42, x, ys, z + h + 0.03, md)
     box(f"{name}·门扇", w, 0.12, h - 0.05, x, ys + face * 0.30, z, md)
     box(f"{name}·门缝", 0.05, 0.16, h * 0.94, x, ys + face * 0.30, z + 0.03 * h, mk)
+    for _i in range(1, max(1, int(leaves))):
+        box(f"{name}·门缝{_i}", 0.06, 0.16, h - 0.02,
+            x - w / 2 + w * _i / leaves, ys + face * 0.30, z, mk)
     # 小两坡顶
     ROOF, _, _ = _lg()
     ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, 2.6, z + h + 0.45, 0.95,
@@ -1073,11 +1077,20 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 
 
 
-def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1):
+# 城门两侧翼墙的长度。城墙断口的宽度 = 城台宽 + 2*GATE_WING，
+# 所以 build_massing（造城墙）与这里（造翼墙）必须共用同一个数：
+# 原来城墙按 GATES["opening"] 断开、翼墙按 46 往外接，两边对不上，
+# 城墙就从门里横穿过去把券洞堵死了（东/西华门还有一条 66 m 的真空缺口）。
+GATE_WING = 46.0
+
+
+def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1):
     """宫门：砖城台（**多券洞**）＋ 重檐门楼 ＋ 两侧翼墙。
 
     n_arch=5 用于正门（承天门那种"中间高大、两侧递小"的五券洞）；3 / 1 用于侧门。
     各券洞的**拱顶取同一标高**，城台就能统一拆成"墩台＋拱顶以上整片"，不必逐洞处理。
+    face=±1：八字墙向哪一侧回折（+1 = 本地 +y）。北门/西门的院内在 −y/−x，必须传 −1，
+    否则八字墙就翻到城墙外、架在护城河上（玄武门的八字墙一度 7/7 个采样点全悬空）。
     """
     ROOF, _, _ = _lg()
     mat_w = MAT["citywall"]
@@ -1160,32 +1173,44 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1):
                   (2, 6, 7, 3), (3, 7, 4, 0)]
             mesh_from(f"{name}·券脸{i}_{k}", vv, ff, mat_s, merge=False)
 
-    # 城台顶女墙（沿前后外沿）
+    # 城台顶女墙：四面围合。原来只做南、北两条，东西两边的台顶边敞着，
+    # 12 m 高的砖台顶上看过去就是一条没有压顶的裸边（鸟瞰尤其明显）。
     for sy in (-1, 1):
         box(f"{name}·女墙{'SN'[sy > 0]}", w - 1.2, 0.7, 1.15, 0,
             sy * (d / 2 - 0.4), z + h, mat_w)
+    for sx in (-1, 1):
+        box(f"{name}·女墙{'EW'[sx > 0]}", 0.7, d - 1.2, 1.15,
+            sx * (w / 2 - 0.4), 0, z + h, mat_w)
 
     # 两侧翼墙：让门接进一道墙里；端头加墩收口
-    sw, st, shh = 46.0, max(3.2, d * 0.42), h * 0.90
+    # wing_off：翼墙组沿**墙厚方向**平移到城墙中线上。承天门 / 玄武门的城台中心
+    # 比城墙线各内收 10.5 m（城台有意往外挑），翼墙若还跟着城台中心走，
+    # 翼墙端头就与 6 m 厚的城墙错开半米多，接口处露一条竖缝。
+    sw, st, shh = GATE_WING, max(3.2, min(d * 0.42, 8.0)), h * 0.90
+    yo = wing_off
+    _rise = max(0.38, st * 0.24)          # 墙帽要有真正的坡，不然 8~18 m 宽的翼墙顶就是块平板
     for sx in (-1, 1):
         cxw = sx * (w / 2 + sw / 2)
-        box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cxw, 0, z, mat_w)
+        box(f"{name}·翼墙{'EW'[sx > 0]}", sw, st, shh, cxw, yo, z, mat_w)
         _cap = ROOF.two_slope(_self(), f"{name}·翼墙帽{'EW'[sx > 0]}",
-                              sw + 0.10, st + 0.10, z + shh - 0.14, 0.38,
+                              sw + 0.9, st + 0.9, z + shh - 0.16, _rise,
                               mat=MAT.get("glaze_plain_dark") or MAT.get("tile_gray")
                               or MAT["tile_gray"])
         _cap.location.x = cxw
+        _cap.location.y = yo
         box(f"{name}·墙端{'EW'[sx > 0]}", 2.4, st + 1.0, shh + 0.6,
-            sx * (w / 2 + sw - 1.2), 0, z, mat_w)
+            sx * (w / 2 + sw - 1.2), yo, z, mat_w)
         # 八字墙：翼墙到头后向内折回一段，收成有交代的门口，而不是截断在半空
         box(f"{name}·八字墙{'EW'[sx > 0]}", st, 12.0, shh * 0.94,
-            sx * (w / 2 + sw - st / 2), 12.0 + st / 2, z, mat_w)
+            sx * (w / 2 + sw - st / 2), yo + face * (12.0 + st / 2), z, mat_w)
         _cap2 = ROOF.two_slope(_self(), f"{name}·八字帽{'EW'[sx > 0]}",
-                               st + 0.8, 12.8, z + shh * 0.94, 0.48,
+                               st + 0.9, 12.9, z + shh * 0.94, max(0.48, _rise * 0.8),
                                mat=MAT.get("glaze_plain_dark") or MAT.get("tile_gray")
                               or MAT["tile_gray"])
         _cap2.location.x = sx * (w / 2 + sw - st / 2)
-        _cap2.location.y = 6.0
+        # 帽要落在八字墙上（墙中心 y = 12 + st/2）。原来写死 6.0，
+        # 帽子就整块盖在翼墙顶上、被翼墙帽压住——S/N 门看不见，E/W 门一转 90° 就飞到护城河上。
+        _cap2.location.y = yo + face * (12.0 + st / 2)
 
     # 门楼：城台上复用 hall()
     tw, td = w * 0.56, d * 0.62

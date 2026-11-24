@@ -92,6 +92,9 @@ MAT = {
     "glass": material("现代玻璃", (0.16, 0.30, 0.40), 0.25, 0.15),
     "ridge": material("屋脊压顶", (0.32, 0.22, 0.09), 0.5),
     "rock": material("假山石", (0.45, 0.43, 0.39), 0.95),
+    # 濠与桥：桥面/驳岸是青石，河床在水下要压暗，不然 80 m 宽的桥面会亮成一张白纸
+    "bridge": material("桥石", (0.38, 0.36, 0.32), 0.88),
+    "moatbed": material("河床", (0.155, 0.15, 0.135), 0.95),
 }
 
 
@@ -318,21 +321,99 @@ def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
 
 
 # ------------------------------------------------------------------ 地面 / 护城河
-box("城外地面", 3000, 3000, 0.4, 0, 0, -0.4, MAT["ground"])
+# 宫外地面做成「回」字形：外圈铺地、内圈留空给护城河与宫城。
+# 原来是一整块 3000×3000 的实心板，把濠沟整个盖在下面——水面、河床、驳岸全看不见。
+_M0 = P["moat_w"]
+_XO = HW + T / 2 + _M0      # 濠外沿（东西）
+_YO = HD + T / 2 + _M0      # 濠外沿（南北）
+for _nm, (_w, _d, _x, _y) in {
+    "南": (3000.0, 1500.0 - _YO, 0.0, -(1500.0 + _YO) / 2),
+    "北": (3000.0, 1500.0 - _YO, 0.0, (1500.0 + _YO) / 2),
+    "东": (1500.0 - _XO, 2 * _YO, (1500.0 + _XO) / 2, 0.0),
+    "西": (1500.0 - _XO, 2 * _YO, -(1500.0 + _XO) / 2, 0.0),
+}.items():
+    box(f"城外地面{_nm}", _w, _d, 0.4, _x, _y, -0.4, MAT["ground"])
 box("宫城地坪", P["width"] + T, P["depth"] + T, 0.6, 0, 0, -0.3, MAT["plaza"])
 
 mw = P["moat_w"]
-for nm, (w_, d_, x_, y_) in {
-    "南": (2 * (HW + T / 2 + mw), mw, 0, -HD - T / 2 - mw / 2),
-    "北": (2 * (HW + T / 2 + mw), mw, 0, HD + T / 2 + mw / 2),
-    "东": (mw, 2 * (HD + T / 2), HW + T / 2 + mw / 2, 0),
-    "西": (mw, 2 * (HD + T / 2), -HW - T / 2 - mw / 2, 0),
+# 护城河做成真的濠：河床 -2.3、水面 -0.65、两侧石驳岸。
+# 原来河道只是一块厚 1.6 的水板（-1.2..0.4），水面比宫外地坪（0.0）还高 0.4 m：
+# 凑近看就是"宫里进了水"，球门券洞下半截泡在里面（东华门近景最刺眼的一处）。
+MOAT_SILL, MOAT_WATER = -2.30, -0.65
+_GATE_ST = {s["name"]: s for s in D.STRUCTS if s.get("kind") == "gate"}
+_GST_SIDE = {g["side"]: _GATE_ST[g["name"]] for g in D.GATES}
+
+
+def moat_bar(nm, w_, d_, x_, y_, along_x, side):
+    """一侧护城河：宫门前断开 + 跨河石桥 + 河床 + 驳岸。"""
+    st = _GST_SIDE[side]
+    gw = st["w"] + 16.0
+    gc = st["cx"] if along_x else st["cy"]
+    lo, hi = ((x_ - w_ / 2, x_ + w_ / 2) if along_x else (y_ - d_ / 2, y_ + d_ / 2))
+    a, b = max(lo, gc - gw / 2), min(hi, gc + gw / 2)
+    for i, (s0, s1) in enumerate(((lo, a), (b, hi))):
+        L = s1 - s0
+        if L < 0.3:
+            continue
+        if along_x:
+            box(f"护城河{nm}{i}", L, d_ - 0.3, MOAT_WATER - MOAT_SILL - 0.3,
+                (s0 + s1) / 2, y_, MOAT_SILL + 0.3, MAT["water"])
+        else:
+            box(f"护城河{nm}{i}", w_ - 0.3, L, MOAT_WATER - MOAT_SILL - 0.3,
+                x_, (s0 + s1) / 2, MOAT_SILL + 0.3, MAT["water"])
+    box(f"护城河{nm}·河床", w_ - 0.2, d_ - 0.2, 0.4, x_, y_, MOAT_SILL, MAT["moatbed"])
+    if along_x:
+        box(f"护城河{nm}·驳岸S", w_ + 1.2, 0.9, 2.6, x_, y_ - d_ / 2, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸N", w_ + 1.2, 0.9, 2.6, x_, y_ + d_ / 2, MOAT_SILL, MAT["bridge"])
+    else:
+        box(f"护城河{nm}·驳岸W", 0.9, d_ + 1.2, 2.6, x_ - w_ / 2, y_, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸E", 0.9, d_ + 1.2, 2.6, x_ + w_ / 2, y_, MOAT_SILL, MAT["bridge"])
+    # 跨河石桥：桥面比宫外地坪高 0.15，两端落到驳岸上；桥下三墩，两侧石栏板。
+    # 桥宽比断口窄 10 m（左右各留 5 m 水面），否则中间那张 80 m 宽的白石板太抢眼。
+    bw = st["w"] + 6.0
+    _rr = 0.95
+    if along_x:
+        box(f"宫前桥{nm}", bw, d_ + 2.4, 0.60, gc, y_, -0.15, MAT["bridge"])
+        for k in (-1, 0, 1):
+            box(f"宫前桥{nm}·墩{k + 1}", bw * 0.9, 1.6, 2.2,
+                gc, y_ + k * (d_ / 3.4), MOAT_SILL, MAT["moatbed"])
+        for _s in (-1, 1):
+            _px = gc + _s * (bw / 2 - 0.13)
+            box(f"宫前桥{nm}·栏板{_s}", 0.26, d_ + 2.0, _rr, _px, y_, 0.45, MAT["bridge"])
+            box(f"宫前桥{nm}·压面{_s}", 0.38, d_ + 2.1, 0.12, _px, y_, 0.45 + _rr,
+                MAT["bridge"])
+    else:
+        box(f"宫前桥{nm}", w_ + 2.4, bw, 0.60, x_, gc, -0.15, MAT["bridge"])
+        for k in (-1, 0, 1):
+            box(f"宫前桥{nm}·墩{k + 1}", 1.6, bw * 0.9, 2.2,
+                x_ + k * (w_ / 3.4), gc, MOAT_SILL, MAT["moatbed"])
+        for _s in (-1, 1):
+            _py = gc + _s * (bw / 2 - 0.13)
+            box(f"宫前桥{nm}·栏板{_s}", w_ + 2.0, 0.26, _rr, x_, _py, 0.45, MAT["bridge"])
+            box(f"宫前桥{nm}·压面{_s}", w_ + 2.1, 0.38, 0.12, x_, _py, 0.45 + _rr,
+                MAT["bridge"])
+
+
+for nm, (w_, d_, x_, y_, al, sd) in {
+    "南": (2 * (HW + T / 2 + mw), mw, 0, -HD - T / 2 - mw / 2, True, "S"),
+    "北": (2 * (HW + T / 2 + mw), mw, 0, HD + T / 2 + mw / 2, True, "N"),
+    "东": (mw, 2 * (HD + T / 2), HW + T / 2 + mw / 2, 0, False, "E"),
+    "西": (mw, 2 * (HD + T / 2), -HW - T / 2 - mw / 2, 0, False, "W"),
 }.items():
-    box("护城河" + nm, w_, d_, 1.6, x_, y_, -1.2, MAT["water"])
-    box("河岸" + nm, w_ + 3, d_ + 3, 0.35, x_, y_, -0.35, MAT["stone"])
+    moat_bar(nm, w_, d_, x_, y_, al, sd)
 
 # ------------------------------------------------------------------ 城墙
-openings = {g["side"]: g["opening"] for g in D.GATES}
+# 断口宽度 = 城台宽 + 两翼墙（gate_house 里 sw = PL.GATE_WING），且**中心落在城门中心**。
+# 原来按 GATES["opening"]（只是城台宽）断开、且一律以中轴为中心：
+#   · 东/西华门在 y=-90，断口却留在 y=0 —— y -33..33 是一条 66 m 的真空缺口，
+#     而城墙从门里横穿过去，把三条券洞彻底堵死；
+#   · 南北门的翼墙各外伸 46 m，城墙同样从翼墙中间穿过去，顶面与翼墙帽互相咬。
+_GATE_ST = {s["name"]: s for s in D.STRUCTS if s.get("kind") == "gate"}
+
+
+def _gate_open(g):
+    st = _GATE_ST[g["name"]]
+    return st["w"] + 2.0 * PL.GATE_WING, (st["cx"] if g["side"] in ("S", "N") else st["cy"])
 
 
 def wall_bar(name, w, d, x, y, along_x=True):
@@ -346,16 +427,24 @@ def wall_bar(name, w, d, x, y, along_x=True):
                            along_x=False)
 
 
-for side, y in (("S", -HD), ("N", HD)):
-    gw = openings[side]
-    seg = HW + T / 2 - gw / 2
-    wall_bar(f"城墙{side}1", seg, T, -(gw / 2 + seg / 2), y, along_x=True)
-    wall_bar(f"城墙{side}2", seg, T, gw / 2 + seg / 2, y, along_x=True)
-for side, x in (("E", HW), ("W", -HW)):
-    gw = openings[side]
-    seg = HD + T / 2 - gw / 2
-    wall_bar(f"城墙{side}1", T, seg, x, -(gw / 2 + seg / 2), along_x=False)
-    wall_bar(f"城墙{side}2", T, seg, x, gw / 2 + seg / 2, along_x=False)
+for _g in D.GATES:
+    _side, (_gw, _gc) = _g["side"], _gate_open(_g)
+    if _side in ("S", "N"):
+        _y = -HD if _side == "S" else HD
+        _a = (-HW - T / 2, _gc - _gw / 2)
+        _b = (_gc + _gw / 2, HW + T / 2)
+        for _i, (_s0, _s1) in enumerate((_a, _b)):
+            if _s1 - _s0 < 0.05:
+                continue
+            wall_bar(f"城墙{_side}{_i + 1}", _s1 - _s0, T, (_s0 + _s1) / 2, _y, along_x=True)
+    else:
+        _x = HW if _side == "E" else -HW
+        _a = (-HD - T / 2, _gc - _gw / 2)
+        _b = (_gc + _gw / 2, HD + T / 2)
+        for _i, (_s0, _s1) in enumerate((_a, _b)):
+            if _s1 - _s0 < 0.05:
+                continue
+            wall_bar(f"城墙{_side}{_i + 1}", T, _s1 - _s0, _x, (_s0 + _s1) / 2, along_x=False)
 
 ct = D.CORNER_TOWER
 for sx in (-1, 1):
@@ -509,6 +598,19 @@ for p in D.PLATFORMS:
 
 for w in D.inner_line_walls():
     add_wall(w["name"], w["x0"], w["x1"], w["y0"], w["y1"])
+# 内廷墙上的两处侧门洞：data 按 24 m 洞口断墙（给侧门留位置），但洞口里一直没有门，
+# 鸟瞰就是墙上两个 24 m 的大豁口。两侧补回墙身、只留 8 m 洞口，再按随墙门做门垛/板门/两坡顶。
+if args.precise:
+    for _gx in (150, -150):
+        _y = D.INNER_LINE["y"]
+        _t = D.INNER_LINE["t"]
+        _tag = "EW"[_gx > 0]
+        for _s in (-1, 1):
+            _a, _b = _gx + _s * 4.0, _gx + _s * 12.0
+            add_wall(f"内廷墙·侧门{_tag}补{'S' if _s < 0 else 'N'}",
+                     min(_a, _b), max(_a, _b), _y - _t / 2, _y + _t / 2)
+        PL.court_gate(f"内廷墙·侧门{_tag}", _gx, _y, z=0.0,
+                      w=6.76, h=min(4.6, WH - 0.1), face=-1, leaves=2)
 # 廊庑占地：院墙遇到它要让开，否则墙会横穿屋顶（近景看就是"墙从屋顶里长出来"）
 _CORR = [(s["cx"], s["cy"], s["w"] / 2 + 2.0, s["d"] / 2 + 2.0)
          for s in D.STRUCTS if s["kind"] == "corridor"]
@@ -706,11 +808,23 @@ def add_struct_precise(st):
     if k == "gate":
         before = set(col.objects)
         _na = 5 if w >= 78 else (3 if w >= 40 else 1)
-        PL.gate_house(st["name"], w, d, z=z, h=h, n_arch=_na)
+        # 东西宫门用数据里的 rot 显式声明（原来靠 d > w 猜，改对尺寸后就不成立了）
+        _rot = float(st.get("rot", 90 if d > w else 0) or 0)
+        _wing_off = 0.0 if _rot else ((-HD if y < 0 else HD) - y)
+        # 八字墙要朝院内回折：南门、东门在本地 +y，北门、西门在 −y
+        _face = 1 if ((not _rot and y < 0) or (_rot and x > 0)) else -1
+        PL.gate_house(st["name"], w, d, z=z, h=h, n_arch=_na,
+                      wing_off=_wing_off, face=_face)
         new = set(col.objects) - before
-        if d > w:            # 东西宫门：整体绕自身原点转 90°，让券洞朝东西
+        if _rot:
+            _a = math.radians(_rot)
+            _ca, _sa = math.cos(_a), math.sin(_a)
             for ob in new:
-                ob.rotation_euler[2] = math.pi / 2
+                ob.rotation_euler[2] = _a
+                # 构件的**位置**也要跟着转：构件库有两种落位方式（顶点烘焙 / object.location），
+                # 只转朝向不转位置，用 location 落位的翼墙帽、八字帽就会被甩到护城河上空。
+                lx, ly = ob.location.x, ob.location.y
+                ob.location.x, ob.location.y = lx * _ca - ly * _sa, lx * _sa + ly * _ca
         for ob in new:       # 构件按原点建，整体挪到城门实位
             ob.location.x += x
             ob.location.y += y
@@ -889,6 +1003,7 @@ shots = [
     ("鸟瞰·内廷", dict(loc=(-520, -200, 380), target=(0, 120, 0), lens=50)),
     ("人视·金瓯殿", dict(loc=(178, -338, 24), target=(0, -150, 14), lens=42)),
     ("细部·外朝", dict(loc=(86, -320, 62), target=(0, -120, 20), lens=52)),
+    ("细部·东华门", dict(loc=(512, -336, 66), target=(376.5, -95, 10), lens=55)),
     ("正立面·正射", dict(loc=(0, -305, 26), target=(0, -60, 24), lens=72)),
 ]
 
