@@ -76,7 +76,8 @@ TIERS = [
 STAGE_SEATS = 400        # 主席台（不计入万人席）
 
 # 【作者·2026-11-23】三项裁决
-EMBLEM = {"d": 6.4}             # ① 国徽直径 6.4 m（"可以"）
+# 【作者·2026-11-24】第四项裁决：国徽浮雕「难做就不要了」→ show=False，主席台只留木饰后墙
+EMBLEM = {"d": 6.4, "show": False}   # ① 国徽直径 6.4 m（"可以"）；浮雕不做了
 FLAGS_AT_PROSCENIUM = False     # ② 台口两侧不设红底金龙旗（"不必"）
 REP_DESKS = True                # ③ 池座（及各层）设代表席小桌（"设"）
 
@@ -329,7 +330,8 @@ def check():
         f'最远观众距台口 {max(t["r1"] for t in TIERS) - 36.06:.1f} m（台口对角线距离）',
         f'中央前厅 {FOYER["x1"] - FOYER["x0"]:.0f} m 深 × '
         f'{FOYER["y1"] - FOYER["y0"]:.0f} m 宽，{FOYER["n_col"]} 根明柱，净高 {FOYER["h"]:.0f} m',
-        f'国徽直径 {EMBLEM["d"]:.1f} m；台口旗：'
+        f'国徽：{"直径 " + format(EMBLEM["d"], ".1f") + " m" if EMBLEM.get("show", True) else "不做浮雕"}'
+        f'（作者 2026-11-23/24 裁决）；台口旗：'
         f'{"设" if FLAGS_AT_PROSCENIUM else "不设"}；代表席小桌：'
         f'{"设" if REP_DESKS else "不设"}（作者 2026-11-23 裁决）',
     ]

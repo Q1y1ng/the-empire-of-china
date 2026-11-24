@@ -453,60 +453,61 @@ def build_stage():
 
     # 国徽与十面旗（精模）
     if P:
-        # 国徽（局部 XY 平面：u 横向、v 竖向、w 出挑；建完绕 Y 轴 −90° 立起朝东）
-        # 比例依《国家象征物（2026）》：城墙宽 0.42D、龙高 0.50D、齿轮宽 0.26D
-        E = Mesh("国徽", MAT["gold"], "stage")
-        Dm = D.EMBLEM["d"]
-        R = Dm / 2.0
-        E.cyl(0, 0, -0.10, 0.14, R, n=72)          # 底盘
-        Z0, ZD = -0.46, 0.36                        # 浮雕出挑层
+        if D.EMBLEM.get("show", True):
+            # 国徽（局部 XY 平面：u 横向、v 竖向、w 出挑；建完绕 Y 轴 −90° 立起朝东）
+            # 比例依《国家象征物（2026）》：城墙宽 0.42D、龙高 0.50D、齿轮宽 0.26D
+            E = Mesh("国徽", MAT["gold"], "stage")
+            Dm = D.EMBLEM["d"]
+            R = Dm / 2.0
+            E.cyl(0, 0, -0.10, 0.14, R, n=72)          # 底盘
+            Z0, ZD = -0.46, 0.36                        # 浮雕出挑层
 
-        def stud(u, v, r, n=12):
-            E.cyl(u, v, Z0, Z0 + ZD, r, n=n)
+            def stud(u, v, r, n=12):
+                E.cyl(u, v, Z0, Z0 + ZD, r, n=n)
 
-        # 城墙：宽 0.42D，居中偏下；城台 + 五垛口 + 瓮城外凸
-        ww = 0.21 * Dm
-        E.box(0, -1.80, Z0, 2 * ww, 1.30, ZD)
-        for i in range(6):
-            stud(-ww + 2 * ww * i / 5, -1.10, 0.20, n=10)
-        E.box(0, -1.00, Z0, ww * 1.10, 0.30, ZD)   # 瓮城顶线
+            # 城墙：宽 0.42D，居中偏下；城台 + 五垛口 + 瓮城外凸
+            ww = 0.21 * Dm
+            E.box(0, -1.80, Z0, 2 * ww, 1.30, ZD)
+            for i in range(6):
+                stud(-ww + 2 * ww * i / 5, -1.10, 0.20, n=10)
+            E.box(0, -1.00, Z0, ww * 1.10, 0.30, ZD)   # 瓮城顶线
 
-        # 齿轮：外径 0.26D，8 齿 + 轮缘
-        gr = 0.13 * Dm
-        E.cyl(0, -2.60, Z0, Z0 + ZD, gr * 0.80, n=32)
-        for i in range(8):
-            a = 2 * math.pi * i / 8 + math.pi / 8
-            stud(gr * 0.98 * math.cos(a), -2.60 + gr * 0.98 * math.sin(a), 0.19, n=6)
+            # 齿轮：外径 0.26D，8 齿 + 轮缘
+            gr = 0.13 * Dm
+            E.cyl(0, -2.60, Z0, Z0 + ZD, gr * 0.80, n=32)
+            for i in range(8):
+                a = 2 * math.pi * i / 8 + math.pi / 8
+                stud(gr * 0.98 * math.cos(a), -2.60 + gr * 0.98 * math.sin(a), 0.19, n=6)
 
-        # 稻穗：左右各五粒，沿二次曲线成弧
-        for sgn in (-1, 1):
-            for i in range(5):
-                t = i / 4.0
-                u = sgn * (0.58 + 1.62 * t)
-                v = -2.15 + 2.70 * t - 0.62 * t * t
-                stud(u, v, 0.24 - 0.05 * t, n=10)
+            # 稻穗：左右各五粒，沿二次曲线成弧
+            for sgn in (-1, 1):
+                for i in range(5):
+                    t = i / 4.0
+                    u = sgn * (0.58 + 1.62 * t)
+                    v = -2.15 + 2.70 * t - 0.62 * t * t
+                    stud(u, v, 0.24 - 0.05 * t, n=10)
 
-        # 金蟠龙：S 形盘绕（60 段圆柱，半径渐收），总高 0.50D
-        NR = 60
-        for i in range(NR):
-            t = i / (NR - 1.0)
-            u = 0.96 * math.sin(t * 1.85 * math.pi - 0.35)
-            v = -1.05 + 3.10 * t
-            r = 0.32 - 0.13 * t
-            stud(u, v, r, n=12)
-        stud(0.86, 2.05, 0.42, n=16)                # 龙首
-        stud(0.72, 2.26, 0.17, n=8)                 # 龙角
-        stud(1.02, 2.24, 0.17, n=8)
+            # 金蟠龙：S 形盘绕（60 段圆柱，半径渐收），总高 0.50D
+            NR = 60
+            for i in range(NR):
+                t = i / (NR - 1.0)
+                u = 0.96 * math.sin(t * 1.85 * math.pi - 0.35)
+                v = -1.05 + 3.10 * t
+                r = 0.32 - 0.13 * t
+                stud(u, v, r, n=12)
+            stud(0.86, 2.05, 0.42, n=16)                # 龙首
+            stud(0.72, 2.26, 0.17, n=8)                 # 龙角
+            stud(1.02, 2.24, 0.17, n=8)
 
-        # 绶带「金瓯永固」
-        E.box(0, -3.10, Z0, 2.10, 0.42, ZD)
-        for sgn in (-1, 1):
-            E.box(sgn * 1.06, -2.98, Z0, 0.34, 0.52, ZD)
+            # 绶带「金瓯永固」
+            E.box(0, -3.10, Z0, 2.10, 0.42, ZD)
+            for sgn in (-1, 1):
+                E.box(sgn * 1.06, -2.98, Z0, 0.34, 0.52, ZD)
 
-        ob = emit(E, (0, 0, 1))
-        if ob:
-            ob.rotation_euler = (0, math.radians(-90), 0)
-            ob.location = (S["x0"] + 1.0, AX, 12.0)
+            ob = emit(E, (0, 0, 1))
+            if ob:
+                ob.rotation_euler = (0, math.radians(-90), 0)
+                ob.location = (S["x0"] + 1.0, AX, 12.0)
         # ---- 主席台陈设（精模）----
         FUR = Mesh("主席台陈设", MAT["stage"], "stage")
         GLD = Mesh("陈设金饰", MAT["gold"], "stage")
