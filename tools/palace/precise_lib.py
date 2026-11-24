@@ -862,9 +862,14 @@ def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1):
         box(f"{name}·门缝{_i}", 0.06, 0.16, h - 0.02,
             x - w / 2 + w * _i / leaves, ys + face * 0.30, z, mk)
     # 小两坡顶
+    # ⚠️ two_slope() 的顶点只含 z，平面位置要由调用方给：原来这里没设 location，
+    # 所有院门（六宫/五所/营区/办公厅的院门 20 多樘）的瓦顶统统落在原点，
+    # 在宫城正中（金瓯殿体里）堆成一摞 —— 门垛、门扇、台阶都在位，唯独没有顶。
     ROOF, _, _ = _lg()
-    ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, 2.6, z + h + 0.45, 0.95,
-                   mat=MAT.get("tile_gray") or MAT["tile_gray"])
+    _rf = ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, 2.6, z + h + 0.45, 0.95,
+                         mat=MAT.get("tile_gray") or MAT["tile_gray"])
+    _rf.location.x = x
+    _rf.location.y = ys
     # 台阶
     for i in range(3):
         box(f"{name}·阶{i}", w + 1.0, 0.40, 0.50 - i * 0.15, x,
@@ -1089,6 +1094,16 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
 GATE_WING = 46.0
 
 
+def gate_wing(w):
+    """翼墙长度：正门用到满 46 m，小门按面阔收（≈0.55w，下限 12 m）。
+
+    原来所有宫门一律 46 m：协和门（面阔 26 m）的翼墙一直伸到 x=91，
+    正好插进承天门（面阔 96 m、翼墙到 94 m）的翼墙里 —— 两座门撞在一起。
+    造城墙断口与造翼墙必须调用同一个函数，否则又会对不上。
+    """
+    return min(GATE_WING, max(12.0, 0.55 * float(w)))
+
+
 def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1):
     """宫门：砖城台（**多券洞**）＋ 重檐门楼 ＋ 两侧翼墙。
 
@@ -1191,7 +1206,7 @@ def gate_house(name, w, d, z=0.0, h=9.0, n_arch=1, wing_off=0.0, face=1):
     # wing_off：翼墙组沿**墙厚方向**平移到城墙中线上。承天门 / 玄武门的城台中心
     # 比城墙线各内收 10.5 m（城台有意往外挑），翼墙若还跟着城台中心走，
     # 翼墙端头就与 6 m 厚的城墙错开半米多，接口处露一条竖缝。
-    sw, st, shh = GATE_WING, max(3.2, min(d * 0.42, 8.0)), h * 0.90
+    sw, st, shh = gate_wing(w), max(3.2, min(d * 0.42, 8.0)), h * 0.90
     yo = wing_off
     _rise = max(0.38, st * 0.24)          # 墙帽要有真正的坡，不然 8~18 m 宽的翼墙顶就是块平板
     for sx in (-1, 1):

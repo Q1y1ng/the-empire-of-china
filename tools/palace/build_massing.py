@@ -424,7 +424,8 @@ _GATE_ST = {s["name"]: s for s in D.STRUCTS if s.get("kind") == "gate"}
 
 def _gate_open(g):
     st = _GATE_ST[g["name"]]
-    return st["w"] + 2.0 * PL.GATE_WING, (st["cx"] if g["side"] in ("S", "N") else st["cy"])
+    return st["w"] + 2.0 * PL.gate_wing(st["w"]), \
+        (st["cx"] if g["side"] in ("S", "N") else st["cy"])
 
 
 def wall_bar(name, w, d, x, y, along_x=True):
@@ -458,16 +459,18 @@ for _g in D.GATES:
                 continue
             wall_bar(f"城墙{_side}{_i + 1}", T, _s1 - _s0, _x, (_s0 + _s1) / 2, along_x=False)
 
+_GATE_KEEP = []        # 城门占地（值房不许压在这里）
 for _g in D.GATES:
     _st = _GATE_ST[_g["name"]]
+    _gw2 = PL.gate_wing(_st["w"])
     if _g["side"] in ("S", "N"):
-        keep_add(_st["cx"] - _st["w"] / 2 - PL.GATE_WING,
-                 _st["cx"] + _st["w"] / 2 + PL.GATE_WING,
-                 _st["cy"] - _st["d"] / 2, _st["cy"] + _st["d"] / 2)
+        _rg = (_st["cx"] - _st["w"] / 2 - _gw2, _st["cx"] + _st["w"] / 2 + _gw2,
+               _st["cy"] - _st["d"] / 2, _st["cy"] + _st["d"] / 2)
     else:
-        keep_add(_st["cx"] - _st["d"] / 2, _st["cx"] + _st["d"] / 2,
-                 _st["cy"] - _st["w"] / 2 - PL.GATE_WING,
-                 _st["cy"] + _st["w"] / 2 + PL.GATE_WING)
+        _rg = (_st["cx"] - _st["d"] / 2, _st["cx"] + _st["d"] / 2,
+               _st["cy"] - _st["w"] / 2 - _gw2, _st["cy"] + _st["w"] / 2 + _gw2)
+    keep_add(*_rg)
+    _GATE_KEEP.append(_rg)
 
 ct = D.CORNER_TOWER
 for sx in (-1, 1):
@@ -729,6 +732,12 @@ box("琼苑·中路", 4.0, _gd - 6, 0.10, _gx, _gy, 0.68, MAT["path"])
 box("琼苑·横路", _gw - 6, 4.0, 0.10, _gx, _gy, 0.68, MAT["path"])
 
 for i, (cx, cy, w, d, hh) in enumerate(D.service_blocks()):
+    # 值房要沿墙成排，所以不避院墙；但城门（城台＋两翼墙）必须让开 ——
+    # 原来值房07 整座压在 西华门·八字墙W 里、值房42 压在 中左门·八字墙W 里。
+    if any(not (cx + w / 2 + 0.5 < gx0 or cx - w / 2 - 0.5 > gx1
+                or cy + d / 2 + 0.5 < gy0 or cy - d / 2 - 0.5 > gy1)
+           for (gx0, gx1, gy0, gy1) in _GATE_KEEP):
+        continue
     keep_add(cx - w / 2 - 0.9, cx + w / 2 + 0.9, cy - d / 2 - 0.9, cy + d / 2 + 0.9)
     if args.precise:
         before = set(col.objects)
