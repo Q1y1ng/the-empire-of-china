@@ -704,6 +704,20 @@ for c in D.COMPOUNDS:
     for w in D.compound_walls(c):
         for _pc in _wall_pieces(w["name"], w["x0"], w["x1"], w["y0"], w["y1"]):
             add_wall(_pc[0], _pc[1], _pc[2], _pc[3], _pc[4], h=WH)
+
+# 前庭两侧的院墙：中左门/中右门各带 22 m 翼墙站在空地上，前后左右接不上东西
+# （数据里这一段本来就没有墙）。补一道 4.2 m 高的院墙，从城门城台边一直拉到
+# 紫光阁院／政枢殿院的西/东墙，前庭这才成为封闭院落。
+for _gname, _cname in (("中左门", "紫光阁院"), ("中右门", "政枢殿院")):
+    _gs = next(_s for _s in D.STRUCTS if _s["name"] == _gname)
+    _cc = next(_c for _c in D.COMPOUNDS if _c["name"] == _cname)
+    _x_out = min(abs(_cc["x0"]), abs(_cc["x1"]))      # 院墙所在的那条边
+    _sgn = 1 if _gs["cx"] > 0 else -1
+    _x_in = _gs["cx"] + _sgn * (_gs["w"] / 2 + 4.0)
+    _x_wall = _sgn * _x_out
+    add_wall(f"前庭·侧墙{'E' if _sgn > 0 else 'W'}",
+             min(_x_in, _x_wall), max(_x_in, _x_wall),
+             _gs["cy"] - 1.25, _gs["cy"] + 1.25, h=WH)
 if args.precise:
     # 院门必须建在数据给定的门洞位置：compound_walls() 是按 c["gates"] 把墙断开的，
     # 之前却在"南墙正中"另起一樘门——于是墙上留着 14 m 的断口没人填（作者看到的"城墙断开"）
