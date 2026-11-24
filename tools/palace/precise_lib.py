@@ -840,16 +840,21 @@ def great_door(name, x0, x1, y_face, z0, h, depth=3.0, angle=100.0,
             z0 + 0.26 + lh * 0.44, MAT.get("gold") or md)
     return w
 
-def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1):
+def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1,
+               wall_t=2.5, wall_h=None):
     """院门（随墙门楼）：门垛 + 门楣 + 板门 + 小两坡顶 + 垂带台阶。
 
     face = -1 表示门朝南（门楼向 -y 凸出）。
     leaves > 1 时把门扇分成几扇（宽洞口不能是一整块板门）。
-    """
+    wall_t / wall_h：所在院墙的厚度与高度。瓦顶进深取 wall_t+1.3、檐口抬到墙帽之上，
+    这样门顶**盖过墙帽两侧**（原来进深写死 2.6 m，比 2.5 m 的墙只宽 0.1 m、
+    比 3.45 m 宽的瓦帽还窄 —— 墙帽从门顶两侧穿出来）。"""
     md = MAT.get("wood_dark") or MAT.get("door") or MAT["wall"]
     mk = MAT.get("soffit") or MAT["wall"]
     ms = MAT.get("stone") or MAT["stone2"]
     ys = y + face * 0.35
+    wt = max(0.8, float(wall_t))
+    wh = float(wall_h) if wall_h else max(h + 0.45, 3.0)
     # 门垛
     for sx in (-1, 1):
         box(f"{name}·垛{'EW'[sx > 0]}", 0.62, 0.86, h + 0.45,
@@ -861,12 +866,10 @@ def court_gate(name, x, y, z=0.0, w=4.2, h=4.2, face=-1, leaves=1):
     for _i in range(1, max(1, int(leaves))):
         box(f"{name}·门缝{_i}", 0.06, 0.16, h - 0.02,
             x - w / 2 + w * _i / leaves, ys + face * 0.30, z, mk)
-    # 小两坡顶
-    # ⚠️ two_slope() 的顶点只含 z，平面位置要由调用方给：原来这里没设 location，
-    # 所有院门（六宫/五所/营区/办公厅的院门 20 多樘）的瓦顶统统落在原点，
-    # 在宫城正中（金瓯殿体里）堆成一摞 —— 门垛、门扇、台阶都在位，唯独没有顶。
+    # 小两坡顶：进深盖过墙帽、檐口抬到墙帽之上
     ROOF, _, _ = _lg()
-    _rf = ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, 2.6, z + h + 0.45, 0.95,
+    _zr = z + max(h + 0.45, wh + 0.58)
+    _rf = ROOF.two_slope(_self(), f"{name}·顶", w + 2.6, wt + 1.3, _zr, 0.95,
                          mat=MAT.get("tile_gray") or MAT["tile_gray"])
     _rf.location.x = x
     _rf.location.y = ys
@@ -980,7 +983,10 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     ring_beam(f"{name}·平板枋", w + 0.4, d + 0.4, z_ping, 0.26, 0.66, MAT["wall"])
     # 斗拱下的白粉线：平板枋顶一道窄白带，把"枋"和"斗拱"分开
     # （真实做法里这道线是檐下最抓眼的一根亮线，没有它斗拱和枋就糊成一条）
-    ring_beam(f"{name}·白粉线", w + 0.46, d + 0.46, z_ping + 0.66, 0.30, 0.07,
+    # 位置：贴在平板枋上口（z_ping+0.16..+0.26）、比枋面（0.66 厚）略凸 0.02 的一圈白线。
+    # 原来写的是 z_ping+0.66、0.30 高、0.07 厚 —— 既压在斗拱坐斗的高度上（从拱腰横切过去），
+    # 又比枋面缩进 0.30 m，实际被枋挡住，等于不存在。
+    ring_beam(f"{name}·白粉线", w + 0.40, d + 0.40, z_ping + 0.16, 0.10, 0.70,
               MAT.get("marble_carved") or MAT["stone"])
     dou_z = z_ping + 0.26
     # 斗拱 LOD 压一档：整宫 100+ 殿时 lod2 的 2200 面/攒会把总面数顶到千万级

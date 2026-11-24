@@ -312,7 +312,7 @@ def keep_add(x0, x1, y0, y1):
 def add_wall(name, x0, x1, y0, y1, h=WH, mat=None):
     """院墙：朱红墙身 + **两坡瓦帽**（出檐 0.4 m、脊高 0.55 m）。"""
     mat = mat or MAT["wall"]
-    keep_add(x0, x1, y0, y1)
+    keep_add(x0 - 0.3, x1 + 0.3, y0 - 0.3, y1 + 0.3)     # 含瓦帽外挑 0.225
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     Lx, Ly = x1 - x0, y1 - y0
     box(name, Lx, Ly, h, cx, cy, 0.0, mat)
@@ -460,15 +460,32 @@ for _g in D.GATES:
             wall_bar(f"城墙{_side}{_i + 1}", T, _s1 - _s0, _x, (_s0 + _s1) / 2, along_x=False)
 
 _GATE_KEEP = []        # 城门占地（值房不许压在这里）
-for _g in D.GATES:
+# 注意：这里要遍历**所有**宫门（D.STRUCTS 里 kind=gate 的 13 座），不只是 D.GATES 的四座城门。
+# 只按 GATES 建禁区时，熙和门/中右门/六宫宫门这些内门没有禁区，
+# 行道树照样长在它们的八字墙里（实测还剩 3 棵）。
+for _g in [dict(name=_s["name"], side=("E" if (float(_s.get("rot", 0) or 0) and _s["cx"] > 0)
+                                      else ("W" if float(_s.get("rot", 0) or 0)
+                                            else ("S" if _s["cy"] < 0 else "N"))))
+           for _s in D.STRUCTS if _s.get("kind") == "gate"]:
     _st = _GATE_ST[_g["name"]]
     _gw2 = PL.gate_wing(_st["w"])
+    # 八字墙从门心沿「院内方向」甩出去 12 + st 米，比城台进深还远；
+    # 禁区必须把这一段也算进来，否则行道树就长在八字墙里（实测 5 棵）。
+    _stt = max(3.2, min(_st["d"] * 0.42, 8.0))
+    _r2 = float(_st.get("rot", 0) or 0)
+    _fc = 1 if ((not _r2 and _st["cy"] < 0) or (_r2 and _st["cx"] > 0)) else -1
+    _ext = 12.0 + _stt + 1.5
+    _along = _st["w"] / 2 + _gw2 + 1.0
+    _cross = _st["d"] / 2 + 1.0
     if _g["side"] in ("S", "N"):
-        _rg = (_st["cx"] - _st["w"] / 2 - _gw2, _st["cx"] + _st["w"] / 2 + _gw2,
-               _st["cy"] - _st["d"] / 2, _st["cy"] + _st["d"] / 2)
+        _rg = (_st["cx"] - _along, _st["cx"] + _along,
+               _st["cy"] - _cross - (_ext if _fc < 0 else 0.0),
+               _st["cy"] + _cross + (_ext if _fc > 0 else 0.0))
     else:
-        _rg = (_st["cx"] - _st["d"] / 2, _st["cx"] + _st["d"] / 2,
-               _st["cy"] - _st["w"] / 2 - _gw2, _st["cy"] + _st["w"] / 2 + _gw2)
+        # 东西门：本地 +y 经 90° 旋转 → 世界 −x
+        _rg = (_st["cx"] - _cross - (_ext if _fc > 0 else 0.0),
+               _st["cx"] + _cross + (_ext if _fc < 0 else 0.0),
+               _st["cy"] - _along, _st["cy"] + _along)
     keep_add(*_rg)
     _GATE_KEEP.append(_rg)
 
@@ -636,7 +653,8 @@ if args.precise:
             add_wall(f"内廷墙·侧门{_tag}补{'S' if _s < 0 else 'N'}",
                      min(_a, _b), max(_a, _b), _y - _t / 2, _y + _t / 2)
         PL.court_gate(f"内廷墙·侧门{_tag}", _gx, _y, z=0.0,
-                      w=6.76, h=min(4.6, WH - 0.1), face=-1, leaves=2)
+                      w=6.76, h=min(4.6, WH - 0.1), face=-1, leaves=2,
+                      wall_t=_t, wall_h=WH)
 # 廊庑占地：院墙遇到它要让开，否则墙会横穿屋顶（近景看就是"墙从屋顶里长出来"）
 _CORR = [(s["cx"], s["cy"], s["w"] / 2 + 2.0, s["d"] / 2 + 2.0)
          for s in D.STRUCTS if s["kind"] == "corridor"]
@@ -698,7 +716,8 @@ if args.precise:
             _y = c["y0"] if _side == "S" else c["y1"]
             PL.court_gate(f"{c['name']}·院门{_i}", _c0, _y, z=0.0,
                           w=max(3.4, _gw * 0.86), h=min(4.6, WH - 0.15),
-                          face=(-1 if _side == "S" else 1))
+                          face=(-1 if _side == "S" else 1),
+                          wall_t=WT, wall_h=WH)
 
 R = D.RIVER
 pts = R["points"]
@@ -876,7 +895,13 @@ def add_struct_precise(st):
         _na = 5 if w >= 78 else (3 if w >= 40 else 1)
         # 东西宫门用数据里的 rot 显式声明（原来靠 d > w 猜，改对尺寸后就不成立了）
         _rot = float(st.get("rot", 90 if d > w else 0) or 0)
-        _wing_off = 0.0 if _rot else ((-HD if y < 0 else HD) - y)
+        # 只有**城墙上的四座城门**需要把翼墙抬到城墙中线上（承天门/玄武门的城台
+        # 比城墙线各内收 10.5 m）。内门（协和门/熙和门/中左门/六宫宫门…）离城墙几百米，
+        # 若也套这条公式，它们的翼墙、墙端、八字墙会被整体平移 150—300 m 落到城墙上
+        # （实测：熙和门的八字墙跑到了 y≈−465、协和门的墙端墩跑到 y≈−480 的城墙里）。
+        _wing_off = 0.0
+        if not _rot and st["name"] in _CITY_GATES:
+            _wing_off = (-HD if y < 0 else HD) - y
         # 八字墙要朝院内回折：南门、东门在本地 +y，北门、西门在 −y
         _face = 1 if ((not _rot and y < 0) or (_rot and x > 0)) else -1
         PL.gate_house(st["name"], w, d, z=z, h=h, n_arch=_na,
@@ -915,6 +940,8 @@ def add_struct_precise(st):
         ob.location.x += x
         ob.location.y += y
 
+
+_CITY_GATES = {_g["name"] for _g in D.GATES}
 
 print("BUILD structs", len(D.STRUCTS), flush=True)
 for _i, s in enumerate(D.STRUCTS):
