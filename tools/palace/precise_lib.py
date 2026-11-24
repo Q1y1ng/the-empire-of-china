@@ -178,8 +178,8 @@ def box(name, w, d, h, x, y, z0=0.0, mat=None):
              (x + hx, y + hy, cz - hz), (x - hx, y + hy, cz - hz),
              (x - hx, y - hy, cz + hz), (x + hx, y - hy, cz + hz),
              (x + hx, y + hy, cz + hz), (x - hx, y + hy, cz + hz)]
-    faces = [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1),
-             (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)]
+    faces = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
+             (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
     return mesh_from(name, verts, faces, mat, merge=False)
 
 
@@ -691,7 +691,8 @@ def small_house(name, w, d, z=0.0, h=4.5, tile=None):
     mk = MAT.get("soffit") or MAT["wall"]
     ms = MAT.get("stone") or MAT["stone2"]
     # 台明两级
-    box(f"{name}·台身", w + 1.10, d + 1.10, 0.42, 0, 0, z - 0.12, MAT["stone2"])
+    # 台身同样加高到 0.54（顶面 z+0.42）：原来顶面正好压在地坪顶面上（共面 771 m²/座）。
+    box(f"{name}·台身", w + 1.10, d + 1.10, 0.54, 0, 0, z - 0.12, MAT["stone2"])
     box(f"{name}·阶条", w + 0.72, d + 0.72, 0.24, 0, 0, z + 0.28, ms)
     zt = z + 0.52
     # 墙身 + 下碱
@@ -769,7 +770,10 @@ def colonnade(name, w, d, z=0.0, h=4.6, bays=None):
     long_x = w >= d
     span = w if long_x else d
     n = bays or max(3, int(span / 4.5))
-    box(f"{name}·台明", w + 0.9, d + 0.9, 0.42, 0, 0, z - 0.12,
+    # 台明顶要与铺装**错开**：原来 0.42 高、从 z−0.12 起 → 顶面正好落在宫城地坪的
+    # 顶面（0.30）上，两层石面同平面互相重叠 2100 m²（东朝房一处），机位一动就闪。
+    # 加高到 0.54（顶面 z+0.42），台明露 0.12 m 石口 —— 既是实物做法，也彻底避开共面。
+    box(f"{name}·台明", w + 0.9, d + 0.9, 0.54, 0, 0, z - 0.12,
         MAT.get("stone2") or MAT["stone"])
     zz = z + 0.30
     for i in range(n + 1):
