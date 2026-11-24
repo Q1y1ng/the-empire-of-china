@@ -34,6 +34,10 @@ where = {}
 for key, fl in buckets.items():
     if len(fl) < 2:
         continue
+    # 朝下的面一律不报：两张「朝下 + 同平面」的面必然都藏在别的实体里
+    # （墙底压阶条、河床压驳岸底），从任何机位都看不见，属噪声。
+    if key[0] == 2 and key[1] < 0:
+        continue
     for i in range(len(fl)):
         a = fl[i]
         for j in range(i + 1, len(fl)):

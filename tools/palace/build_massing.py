@@ -374,11 +374,11 @@ def moat_bar(nm, w_, d_, x_, y_, along_x, side):
                 x_, (s0 + s1) / 2, MOAT_SILL + 0.3, MAT["water"])
     box(f"护城河{nm}·河床", w_ - 0.2, d_ - 0.2, 0.4, x_, y_, MOAT_SILL, MAT["moatbed"])
     if along_x:
-        box(f"护城河{nm}·驳岸S", w_ + 1.2, 0.9, 2.6, x_, y_ - d_ / 2, MOAT_SILL, MAT["bridge"])
-        box(f"护城河{nm}·驳岸N", w_ + 1.2, 0.9, 2.6, x_, y_ + d_ / 2, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸S", w_ + 1.2, 0.9, 2.66, x_, y_ - d_ / 2, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸N", w_ + 1.2, 0.9, 2.66, x_, y_ + d_ / 2, MOAT_SILL, MAT["bridge"])
     else:
-        box(f"护城河{nm}·驳岸W", 0.9, d_ + 1.2, 2.6, x_ - w_ / 2, y_, MOAT_SILL, MAT["bridge"])
-        box(f"护城河{nm}·驳岸E", 0.9, d_ + 1.2, 2.6, x_ + w_ / 2, y_, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸W", 0.9, d_ + 1.2, 2.66, x_ - w_ / 2, y_, MOAT_SILL, MAT["bridge"])
+        box(f"护城河{nm}·驳岸E", 0.9, d_ + 1.2, 2.66, x_ + w_ / 2, y_, MOAT_SILL, MAT["bridge"])
     # 跨河石桥：桥面比宫外地坪高 0.15，两端落到驳岸上；桥下三墩，两侧石栏板。
     # 桥宽比断口窄 10 m（左右各留 5 m 水面），否则中间那张 80 m 宽的白石板太抢眼。
     bw = st["w"] + 6.0

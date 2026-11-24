@@ -696,7 +696,9 @@ def small_house(name, w, d, z=0.0, h=4.5, tile=None):
     box(f"{name}·阶条", w + 0.72, d + 0.72, 0.24, 0, 0, z + 0.28, ms)
     zt = z + 0.52
     # 墙身 + 下碱
-    box(f"{name}·墙", w, d, h, 0, 0, zt, MAT["wall"])
+    # 墙底再压进阶条石 4 cm：原来墙底与下碱底**同在 zt 平面**，两张朝下的面完全重合
+    # （每座值房 704 m²）。压进去以后两张面错开，顶面标高不变（高度同步加 4 cm）。
+    box(f"{name}·墙", w, d, h + 0.04, 0, 0, zt - 0.04, MAT["wall"])
     box(f"{name}·下碱", w + 0.05, d + 0.05, min(0.56, h * 0.16), 0, 0, zt, MAT["stone2"])
     yf = -d / 2
     # 板门：两扇 + 门框 + 门楣
