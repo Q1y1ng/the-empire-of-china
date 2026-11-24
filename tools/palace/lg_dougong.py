@@ -33,6 +33,7 @@ __all__ = [
     "make_mesh",
     "place_ring",
     "ring_layout",
+    "ring_layout_bays",
     "DOUGONG_DIMS",
 ]
 
@@ -512,6 +513,7 @@ def ring_layout(w, d, spacing):
 
     每侧用 ceil 保证实际中距 ≤ spacing；四角各留半档，不设角科，
     所以第一/最后一攒的拱头离角只有约 0.4 m，桁则正好在角上相接。
+    （无柱网信息时的退化方案；有柱位请用 ring_layout_bays。）
     """
     out = []
     n = max(1, int(math.ceil(w / spacing - 1e-9)))
@@ -527,6 +529,62 @@ def ring_layout(w, d, spacing):
         out.append((-w / 2, y, math.pi / 2, sp, 1))   # 西：+Y(本) → -X(世)
         out.append((w / 2, y, -math.pi / 2, sp, 1))   # 东
     return out
+
+
+def _bay_slots(cols, spacing):
+    """一列柱位 → [(位置, 构件长度)]：柱头科落在每根柱轴上，平身科在开间内均分。
+
+    构件长度取到左右邻居**较大的**间距——宁可相邻两攒搭接，绝不留缝
+    （露缝时从下往上看是一条天光，比搭接明显得多）。
+    """
+    pos = []
+    for i in range(len(cols) - 1):
+        a, b = cols[i], cols[i + 1]
+        bay = b - a
+        k = max(0, int(round(bay / spacing)) - 1)      # 开间里的平身科数量
+        g = bay / (k + 1)
+        pos.append(a)
+        for j in range(1, k + 1):
+            pos.append(a + j * g)
+    pos.append(cols[-1])
+    out = []
+    for i, p in enumerate(pos):
+        gaps = []
+        if i > 0:
+            gaps.append(p - pos[i - 1])
+        if i < len(pos) - 1:
+            gaps.append(pos[i + 1] - p)
+        out.append((p, max(gaps) if gaps else spacing))
+    return out
+
+
+def ring_layout_bays(w, d, spacing, xs, ys):
+    """按开间布攒（清式柱头科 / 平身科 / 角科）。
+
+    原来的 `ring_layout()` 是每边按 ceil 等分：攒位与柱轴毫无关系，柱头上可能压着
+    一攒平身科、而开间正中却是个空档——檐下仰视一眼就看出来。
+    这里：柱头科正对每根柱（四角跳过），平身科在开间内均分，四角单独放 45° 角科。
+    """
+    out = []
+    sx = _bay_slots(xs, spacing)
+    sy = _bay_slots(ys, spacing)
+    for i, (x, sp) in enumerate(sx):
+        if i == 0 or i == len(sx) - 1:          # 角上的柱位交给角科
+            continue
+        out.append((x, -d / 2, math.pi, sp, 0))       # 南：+Y(本) → -Y(世)
+        out.append((x, d / 2, 0.0, sp, 0))            # 北
+    for i, (y, sp) in enumerate(sy):
+        if i == 0 or i == len(sy) - 1:
+            continue
+        out.append((-w / 2, y, math.pi / 2, sp, 1))   # 西：+Y(本) → -X(世)
+        out.append((w / 2, y, -math.pi / 2, sp, 1))   # 东
+    cn = max(spacing, sx[0][1] if sx else spacing, sy[0][1] if sy else spacing)
+    for sxn in (-1, 1):
+        for syn in (-1, 1):
+            # 角科 45° 出跳：把本地 +Y 转到 (sxn, syn)/√2
+            out.append((sxn * w / 2, syn * d / 2, math.atan2(-sxn, syn), cn, 2))
+    return out
+
 
 
 def place_ring(pl, w, d, z, unit=0.16, spacing=None, lod=2, mat=None):

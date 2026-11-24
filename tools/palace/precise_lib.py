@@ -124,10 +124,15 @@ def unit_for(w):
     return max(0.070, min(0.170, w / 545.0))
 
 
-def merge_ring(pl, name, dg, w, d, z, unit, spacing, lod):
-    """把一圈斗拱合成**一个**网格对象（整宫精模里 100+ 殿，散着放会有上万对象）。"""
+def merge_ring(pl, name, dg, w, d, z, unit, spacing, lod, xs=None, ys=None):
+    """把一圈斗拱合成**一个**网格对象（整宫精模里 100+ 殿，散着放会有上万对象）。
+
+    给了柱位（xs / ys）就按开间布攒：柱头科对每根柱、平身科在开间内均分、四角 45° 角科；
+    没给就退回每边等分的 `ring_layout()`。
+    """
     import math as _m
-    slots = dg.ring_layout(w, d, spacing)
+    slots = (dg.ring_layout_bays(w, d, spacing, xs, ys)
+             if (xs and ys) else dg.ring_layout(w, d, spacing))
     verts, faces, midx = [], [], []
     cache = {}
     mats = []
@@ -977,7 +982,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
     dou_lod = 1 if lod >= 2 else 0
     if lod >= 1:
         merge_ring(_self(), f"{name}·斗拱", DG, w, d, dou_z, unit,
-                   11.0 * unit, dou_lod)
+                   11.0 * unit, dou_lod, xs=xs, ys=ys)
     else:      # 远距离：一条斗拱带代替整圈构件（102 殿省下 300 万面）
         ring_beam(f"{name}·斗拱带", w + 1.0, d + 1.0, dou_z + dou_h * 0.18,
                   dou_h * 0.72, 0.72, MAT["dou"])
@@ -1062,7 +1067,7 @@ def hall(name, w, d, bays=None, dbays=None, z=0.0, storeys=1,
                   0.24, 0.6, MAT["wall"])
         dou_z2 = ring_z + z_wall + 1.10
         merge_ring(_self(), f"{name}·上斗拱", DG, up_w, up_d, dou_z2, unit2,
-                   11.0 * unit2, dou_lod)
+                   11.0 * unit2, dou_lod, xs=up_xs, ys=up_ys)
         eave_hi = dou_z2 + 11.0 * unit2 + 0.30
         W2 = up_w + 2 * (10.5 * unit2 + 1.05)
         D2 = up_d + 2 * (10.5 * unit2 + 1.05)
