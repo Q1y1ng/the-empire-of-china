@@ -351,10 +351,11 @@ def rail_edge(name, axis, fixed, lo, hi, gaps, z0=2.32):
 
 
 def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing=12.0,
-                 gap=0.0):
+                 gap=0.0, gap_z1=15.6):
     """现代民族形式的石材柱廊＋玻璃幕墙（只做广场面）。
 
-    gap > 0 时在 center 处留出 gap 宽的洞口（大会堂中厅的入口，供玻璃门斗穿过）。
+    gap > 0 时在 center 处留出 gap 宽的洞口（大会堂中厅的入口，供玻璃门斗穿过）；
+    洞口只到 gap_z1 高，其上仍是玻璃（否则幕墙上会留下一块难看的石墙补丁）。
     """
     if axis == "y":
         if gap > 0:
@@ -362,6 +363,8 @@ def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing
             for sgn, tag in ((-1, "南"), (1, "北")):
                 box(name + "·玻璃" + tag, 0.6, seg, h - 6, fixed + side * 1.2,
                     center + sgn * (gap / 2 + seg / 2), z0, MAT["glass"])
+            box(name + "·玻璃过梁", 0.6, gap, h - 6 - (gap_z1 - z0),
+                fixed + side * 1.2, center, gap_z1, MAT["glass"])
         else:
             box(name + "·玻璃", 0.6, length - 16, h - 6, fixed + side * 1.2, center,
                 z0, MAT["glass"])
@@ -388,23 +391,28 @@ def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing
             box(name + f"·腰线{k}", length - 8, 1.1, 1.4, center, fixed + side * 1.9, zz, MAT["stone_light"])
 
 
-def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None, gap=0.0):
+def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None, gap=0.0,
+                 gap_z1=15.6):
     gh = glass_h if glass_h else h - 6
     z0 = 3.0
     span = length - 16
     n = max(1, int(span / 1.8))
     for i in range(n + 1):
         p = center - span / 2 + i * span / n
-        if gap > 0 and abs(p - center) <= gap / 2:
+        in_gap = gap > 0 and abs(p - center) <= gap / 2
+        zz0 = gap_z1 if in_gap else z0
+        if zz0 >= z0 + gh:
             continue
         if axis == "y":
-            box(name + f"·竖梃{i}", 0.12, 0.16, gh, fixed + side * 1.55, p, z0, MAT["metal"])
+            box(name + f"·竖梃{i}", 0.12, 0.16, z0 + gh - zz0,
+                fixed + side * 1.55, p, zz0, MAT["metal"])
         else:
-            box(name + f"·竖梃{i}", 0.16, 0.12, gh, p, fixed + side * 1.55, z0, MAT["metal"])
+            box(name + f"·竖梃{i}", 0.16, 0.12, z0 + gh - zz0,
+                p, fixed + side * 1.55, zz0, MAT["metal"])
     m = max(1, int(gh / 4.5))
     for j in range(m + 1):
         zz = z0 + j * gh / m
-        if gap > 0:
+        if gap > 0 and zz < gap_z1:
             seg = (span - gap) / 2
             for sgn, tag in ((-1, "南"), (1, "北")):
                 if axis == "y":
