@@ -185,6 +185,8 @@ if "--glb-only" in argv:
     raise SystemExit(0)
 
 SHOTS = {
+    "正立面": dict(loc=(-140.0, AX, 14.0), target=(-311.5, AX, 15.0), lens=24,
+                 section=False),
     "门斗": dict(loc=(-303.0, AX + 4.0, 4.8), target=(-320.0, AX + 2.0, 3.6), lens=24,
                  section=False),
     "厅内": dict(loc=(-459.0, AX, 2.5), target=(-500.0, AX + 2, 6.0), lens=26,

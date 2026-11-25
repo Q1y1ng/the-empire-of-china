@@ -8,8 +8,7 @@ from PIL import Image
 SRC = os.path.join(os.environ["TEMP"], "hall_fit")
 DST = r"E:\AI\帝国\docs\assets"
 JOBS = [
-    ("套合试验·套合.png", "国家广场(2026)·大会堂套合试验·横剖.webp"),
-    ("套合试验·厅内.png", "国家广场(2026)·大会堂套合试验·厅内.webp"),
+    ("套合试验·正立面.png", "国家广场(2026)·大会堂套合试验·正立面.webp"),
 ]
 for src, dst in JOBS:
     p = os.path.join(SRC, src)
