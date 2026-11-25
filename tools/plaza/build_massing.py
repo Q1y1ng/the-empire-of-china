@@ -350,10 +350,21 @@ def rail_edge(name, axis, fixed, lo, hi, gaps, z0=2.32):
                 box(name + f"·螭首{si}-{k}", 0.65, 0.55, 0.42, xx, fixed, z0 + 0.95, MAT["marble"])
 
 
-def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing=12.0):
-    """现代民族形式的石材柱廊＋玻璃幕墙（只做广场面）。"""
+def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing=12.0,
+                 gap=0.0):
+    """现代民族形式的石材柱廊＋玻璃幕墙（只做广场面）。
+
+    gap > 0 时在 center 处留出 gap 宽的洞口（大会堂中厅的入口，供玻璃门斗穿过）。
+    """
     if axis == "y":
-        box(name + "·玻璃", 0.6, length - 16, h - 6, fixed + side * 1.2, center, z0, MAT["glass"])
+        if gap > 0:
+            seg = (length - 16 - gap) / 2
+            for sgn, tag in ((-1, "南"), (1, "北")):
+                box(name + "·玻璃" + tag, 0.6, seg, h - 6, fixed + side * 1.2,
+                    center + sgn * (gap / 2 + seg / 2), z0, MAT["glass"])
+        else:
+            box(name + "·玻璃", 0.6, length - 16, h - 6, fixed + side * 1.2, center,
+                z0, MAT["glass"])
     else:
         box(name + "·玻璃", length - 16, 0.6, h - 6, center, fixed + side * 1.2, z0, MAT["glass"])
     n = max(3, int(length / spacing))
@@ -377,13 +388,15 @@ def glass_facade(name, length, h, fixed, axis, side, center=0.0, z0=3.0, spacing
             box(name + f"·腰线{k}", length - 8, 1.1, 1.4, center, fixed + side * 1.9, zz, MAT["stone_light"])
 
 
-def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None):
+def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None, gap=0.0):
     gh = glass_h if glass_h else h - 6
     z0 = 3.0
     span = length - 16
     n = max(1, int(span / 1.8))
     for i in range(n + 1):
         p = center - span / 2 + i * span / n
+        if gap > 0 and abs(p - center) <= gap / 2:
+            continue
         if axis == "y":
             box(name + f"·竖梃{i}", 0.12, 0.16, gh, fixed + side * 1.55, p, z0, MAT["metal"])
         else:
@@ -391,7 +404,17 @@ def add_mullions(name, fixed, axis, side, center, length, h, glass_h=None):
     m = max(1, int(gh / 4.5))
     for j in range(m + 1):
         zz = z0 + j * gh / m
-        if axis == "y":
+        if gap > 0:
+            seg = (span - gap) / 2
+            for sgn, tag in ((-1, "南"), (1, "北")):
+                if axis == "y":
+                    box(name + f"·横梃{j}" + tag, 0.14, seg, 0.14, fixed + side * 1.55,
+                        center + sgn * (gap / 2 + seg / 2), zz, MAT["metal"])
+                else:
+                    box(name + f"·横梃{j}" + tag, seg, 0.14, 0.14,
+                        center + sgn * (gap / 2 + seg / 2), fixed + side * 1.55, zz,
+                        MAT["metal"])
+        elif axis == "y":
             box(name + f"·横梃{j}", 0.14, span, 0.14, fixed + side * 1.55, center, zz, MAT["metal"])
         else:
             box(name + f"·横梃{j}", span, 0.14, 0.14, center, fixed + side * 1.55, zz, MAT["metal"])
@@ -900,23 +923,76 @@ for s in D.SITES:
     wall_segments(s, D.GATES.get(s["key"], []))
 
 
-def plinth(name, w, d, x, y, h=2.2):
-    box(name + "·台基", w, d, h, x, y, 0.12, MAT["marble"])
-    box(name + "·台基压顶", w + 0.8, d + 0.8, 0.3, x, y, 0.12 + h - 0.3, MAT["stone_light"])
+def plinth(name, w, d, x, y, h=2.2, carve=None):
+    """台基。carve=(x0,x1,y0,y1) 时做成「回」字，中间掏空（供下沉的礼堂穿过）。"""
+    z0 = 0.12
+    if not carve:
+        box(name + "·台基", w, d, h, x, y, z0, MAT["marble"])
+        box(name + "·台基压顶", w + 0.8, d + 0.8, 0.3, x, y, z0 + h - 0.3, MAT["stone_light"])
+        return
+    cx0, cx1, cy0, cy1 = carve
+    px0, px1, py0, py1 = x - w / 2, x + w / 2, y - d / 2, y + d / 2
+    quads = [
+        ("北", px0, px1, cy1, py1),
+        ("南", px0, px1, py0, cy0),
+        ("西", px0, cx0, cy0, cy1),
+        ("东", cx1, px1, cy0, cy1),
+    ]
+    for tag, x0, x1, y0, y1 in quads:
+        box(f"{name}·台基{tag}", x1 - x0, y1 - y0, h, (x0 + x1) / 2, (y0 + y1) / 2, z0,
+            MAT["marble"])
+        box(f"{name}·台基压顶{tag}", x1 - x0 + 0.8, y1 - y0 + 0.8, 0.3,
+            (x0 + x1) / 2, (y0 + y1) / 2, z0 + h - 0.3, MAT["stone_light"])
+
+
+def ring(name, w, d, t, h, cx, cy, z, mat):
+    """四面围合的环（无顶无底），用于挖空的体块与檐口。"""
+    box(name + "·北", w, t, h, cx, cy + (d - t) / 2, z, mat)
+    box(name + "·南", w, t, h, cx, cy - (d - t) / 2, z, mat)
+    box(name + "·东", t, d - 2 * t, h, cx + (w - t) / 2, cy, z, mat)
+    box(name + "·西", t, d - 2 * t, h, cx - (w - t) / 2, cy, z, mat)
 
 
 # 大会堂：230 × 600，三段式
+# 【作者·2026-11-25】中厅挖空：壁厚 2 m，台基在礼堂处掏空，内胆（万人大礼堂）地坪落 z=0 下沉在台基之下
 HX, HY = -425.0, -1035.5
-plinth("大会堂", 238, 608, HX, HY)
+CH = next(m for m in D.MASSES if m["kind"] == "chamber")
+CARVE = (CH["x0"], CH["x1"], CH["y0"], CH["y1"])
+SHELL_T = 2.0
+plinth("大会堂", 238, 608, HX, HY, carve=CARVE)
 for m in D.MASSES:
     if m["parent"] != "hall" or m["kind"] == "portico":
         continue
     cx, cy = (m["x0"] + m["x1"]) / 2, (m["y0"] + m["y1"]) / 2
     w, d, h = m["x1"] - m["x0"], m["y1"] - m["y0"], m["h"]
-    box("大会堂·" + m["name"], w, d, h - 2.3, cx, cy, 2.3, MAT["stone"])
-    box("大会堂·" + m["name"] + "·基座线", w + 1.2, d + 1.2, 1.4, cx, cy, 2.3, MAT["stone_light"])
-    glass_facade("大会堂·" + m["name"], d, h, m["x1"], "y", 1, (m["y0"] + m["y1"]) / 2)
-    box("大会堂·" + m["name"] + "·檐口", w + 3, d + 3, 2.2, cx, cy, h - 2.2, MAT["stone_light"])
+    if m["kind"] == "chamber":
+        # 空心体块：南／北／西整面，东面留 24 × 13.3 m 门洞（门廊处）
+        half = 12.0
+        box("大会堂·" + m["name"] + "·北", w, SHELL_T, h - 2.3, cx, cy + (d - SHELL_T) / 2,
+            2.3, MAT["stone"])
+        box("大会堂·" + m["name"] + "·南", w, SHELL_T, h - 2.3, cx, cy - (d - SHELL_T) / 2,
+            2.3, MAT["stone"])
+        box("大会堂·" + m["name"] + "·西", SHELL_T, d - 2 * SHELL_T, h - 2.3,
+            cx - (w - SHELL_T) / 2, cy, 2.3, MAT["stone"])
+        seg = (d - 2 * SHELL_T) / 2 - half
+        for sgn, tag in ((1, "北"), (-1, "南")):
+            yy = cy + sgn * (half + seg / 2)
+            box("大会堂·" + m["name"] + "·东" + tag, SHELL_T, seg, h - 2.3,
+                cx + (w - SHELL_T) / 2, yy, 2.3, MAT["stone"])
+        box("大会堂·" + m["name"] + "·东过梁", SHELL_T, 2 * half, h - 15.6,
+            cx + (w - SHELL_T) / 2, cy, 15.6, MAT["stone"])
+        ring("大会堂·" + m["name"] + "·基座线", w + 1.2, d + 1.2, 1.0, 1.4, cx, cy, 2.3,
+             MAT["stone_light"])
+        ring("大会堂·" + m["name"] + "·檐口", w + 3, d + 3, 8.0, 2.2, cx, cy, h - 2.2,
+             MAT["stone_light"])
+    else:
+        box("大会堂·" + m["name"], w, d, h - 2.3, cx, cy, 2.3, MAT["stone"])
+        box("大会堂·" + m["name"] + "·基座线", w + 1.2, d + 1.2, 1.4, cx, cy, 2.3,
+            MAT["stone_light"])
+        box("大会堂·" + m["name"] + "·檐口", w + 3, d + 3, 2.2, cx, cy, h - 2.2,
+            MAT["stone_light"])
+    glass_facade("大会堂·" + m["name"], d, h, m["x1"], "y", 1, (m["y0"] + m["y1"]) / 2,
+                 gap=24.0 if m["kind"] == "chamber" else 0.0)
     if m["kind"] == "chamber":
         hip_roof("大会堂·中厅顶", w, d, 14.0, cx, cy, h + 0.15, MAT["roof_tile"], overhang=6, front="E")
     else:
@@ -977,7 +1053,8 @@ if P:
     for m in D.MASSES:
         if m["parent"] == "hall" and m["kind"] != "portico":
             add_mullions("大会堂·" + m["name"], m["x1"], "y", 1,
-                         (m["y0"] + m["y1"]) / 2, m["y1"] - m["y0"], m["h"])
+                         (m["y0"] + m["y1"]) / 2, m["y1"] - m["y0"], m["h"],
+                         gap=24.0 if m["kind"] == "chamber" else 0.0)
     add_mullions("议事大楼·基座", 310, "y", -1, CY, 600, 36)
     add_mullions("议事大楼·议事厅", 344.6, "y", -1, CY, 150, 50, 37)
     add_mullions("博物馆·主体", -1450.5, "x", 1, 0.0, 560, 30)

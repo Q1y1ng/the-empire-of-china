@@ -64,7 +64,7 @@ col = sc.collection
 WHITE = P is False
 
 
-def mat(name, rgb, rough=0.8, metal=0.0, emit=None, emit_str=1.0):
+def mat(name, rgb, rough=0.8, metal=0.0, emit=None, emit_str=1.0, transmission=None):
     m = bpy.data.materials.get(name)
     if m:
         return m
@@ -74,6 +74,8 @@ def mat(name, rgb, rough=0.8, metal=0.0, emit=None, emit_str=1.0):
     b.inputs["Base Color"].default_value = (*rgb, 1.0)
     b.inputs["Roughness"].default_value = rough
     b.inputs["Metallic"].default_value = metal
+    if transmission is not None:
+        b.inputs["Transmission Weight"].default_value = transmission
     if emit is not None:
         b.inputs["Emission Color"].default_value = (*emit, 1.0)
         b.inputs["Emission Strength"].default_value = emit_str
@@ -97,6 +99,7 @@ if WHITE:
                     emit=(1.0, 0.98, 0.94), emit_str=1.10),
         "soffit": mat("白模·楼座底", (0.82, 0.81, 0.78), 0.9,
                       emit=(1.0, 0.97, 0.92), emit_str=1.45),
+        "glass": mat("白模·玻璃", (0.55, 0.62, 0.65), 0.10),
     }
 else:
     MAT = {
@@ -115,6 +118,8 @@ else:
         "red": mat("地毯·帝国红", L(D.SRGB["imperial_red"]), 0.95),
         "bronze": mat("铜门", L(D.SRGB["bronze"]), 0.35, metal=0.9),
         "marble_w": mat("汉白玉柱", L(D.SRGB["white_marble"]), 0.28),
+        "glass": mat("玻璃幕墙", (0.62, 0.72, 0.74), 0.04, metal=0.0,
+                     transmission=0.92),
     }
 
 
@@ -442,7 +447,7 @@ def build_stage():
 
     # 舞台与后台上方的顶板（否则从池座透过台口会看到"天空"）
     RF = Mesh("舞台顶板", MAT["soffit"], "stage")
-    RF.box(-513.0, AX, D.PROSCENIUM["h"], 60.0, 130.0, 0.9)
+    RF.box(-510.5, AX, D.PROSCENIUM["h"], 54.0, 130.0, 0.9)
     emit(RF, (0, 0, -1))
 
     # 后台体块
@@ -832,23 +837,56 @@ def build_foyer():
     # 两侧墙
     for y in (y0, y1):
         W.quad((x0, y, 0), (x1, y, 0), (x1, y, F["h"]), (x0, y, F["h"]))
-    # 东墙（留五樘门洞）
-    segs = []
-    ys = sorted([AX - 48 - 3.2, AX + 48 + 3.2] + [dd[1] - 3.2 for dd in D.DOORS["foyer"]]
-                + [dd[1] + 3.2 for dd in D.DOORS["foyer"]])
-    prev = y0
-    for yy in sorted(set(ys)):
-        if yy > prev:
-            segs.append((prev, yy))
-        prev = max(prev, yy)
-    if prev < y1:
-        segs.append((prev, y1))
-    for a, b in segs:
-        W.quad((x1, a, 0), (x1, b, 0), (x1, b, F["h"]), (x1, a, F["h"]))
-    # 门洞上口
-    for (dx, dy, w, hh) in D.DOORS["foyer"]:
-        W.quad((x1, dy - w / 2, hh), (x1, dy + w / 2, hh),
-               (x1, dy + w / 2, F["h"]), (x1, dy - w / 2, F["h"]))
+    # 东墙：【作者·2026-11-25】改整面玻璃幕墙 ＋ 轴线上 24 × 2.5 m 玻璃门斗
+    B = D.DOORBAY
+    vy, vx1, zb = B["half_w"], B["x"] + B["depth"], 2.3
+    GL = Mesh("前厅·玻璃幕墙", MAT["glass"], "foyer_glass")
+    # 南北两段整高，轴线上只留门斗以上的高窗
+    for a, b in ((y0, AX - vy), (AX + vy, y1)):
+        GL.quad((x1, a, 0), (x1, b, 0), (x1, b, F["h"]), (x1, a, F["h"]))
+    GL.quad((x1, AX - vy, zb + B["h"]), (x1, AX + vy, zb + B["h"]),
+            (x1, AX + vy, F["h"]), (x1, AX - vy, F["h"]))
+    MU = Mesh("前厅·幕墙竖梃", MAT["bronze"] if P else MAT["dark"], "foyer_glass")
+    nb = max(1, int((y1 - y0) / 3.0))
+    for i in range(nb + 1):
+        yy = y0 + (y1 - y0) * i / nb
+        if abs(yy - AX) < vy - 0.6:
+            continue
+        MU.box(x1 - 0.10, yy, 0.0, 0.14, 0.16, F["h"])
+    for zz in (0.0, F["h"] - 0.35, zb, zb + B["h"], F["beam_z"]):
+        MU.box(x1 - 0.10, (y0 + y1) / 2, zz, 0.18, y1 - y0, 0.28)
+    emit(GL)
+    emit(MU)
+
+    # 玻璃门斗：平台落在 z=2.3（与广场台基面同高），再下 12 级大台阶到前厅地坪 0——
+    # 【作者·2026-11-25】「万人大礼堂下沉」，下沉量 2.3 m
+    NB = 12
+    PF = Mesh("门斗平台", MAT["floor"], "foyer_glass")
+    PF.quad((B["x"], AX - vy, zb), (vx1, AX - vy, zb),
+            (vx1, AX + vy, zb), (B["x"], AX + vy, zb))
+    emit(PF, (0, 0, 1))
+    ST = Mesh("门斗大台阶", MAT["wall"], "foyer_glass")
+    rise, tread = zb / NB, 4.0 / NB
+    for i in range(NB):
+        ST.box(B["x"] - (i + 0.5) * tread, AX, 0.0, tread + 0.02, 2 * vy,
+               zb - (i + 1) * rise)
+    emit(ST)
+    VD = Mesh("玻璃门斗", MAT["glass"], "foyer_glass")
+    for sy in (-1, 1):
+        VD.quad((B["x"], AX + sy * vy, zb), (vx1, AX + sy * vy, zb),
+                (vx1, AX + sy * vy, zb + B["h"]), (B["x"], AX + sy * vy, zb + B["h"]))
+    VD.quad((vx1, AX - vy, zb), (vx1, AX + vy, zb),
+            (vx1, AX + vy, zb + B["h"]), (vx1, AX - vy, zb + B["h"]))
+    VD.quad((B["x"], AX - vy, zb + B["h"]), (vx1, AX - vy, zb + B["h"]),
+            (vx1, AX + vy, zb + B["h"]), (B["x"], AX + vy, zb + B["h"]))
+    emit(VD)
+    DF = Mesh("门斗竖梃", MAT["bronze"] if P else MAT["dark"], "foyer_glass")
+    for i in range(9):
+        yy = AX - vy + 2 * vy * i / 8
+        DF.box((B["x"] + vx1) / 2, yy, zb, B["depth"] + 0.06, 0.14, B["h"])
+    DF.box((B["x"] + vx1) / 2, AX, zb + B["h"] - 0.05, B["depth"] + 0.10,
+           2 * vy + 0.10, 0.22)
+    emit(DF)
     emit(W)
 
     # 地坪
@@ -1094,7 +1132,7 @@ SHOTS = [
     ("主席台立姿", dict(loc=(-485.5, AX, 3.00), target=(-430, AX, 13.2), lens=15)),
     ("主席台俯瞰", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
     ("仰望穹顶", dict(loc=(-468, AX + 6, 3.6), target=(-440, AX + 1, 44.0), lens=17)),
-    ("中央前厅", dict(loc=(-324, AX - 34, 7.0), target=(-389, AX + 8, 12.0), lens=26)),
+    ("中央前厅", dict(loc=(-350, AX - 18, 7.0), target=(-311.5, AX + 4, 9.0), lens=24)),
     ("剖视鸟瞰", dict(loc=(-322, AX + 104, 74), target=(-462, AX - 8, 12), lens=34,
                    hide=("dome", "wall_n", "foyer_ceil"))),
 ]
