@@ -101,6 +101,7 @@ py -3 hall_data.py
 | `probe_fit.py` | 套合量测：读两个 .glb，出包围盒、净空、越界清单（见第八节） |
 | `try_merge.py` | 套合出图：内胆套进广场「大会堂·中厅」并横剖，可 `--glb`／`--glb-only` 导出合并 glb |
 | `verify_glb.py` | 验收合并 glb：单独导入查物体/三角面/材质/贴图，并出池座一张图 |
+| `glbchk_fit.py` | 解析 glb 头与 JSON 块：扩展、材质、贴图、外部依赖（本文件自洽，26 张 JPEG 全内嵌） |
 | `webp_fit.py` | 把 `%TEMP%/hall_fit` 的试验图转 WebP q92 写入 `docs/assets` |
 
 产物（`docs/assets/`）：
