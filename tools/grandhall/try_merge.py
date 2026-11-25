@@ -166,6 +166,24 @@ def section_at_axis():
         ridge.hide_render = True
 
 
+# ---------------------------------------------------------------- 合并 glb（必须在横剖之前导出）
+if "--glb" in argv or "--glb-only" in argv:
+    glb = os.path.join(OUT, "国家广场·含万人大礼堂.glb")
+    bpy.ops.export_scene.gltf(
+        filepath=glb, export_format="GLB", export_apply=True,
+        export_image_format="JPEG", export_image_quality=88,
+        export_draco_mesh_compression_enable=True,
+        export_draco_mesh_compression_level=6,
+        export_draco_position_quantization=14,
+        export_draco_normal_quantization=10,
+        export_draco_texcoord_quantization=12)
+    report["glb"] = glb
+    report["glb_mb"] = round(os.path.getsize(glb) / 1e6, 2)
+    print("GLB", glb, report["glb_mb"], "MB", flush=True)
+if "--glb-only" in argv:
+    print("MERGE_JSON " + json.dumps(report, ensure_ascii=False), flush=True)
+    raise SystemExit(0)
+
 SHOTS = {
     "门斗": dict(loc=(-303.0, AX + 4.0, 4.8), target=(-320.0, AX + 2.0, 3.6), lens=24,
                  section=False),
@@ -187,19 +205,5 @@ for name, s in SHOTS.items():
     sc.render.filepath = path
     print("RENDER", name, path, flush=True)
     bpy.ops.render.render(write_still=True)
-
-# ---------------------------------------------------------------- 合并 glb
-if "--glb" in argv and not ONLY:
-    glb = os.path.join(OUT, "国家广场·含万人大礼堂.glb")
-    bpy.ops.export_scene.gltf(
-        filepath=glb, export_format="GLB", export_apply=True,
-        export_image_format="JPEG", export_image_quality=88,
-        export_draco_mesh_compression_enable=True,
-        export_draco_mesh_compression_level=6,
-        export_draco_position_quantization=14,
-        export_draco_normal_quantization=10,
-        export_draco_texcoord_quantization=12)
-    report["glb"] = glb
-    report["glb_mb"] = round(os.path.getsize(glb) / 1e6, 2)
 
 print("MERGE_JSON " + json.dumps(report, ensure_ascii=False), flush=True)
