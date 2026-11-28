@@ -219,7 +219,7 @@ def tier_rows(tier):
             blocks = row_blocks(r, tier)
             rr.append({
                 "r": round(r, 3),
-                "z": round(tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"], 3),
+                "z": round(tier_row_z(tier, r), 3),
                 "blocks": blocks,
                 "seats": sum(b[2] for b in blocks),
             })
@@ -296,7 +296,61 @@ def tier_z_at(tier, x, y):
     th = math.atan2(dy, dx)
     if not any(iv[0] <= th <= iv[1] for iv in row_intervals(r, tier)):
         return None
+    return tier_z(tier, x, y, clamp=True)
+
+
+# ---------------------------------------------------------------- 派生几何（无 bpy 副作用）
+def tier_row_z(tier, r):
+    """半径 r 处的座席排高（未 clamp）。逐排数据、楼板面、体检脚本共用这一条式子。"""
     return tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"]
+
+
+def tier_z(tier, x, y, clamp=True):
+    """点 (x, y) 处的该层楼板标高。
+
+    clamp=True：不超过末排标高——末排之外是后区平台（这块要不要留、留多宽是待裁项）。
+    """
+    r = math.hypot(x - FOCUS["x"], y - FOCUS["y"])
+    z = tier_row_z(tier, r)
+    if clamp:
+        rows = tier_rows(tier)
+        if rows:
+            z = min(z, rows[-1]["z"])
+    return z
+
+
+def hall_half_width(x):
+    """观众厅在 x 处的半宽（前 40 m、后 160 m 线性展开）。"""
+    t = (x - HALL["x_front"]) / HALL["depth"]
+    return HALL["w_front"] / 2.0 + t * (HALL["w_rear"] - HALL["w_front"]) / 2.0
+
+
+def in_hall(x, y, grow=0.0):
+    """点是否在观众厅平面内；grow 为外扩量（补齐网格边缘锯齿缝）。"""
+    if not (HALL["x_front"] - grow <= x <= HALL["x_rear"] + grow):
+        return False
+    return abs(y - AXIS_Y) <= hall_half_width(x) + grow
+
+
+def hall_radius(th):
+    """自扇心沿 th 方向到观众厅边界的距离（梯形四边求交）。"""
+    dx, dy = math.cos(th), math.sin(th)
+    poly = hall_plan()
+    ts = []
+    n = len(poly)
+    for i in range(n):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % n]
+        ex, ey = x2 - x1, y2 - y1
+        den = dx * ey - dy * ex
+        if abs(den) < 1e-12:
+            continue
+        t = ((x1 - FOCUS["x"]) * ey - (y1 - FOCUS["y"]) * ex) / den
+        u = ((x1 - FOCUS["x"]) * dy - (y1 - FOCUS["y"]) * dx) / den
+        if t > 0 and -1e-9 <= u <= 1 + 1e-9:
+            ts.append(t)
+    # 扇心在观众厅之外（台口以西 30 m），一条射线先进后出，取**出射**那一点
+    return max(ts) if ts else 0.0
 
 
 def _ray_to_polygon(c, ang, poly):

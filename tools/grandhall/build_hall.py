@@ -42,6 +42,10 @@ ap.add_argument("--check", action="store_true", help="Workbench 几何校对")
 ap.add_argument("--exposure", type=float, default=None)
 ap.add_argument("--exposures", default="", help="曝光扫描，逗号分隔")
 ap.add_argument("--cut", action="store_true", help="沿中轴切开（纵剖图）")
+ap.add_argument("--manifest", default="",
+                help="导出 物体名→group→bbox JSON（供 tools/audit 做两次构建 diff、算受影响机位）")
+ap.add_argument("--no-render", action="store_true",
+                help="只建模型/导 glb（26 s），机位渲染（3.5 min）留给验收轮")
 args = ap.parse_args(argv)
 args.out = os.path.abspath(args.out)
 P = args.precise
@@ -211,9 +215,13 @@ def emit(m: Mesh, want=None):
 
 
 # ------------------------------------------------------------------ 通用几何
-def hall_half_width(x):
-    t = (x - HX0) / D.HALL["depth"]
-    return D.HALL["w_front"] / 2 + t * (D.HALL["w_rear"] - D.HALL["w_front"]) / 2
+# 派生几何一律走 hall_data（无 bpy 副作用），这里只做名字绑定：
+# 三处 `z0 + max(0, r−r0)·slope` 已收成 hall_data.tier_row_z 一份，
+# 楼板标高的 clamp 也只有 hall_data.tier_z 一处。tools/audit 的断言直接 import hall_data。
+hall_half_width = D.hall_half_width
+in_hall = D.in_hall
+hall_radius = D.hall_radius
+tier_z = D.tier_z
 
 
 def r_of(x, y):
@@ -222,34 +230,6 @@ def r_of(x, y):
 
 def theta_of(x, y):
     return math.atan2(y - FY, x - FX)
-
-
-def in_hall(x, y, grow=0.0):
-    """点是否在观众厅平面内；grow 为外扩量（补齐网格边缘锯齿缝）。"""
-    if not (HX0 - grow <= x <= HX1 + grow):
-        return False
-    return abs(y - AX) <= hall_half_width(x) + grow
-
-
-def hall_radius(th):
-    """自扇心沿 th 方向到观众厅边界的距离（梯形四边求交）。"""
-    dx, dy = math.cos(th), math.sin(th)
-    poly = D.hall_plan()
-    ts = []
-    n = len(poly)
-    for i in range(n):
-        x1, y1 = poly[i]
-        x2, y2 = poly[(i + 1) % n]
-        ex, ey = x2 - x1, y2 - y1
-        den = dx * ey - dy * ex
-        if abs(den) < 1e-12:
-            continue
-        t = ((x1 - FX) * ey - (y1 - FY) * ex) / den
-        u = ((x1 - FX) * dy - (y1 - FY) * dx) / den
-        if t > 0 and -1e-9 <= u <= 1 + 1e-9:
-            ts.append(t)
-    # 扇心在观众厅之外（台口以西 30 m），一条射线先进后出，取**出射**那一点
-    return max(ts) if ts else 0.0
 
 
 def fan_surface(mesh, tier, zoff=0.0, up=True, n_th=260, n_s=10):
@@ -300,14 +280,6 @@ def tier_has(tier, x, y):
     """该层楼板在 (x, y) 处是否存在：U 形前缘以外一直到后墙。"""
     r, th = r_of(x, y), theta_of(x, y)
     return r >= tier_front_r(tier, th) - 0.01
-
-
-def tier_z(tier, x, y):
-    r = r_of(x, y)
-    z = tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"]
-    rows = D.tier_rows(tier)
-    zmax = rows[-1]["z"] if rows else tier["z0"]
-    return min(z, zmax)
 
 
 def grid_surface(mesh, predicate, zfn, step=0.9, x0=HX0, x1=HX1, zoff=0.0,
@@ -1139,9 +1111,11 @@ SHOTS = [
     ("中央前厅", dict(loc=(-350, AX - 18, 7.0), target=(-311.5, AX + 4, 9.0), lens=24)),
     # 座席系统验收机位（2026-11-28，针对作者提的"座椅不贴地/看不出朝向/过道没用/二三层过不去"）
     ("座席正面", dict(loc=(-491, AX, 3.2), target=(-460, AX, 1.3), lens=40)),
-    ("座椅落地", dict(loc=(-457, AX + 12, 2.4), target=(-451, AX + 5, 1.5), lens=50)),
+    ("座椅落地", dict(loc=(-450, AX + 14, 3.1), target=(-446, AX + 7, 1.9), lens=50)),
     ("横向过道", dict(loc=(-450, AX - 3, 3.3), target=(-450, AX + 48, 2.8), lens=30)),
-    ("二层净空", dict(loc=(-431, AX, 17.4), target=(-426.5, AX, 20.6), lens=30)),
+    ("二层净空", dict(loc=(-429.5, AX, 17.0), target=(-455, AX, 15.6), lens=22)),
+    ("主席团座椅", dict(loc=(-496, AX + 7, 2.8), target=(-505.5, AX + 2, 2.3), lens=45)),
+    ("池座后区", dict(loc=(-431, AX, 5.2), target=(-394, AX, 4.0), lens=24)),
     ("剖视鸟瞰", dict(loc=(-322, AX + 104, 74), target=(-462, AX - 8, 12), lens=34,
                    hide=("dome", "wall_n", "foyer_ceil"))),
 ]
@@ -1166,6 +1140,36 @@ for i, t in enumerate(D.TIERS):
     build_seats(t, i, desks=D.REP_DESKS)
 print("BUILD DONE", round(time.time() - t0, 1), "s", flush=True)
 
+
+def dump_manifest(path):
+    """物体名 → group → bbox / 面数，落 JSON。
+
+    体检脚本只读这个 JSON 就能做两次构建的 diff（改了哪些物体 → 影响哪些机位），
+    不必解析 .blend、也不必 import 本脚本（import 会把整栋楼建一遍）。
+    """
+    items = []
+    for o in col.objects:
+        if o.type != "MESH":
+            continue
+        me = o.data
+        me.calc_loop_triangles()
+        pts = [o.matrix_world @ Vector(c) for c in o.bound_box]
+        mn = [round(min(p[i] for p in pts), 3) for i in range(3)]
+        mx = [round(max(p[i] for p in pts), 3) for i in range(3)]
+        items.append({"name": o.name, "group": o.get("group", ""),
+                      "tris": len(me.loop_triangles), "min": mn, "max": mx})
+    doc = {"mode": "precise" if P else "massing", "objects": len(items),
+           "triangles": sum(x["tris"] for x in items),
+           "seats": sum(sum(r["seats"] for r in D.tier_rows(t)) for t in D.TIERS),
+           "items": sorted(items, key=lambda x: x["name"])}
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=1)
+    print("MANIFEST", path, doc["objects"], doc["triangles"], doc["seats"], flush=True)
+
+
+if args.manifest:
+    dump_manifest(args.manifest)
+
 if args.cut:
     cut_at_axis()
 setup_lights()
@@ -1174,6 +1178,8 @@ cam = setup_render()
 prefix = "校对" if args.check else ("精模" if P else "白模")
 results = {}
 for name, s in SHOTS:
+    if args.no_render:
+        break
     if args.only and not any(k and k in name for k in args.only.split(",")):
         continue
     if ("纵剖" in name) != bool(args.cut):
