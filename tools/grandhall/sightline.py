@@ -32,6 +32,7 @@ EYE = 1.15          # 坐姿眼高
 RAIL = 0.95         # 挑台前缘栏板高
 STAGE_DECK = D.STAGE["z"]
 HEAD = 1.30         # 就坐者头顶相对台面
+R_TARGET = 36.06    # 台唇（台口面 + 6 m）的半径，视线都算到这里
 TARGETS = {
     "deck": STAGE_DECK,
     "head": STAGE_DECK + HEAD,
@@ -65,7 +66,7 @@ def tier_report(tier):
         if r < r_front - 0.01:
             continue
         z_eye = row["z"] + EYE
-        lim = sight_limit(r, z_eye, r_front, z_rail, 36.06)
+        lim = sight_limit(r, z_eye, r_front, z_rail, R_TARGET)
         out.append({
             "r": round(r, 2),
             "z_eye": round(z_eye, 2),
@@ -87,7 +88,7 @@ def need_slope(tier, target, n_rows=None):
     rows = D.tier_rows(tier)
     r_front = tier["r0"]
     r_rear = rows[-1]["r"]
-    a = r_front - 36.06
+    a = r_front - R_TARGET
     d = max(r_rear - r_front, 1e-6)
     if a <= 0:
         return None
@@ -97,7 +98,7 @@ def need_slope(tier, target, n_rows=None):
 def z0_for_slope(tier, slope, target):
     """保持给定坡度时，本层起点标高最多多少才能让末排看见目标（反函数）。"""
     rows = D.tier_rows(tier)
-    a = tier["r0"] - 36.06
+    a = tier["r0"] - R_TARGET
     d = max(rows[-1]["r"] - tier["r0"], 1e-6)
     return target - RAIL + a * (slope + (EYE - RAIL) / d)
 

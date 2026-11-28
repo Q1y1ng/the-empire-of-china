@@ -36,6 +36,7 @@ if GRANDHALL not in sys.path:
     sys.path.insert(0, GRANDHALL)
 
 import hall_data as D  # noqa: E402
+import sightline as SL  # noqa: E402  # 复用 EYE/RAIL/R_TARGET，口径只留一份
 
 DEFAULT_MANIFEST = os.path.join(ROOT, "build", "hall_manifest.json")
 
@@ -127,6 +128,42 @@ def balcony_headroom(items):
     detail = [f"板厚 {slab:.3f}（三层起点 {bal2['z0']:.2f} − 网格最低 {soffit_front:.3f}）",
               f"最紧处 r={r:.1f}：三层底 {soffit2:.3f} − 二层板 {floor1:.3f} = {h:.3f} m"]
     return h >= HEADROOM_MIN, f"{h:.3f} m（门槛 {HEADROOM_MIN}）", detail
+
+def tier_overhang(items):
+    """④��� tier.overhang：下层座席被**上层挑台前缘**切掉的那一段台口。
+
+    为什么另算：`sightline.py` 只判「本层自己的栏板」——二层真正的遮挡物是三层楼板
+    （板底到栏板顶那条带子）。2026-11-29 查：方案B 后三层前缘压在二层后半段之上，
+    三层 z0=12 时二层有 12 排只能看见台面以下（切到 7 m）。抬三层到 15.6 后剩 8 排、
+    且只切 13 m 以上（台口上缘，纯装饰面）。门槛取 10 m：切到 10 m 以下才算真问题。
+    """
+    b2 = by_group(items, "bal2")
+    if not b2:
+        return False, "无 bal2 物体", []
+    bal1 = [t for t in D.TIERS if t["key"] == "bal1"][0]
+    bal2 = [t for t in D.TIERS if t["key"] == "bal2"][0]
+    slab = round(bal2["z0"] - min(i["min"][2] for i in b2), 3)
+    band = (bal2["z0"] - slab, bal2["z0"] + SL.RAIL)   # 三层前缘的实体带（板底→栏板顶）
+    cut_rows, worst = [], 99.0
+    for row in D.tier_rows(bal1):
+        r = row["r"]
+        if r <= bal2["r0"] + 0.01:
+            continue
+        # 目标 t 被挡 ⇔ 眼到 t 的视线在 r0 处的高度落进 band：
+        #   z(r0) = ze + (t − ze)·(r0 − r_t)/(r − r_t)，对 t 反解
+        kr = (bal2["r0"] - SL.R_TARGET) / (r - SL.R_TARGET)
+        ze = row["z"] + SL.EYE
+        edges = sorted(ze + (b - ze) * kr for b in band)
+        if edges[1] > 1.5 and edges[0] < SL.TARGETS["top"]:
+            cut_rows.append(r)
+            worst = min(worst, edges[0])
+    n = len(cut_rows)
+    if not n:
+        return True, "二层零遮挡", ["三层前缘实体带整条落在二层末排视线之上"]
+    detail = [f"被切 {n} 排（r {cut_rows[0]:.1f} 起），最高起切点 {worst:.2f} m",
+              f"三层前缘实体带 {band[0]:.2f}—{band[1]:.2f} m（板厚 {slab:.3f}）"]
+    return worst >= 10.0, f"{n} 排只丢台口上缘，自 {worst:.2f} m 起切", detail
+
 
 def cross_aisles():
     """③ cross_aisle_count：每层横向过道处数（数据声明，不是从几何里找缺口）。
@@ -251,6 +288,7 @@ def main():
     checks = [
         ("seat.floor_gap", "座箱底 − 同排楼板高", *seat_floor_gap(items)),
         ("bal2.headroom", "三层最低点 − 二层楼板（clamp）", *balcony_headroom(items)),
+        ("tier.overhang", "二层被三层挑台切掉的台口", *tier_overhang(items)),
         ("cross_aisle", "每层横向过道 ≥1.5 m 的处数", *cross_aisles()),
         ("pit.rear_void", "池座末排 → 后墙", *rear_void()),
         ("seat.density", "席数 ÷ 观众厅平面", *seat_density(totals["seats"])),

@@ -1211,7 +1211,7 @@ SHOTS = [
     ("全景自台口", dict(loc=(-481, AX, 14.0), target=(-440, AX, 11.0), lens=17)),
     ("池座坐姿", dict(loc=(-469.0, AX, 2.50), target=(-500, AX + 2, 6.0), lens=26)),
     ("二层坐姿", dict(loc=(-449.0, AX, 9.30), target=(-500, AX + 2, 6.0), lens=26)),
-    ("三层坐姿", dict(loc=(-444.0, AX, 15.55), target=(-500, AX + 2, 6.0), lens=26)),
+    ("三层坐姿", dict(loc=(-444.0, AX, 19.93), target=(-500, AX + 2, 6.0), lens=26)),
     ("主席台立姿", dict(loc=(-495.0, AX, 3.00), target=(-440, AX, 12.0), lens=15)),
     ("主席台俯瞰", dict(loc=(-505, AX, 13.0), target=(-448, AX, 13.5), lens=21)),
     ("仰望穹顶", dict(loc=(-465, AX + 6, 3.6), target=(-445, AX + 1, 44.0), lens=17)),
