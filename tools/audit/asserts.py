@@ -44,8 +44,11 @@ HEADROOM_MIN = 2.30       # 挑台下净空
 AISLE_MIN = 1.50          # 横向过道宽
 AISLE_COUNT_MIN = 2       # 每层横向过道处数
 GAP_TOL = 0.02            # 座椅离地容差（2 cm）
-DENSITY_RANGE = (0.9, 2.4)  # 席/m²，参考区间（不是硬门槛）
-REAR_VOID_RANGE = (0.0, 50.0)  # 只报数，等作者裁
+# 席/m²。人民大会堂实物 = 9,726/(76×60) = 2.13。
+# 旧区间 0.9–2.4 是按「进深 95、后区 40 m 空场」的旧平面定的；
+# 作者 2026-11-28 改为「座席贴后墙」后，密度必然上移，故按实物重定 1.6–2.6。
+DENSITY_RANGE = (1.6, 2.6)
+REAR_VOID_RANGE = (0.5, 2.0)   # 【作者·2026-11-28】末排贴墙：座背到后墙面 0.5–2 m
 
 
 def load_manifest(path):
@@ -129,14 +132,18 @@ def cross_aisles():
 
 
 def rear_void():
-    """④ pit.rear_void：池座末排到后墙的距离。规格待裁——只报数，不判。"""
+    """④ pit.rear_void：池座末排到后墙的距离。
+
+    口径（作者 2026-11-28）：「座位最后面就是墙/门，不留空地」——所以这不是
+    待裁项，是硬约束：座背到墙面只留 0.5–2 m（出门与门斗的做法余量）。
+    """
     pit = [t for t in D.TIERS if t["key"] == "pit"][0]
     rows = D.tier_rows(pit)
     rear = D.hall_radius(0.0)
     void = round(rear - rows[-1]["r"], 2)
     detail = [f"末排 r={rows[-1]['r']:.2f}，后墙 r={rear:.2f}", f"空场 {void} m"]
-    warn = not (REAR_VOID_RANGE[0] <= void <= REAR_VOID_RANGE[1])
-    return None if warn else True, f"{void} m（规格待裁）", detail
+    ok = REAR_VOID_RANGE[0] <= void <= REAR_VOID_RANGE[1]
+    return ok, f"{void} m（要求 {REAR_VOID_RANGE[0]}–{REAR_VOID_RANGE[1]}）", detail
 
 
 def seat_density(seats):

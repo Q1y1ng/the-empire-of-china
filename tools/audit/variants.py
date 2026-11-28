@@ -109,7 +109,49 @@ def simulate(scheme):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--json", default="")
+    ap.add_argument("--grid", action="store_true", help="扫 depth × 后墙宽，找密度/视距都合格的组合")
+    ap.add_argument("--depth", type=float, default=None)
+    ap.add_argument("--w-rear", type=float, default=None)
+    ap.add_argument("--pitch", type=float, default=None, help="座宽（默认 0.58）")
+    ap.add_argument("--row", type=float, default=None, help="排距（默认 0.95）")
     args = ap.parse_args()
+
+    if args.pitch:
+        D.SEAT["pitch"] = args.pitch
+    if args.row:
+        D.SEAT["row"] = args.row
+
+    if args.depth or args.w_rear:
+        s = {"key": "custom", "name": "自定义",
+             "depth": args.depth or D.HALL["depth"],
+             "w_rear": args.w_rear or D.HALL["w_rear"],
+             "pit_r1": None, "note": f"pitch={D.SEAT['pitch']} row={D.SEAT['row']}"}
+        r = simulate(s)
+        print(f"自定义：进深 {r['depth']:.0f} / 后墙 {r['w_rear']:.0f} / "
+              f"座 {D.SEAT['pitch']}×{D.SEAT['row']}")
+        print(f"  面积 {r['area']:.0f} m²，{r['seats']} 席，密度 {r['density']:.2f}，"
+              f"最远视距 {r['far_sight']:.1f} m，后区空场 {r['rear_void']} m")
+        return 0
+
+    if args.grid:
+        print(f"扫描（座 {D.SEAT['pitch']}×{D.SEAT['row']}；目标 ≥1 万席、密度 ≥1.8、视距 ≤60 m）\n")
+        print(f"{'进深':>4s} {'后墙':>4s} " + " ".join(f"{w:>5.0f}m" for w in (100,110,120,130,140,160)))
+        for dep in (60, 65, 70, 75, 80, 95):
+            cells = []
+            for wr in (100, 110, 120, 130, 140, 160):
+                r = simulate({"key": "grid", "name": "g", "depth": dep, "w_rear": wr,
+                              "pit_r1": None, "note": ""})
+                mark = ""
+                if r["seats"] >= 10000 and r["density"] >= 1.8 and r["far_sight"] <= 60:
+                    mark = "★"
+                elif r["seats"] >= 10000:
+                    mark = "·"
+                else:
+                    mark = " "
+                cells.append(f"{r['seats']/1000:>4.1f}k{mark}")
+            print(f"{dep:>4.0f} " + " ".join(f"{c:>5s}" for c in cells))
+        print("\n★ = 席数≥1万 且 密度≥1.8 且 最远视距≤60 m；· = 席数够但密度或视距不合格")
+        return 0
 
     base_seats = D.total_seats()
     rows = [simulate(s) for s in SCHEMES]

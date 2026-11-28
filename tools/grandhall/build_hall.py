@@ -164,6 +164,15 @@ class Mesh:
                  [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
                   (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)])
 
+    def boxc(self, cx, cy, cz, w, d, h, rz=0.0):
+        """中心锚盒体：cz 是盒子中心（`box()` 是底锚，占 cz…cz+h）。
+
+        座席那一组是按中心锚写的（座箱 0.18±0.18 = 地坪到 0.36、座板 0.40±0.04
+        正好坐在座箱顶上）。上一轮把底锚当中心锚用，座椅就浮了 0.18 m。
+        不要改 `box()` 的语义——全项目三万处调用都在用底锚。
+        """
+        self.box(cx, cy, cz - h / 2.0, w, d, h, rz)
+
     def quad(self, p0, p1, p2, p3):
         self.add([p0, p1, p2, p3], [(0, 1, 2, 3)])
 
@@ -632,24 +641,24 @@ def build_seats(tier, idx, desks=True):
                 th = t0 + step * (k + 0.5)
                 x = FX + (r + 0.12) * math.cos(th)
                 y = FY + (r + 0.12) * math.sin(th)
-                # 座箱（落地 —— 解决"座椅跟地板没贴合"：原来座板悬在 z+0.40，底下是空的）
-                S.box(x, y, z + 0.18, 0.46, 0.44, 0.36, rz=th + math.pi / 2)
-                # 座板
-                S.box(x, y, z + 0.40, 0.52, 0.50, 0.08, rz=th + math.pi / 2)
+                # 座箱（落地）：中心锚 0.18±0.18 → 地坪 0…0.36
+                S.boxc(x, y, z + 0.18, 0.46, 0.44, 0.36, rz=th + math.pi / 2)
+                # 座板：中心锚 0.40±0.04 → 0.36…0.44，正好坐在座箱顶上
+                S.boxc(x, y, z + 0.40, 0.52, 0.50, 0.08, rz=th + math.pi / 2)
                 # 靠背：在座席后方（+r 一侧），自座箱后沿立起、分两段近似后倾
                 BK = BKD if (P and BKD) else S
                 bxx = x + 0.21 * math.cos(th)
                 byy = y + 0.21 * math.sin(th)
-                BK.box(bxx, byy, z + 0.70, 0.52, 0.09, 0.56, rz=th + math.pi / 2)
-                BK.box(bxx + 0.05 * math.cos(th), byy + 0.05 * math.sin(th),
-                       z + 0.99, 0.52, 0.09, 0.16, rz=th + math.pi / 2)
+                BK.boxc(bxx, byy, z + 0.70, 0.52, 0.09, 0.56, rz=th + math.pi / 2)
+                BK.boxc(bxx + 0.05 * math.cos(th), byy + 0.05 * math.sin(th),
+                        z + 0.99, 0.52, 0.09, 0.16, rz=th + math.pi / 2)
                 if P:
                     # 扶手：落地支腿 + 扶手面（原来支腿悬空、扶手像飘着的板）
                     for sgn in (1, -1):
                         ax = x + sgn * 0.27 * math.cos(th + math.pi / 2)
                         ay = y + sgn * 0.27 * math.sin(th + math.pi / 2)
-                        S.box(ax, ay, z + 0.30, 0.05, 0.05, 0.60)
-                        S.box(ax, ay, z + 0.60, 0.08, 0.50, 0.05, rz=th + math.pi / 2)
+                        S.boxc(ax, ay, z + 0.30, 0.05, 0.05, 0.60)
+                        S.boxc(ax, ay, z + 0.60, 0.08, 0.50, 0.05, rz=th + math.pi / 2)
             if DD:
                 # 桌板按弧分段，避免大块用弦直连、中段凹进舞台
                 rr_out, rr_in = r - 0.28, r - 0.62
@@ -1099,24 +1108,26 @@ def setup_render():
 
 AR = 16 / 9
 SHOTS = [
-    ("纵剖A—A", dict(loc=(-425, AX + 330, 23.5), target=(-425, AX, 23.5), lens=50,
+    # 【2026-11-28 重算】观众厅收进深后（末排 r=82 → 后墙 x=−431），机位全部重定位。
+    #   池座 r≈45 / 二层 r≈65 / 三层 r≈70，眼高取各层地坪 +1.2 m。
+    ("纵剖A—A", dict(loc=(-436, AX + 330, 23.0), target=(-436, AX, 23.0), lens=50,
                    ortho=246, ar=4.15, hide=(), exp=-0.6)),
-    ("全景自台口", dict(loc=(-482, AX, 15.5), target=(-410, AX, 12.0), lens=17)),
-    ("池座坐姿", dict(loc=(-459.0, AX, 2.50), target=(-500, AX + 2, 6.0), lens=26)),
-    ("二层坐姿", dict(loc=(-447.5, AX, 13.62), target=(-500, AX + 2, 6.0), lens=26)),
-    ("三层坐姿", dict(loc=(-439.2, AX, 22.13), target=(-500, AX + 2, 6.0), lens=26)),
-    ("主席台立姿", dict(loc=(-485.5, AX, 3.00), target=(-430, AX, 13.2), lens=15)),
-    ("主席台俯瞰", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
-    ("仰望穹顶", dict(loc=(-468, AX + 6, 3.6), target=(-440, AX + 1, 44.0), lens=17)),
-    ("中央前厅", dict(loc=(-350, AX - 18, 7.0), target=(-311.5, AX + 4, 9.0), lens=24)),
-    # 座席系统验收机位（2026-11-28，针对作者提的"座椅不贴地/看不出朝向/过道没用/二三层过不去"）
-    ("座席正面", dict(loc=(-491, AX, 3.2), target=(-460, AX, 1.3), lens=40)),
-    ("座椅落地", dict(loc=(-450, AX + 14, 3.1), target=(-446, AX + 7, 1.9), lens=50)),
-    ("横向过道", dict(loc=(-450, AX - 3, 3.3), target=(-450, AX + 48, 2.8), lens=30)),
-    ("二层净空", dict(loc=(-429.5, AX, 17.0), target=(-455, AX, 15.6), lens=22)),
-    ("主席团座椅", dict(loc=(-496, AX + 7, 2.8), target=(-505.5, AX + 2, 2.3), lens=45)),
-    ("池座后区", dict(loc=(-431, AX, 5.2), target=(-394, AX, 4.0), lens=24)),
-    ("剖视鸟瞰", dict(loc=(-322, AX + 104, 74), target=(-462, AX - 8, 12), lens=34,
+    ("全景自台口", dict(loc=(-481, AX, 14.0), target=(-440, AX, 11.0), lens=17)),
+    ("池座坐姿", dict(loc=(-469.0, AX, 2.50), target=(-500, AX + 2, 6.0), lens=26)),
+    ("二层坐姿", dict(loc=(-449.0, AX, 12.50), target=(-500, AX + 2, 6.0), lens=26)),
+    ("三层坐姿", dict(loc=(-444.0, AX, 23.78), target=(-500, AX + 2, 6.0), lens=26)),
+    ("主席台立姿", dict(loc=(-495.0, AX, 3.00), target=(-440, AX, 12.0), lens=15)),
+    ("主席台俯瞰", dict(loc=(-505, AX, 13.0), target=(-448, AX, 13.5), lens=21)),
+    ("仰望穹顶", dict(loc=(-465, AX + 6, 3.6), target=(-445, AX + 1, 44.0), lens=17)),
+    ("中央前厅", dict(loc=(-392, AX - 18, 7.0), target=(-330, AX + 4, 9.0), lens=24)),
+    # 座席系统验收机位
+    ("座席正面", dict(loc=(-478, AX, 3.2), target=(-455, AX, 1.3), lens=40)),
+    ("座椅落地", dict(loc=(-460, AX + 14, 3.1), target=(-456, AX + 7, 1.9), lens=50)),
+    ("横向过道", dict(loc=(-460, AX - 3, 3.3), target=(-460, AX + 40, 2.8), lens=30)),
+    ("二层净空", dict(loc=(-446, AX, 12.5), target=(-440, AX, 19.5), lens=20)),
+    ("主席团座椅", dict(loc=(-500, AX + 7, 2.8), target=(-508, AX + 2, 2.3), lens=45)),
+    ("池座后区", dict(loc=(-447, AX, 5.2), target=(-431, AX, 4.0), lens=24)),
+    ("剖视鸟瞰", dict(loc=(-330, AX + 104, 74), target=(-450, AX - 8, 12), lens=34,
                    hide=("dome", "wall_n", "foyer_ceil"))),
 ]
 
