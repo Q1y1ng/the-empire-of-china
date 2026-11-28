@@ -546,11 +546,12 @@ def build_stage():
         FUR.box(bx + 5.4, AX, 2.10, 1.05, 22.0, 0.16)
         FUR.box(bx + 5.4, AX, 1.50, 0.90, 22.0, 0.60)
         GLD.box(bx + 5.0, AX, 2.04, 0.06, 22.2, 0.24)
-        # 主席团座椅：9 把
+        # 主席团座椅：9 把（靠背在 -x 一侧＝靠后墙那一侧，人是面朝观众席 +x 坐的；
+        # 原来靠背放在 pad 的 +x 边，等于九把椅子全部背对观众——作者 2026-11-28 指出）
         for k in range(9):
             yy = AX - 9.6 + k * 2.4
             FUR.box(bx + 6.8, yy, 2.26, 0.62, 0.56, 0.12)
-            FUR.box(bx + 7.05, yy, 2.30, 0.12, 0.56, 0.72)
+            FUR.box(bx + 6.49, yy, 2.30, 0.12, 0.56, 0.72)
         # 台唇与踏步
         FUR.box(D.PROSCENIUM["x"] + 0.35, AX, 1.34, 0.70, D.PROSCENIUM["w"], 0.20)
         for i in range(3):
@@ -659,21 +660,24 @@ def build_seats(tier, idx, desks=True):
                 th = t0 + step * (k + 0.5)
                 x = FX + (r + 0.12) * math.cos(th)
                 y = FY + (r + 0.12) * math.sin(th)
-                # 椅座 + 靠背（靠背在座席后方，即 +r 一侧）
-                S.box(x, y, z + 0.40, 0.52, 0.50, 0.09, rz=th + math.pi / 2)
+                # 座箱（落地 —— 解决"座椅跟地板没贴合"：原来座板悬在 z+0.40，底下是空的）
+                S.box(x, y, z + 0.18, 0.46, 0.44, 0.36, rz=th + math.pi / 2)
+                # 座板
+                S.box(x, y, z + 0.40, 0.52, 0.50, 0.08, rz=th + math.pi / 2)
+                # 靠背：在座席后方（+r 一侧），自座箱后沿立起、分两段近似后倾
                 BK = BKD if (P and BKD) else S
-                BK.box(x + 0.26 * math.cos(th), y + 0.26 * math.sin(th), z + 0.44,
-                       0.52, 0.10, 0.52, rz=th + math.pi / 2)
+                bxx = x + 0.21 * math.cos(th)
+                byy = y + 0.21 * math.sin(th)
+                BK.box(bxx, byy, z + 0.70, 0.52, 0.09, 0.56, rz=th + math.pi / 2)
+                BK.box(bxx + 0.05 * math.cos(th), byy + 0.05 * math.sin(th),
+                       z + 0.99, 0.52, 0.09, 0.16, rz=th + math.pi / 2)
                 if P:
-                    # 扶手：面（前后向）+ 前支座 + 竖向连接，做成实心扶手而非细条
+                    # 扶手：落地支腿 + 扶手面（原来支腿悬空、扶手像飘着的板）
                     for sgn in (1, -1):
                         ax = x + sgn * 0.27 * math.cos(th + math.pi / 2)
                         ay = y + sgn * 0.27 * math.sin(th + math.pi / 2)
-                        S.box(ax, ay, z + 0.58, 0.08, 0.50, 0.06, rz=th + math.pi / 2)
-                        S.box(ax - 0.20 * math.cos(th), ay - 0.20 * math.sin(th),
-                              z + 0.40, 0.06, 0.06, 0.18)
-                        S.box(ax + 0.20 * math.cos(th), ay + 0.20 * math.sin(th),
-                              z + 0.44, 0.06, 0.06, 0.14, rz=th + math.pi / 2)
+                        S.box(ax, ay, z + 0.30, 0.05, 0.05, 0.60)
+                        S.box(ax, ay, z + 0.60, 0.08, 0.50, 0.05, rz=th + math.pi / 2)
             if DD:
                 # 桌板按弧分段，避免大块用弦直连、中段凹进舞台
                 rr_out, rr_in = r - 0.28, r - 0.62
@@ -1133,6 +1137,11 @@ SHOTS = [
     ("主席台俯瞰", dict(loc=(-497, AX, 13.0), target=(-424, AX, 13.5), lens=21)),
     ("仰望穹顶", dict(loc=(-468, AX + 6, 3.6), target=(-440, AX + 1, 44.0), lens=17)),
     ("中央前厅", dict(loc=(-350, AX - 18, 7.0), target=(-311.5, AX + 4, 9.0), lens=24)),
+    # 座席系统验收机位（2026-11-28，针对作者提的"座椅不贴地/看不出朝向/过道没用/二三层过不去"）
+    ("座席正面", dict(loc=(-491, AX, 3.2), target=(-460, AX, 1.3), lens=40)),
+    ("座椅落地", dict(loc=(-457, AX + 12, 2.4), target=(-451, AX + 5, 1.5), lens=50)),
+    ("横向过道", dict(loc=(-450, AX - 3, 3.3), target=(-450, AX + 48, 2.8), lens=30)),
+    ("二层净空", dict(loc=(-431, AX, 17.4), target=(-426.5, AX, 20.6), lens=30)),
     ("剖视鸟瞰", dict(loc=(-322, AX + 104, 74), target=(-462, AX - 8, 12), lens=34,
                    hide=("dome", "wall_n", "foyer_ceil"))),
 ]

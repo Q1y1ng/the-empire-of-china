@@ -75,13 +75,21 @@ SEAT = {"pitch": 0.58, "row": 0.95, "aisle": 1.6, "aisle_every": 18.0}
 # 三层座席。池座为纯扇面（wrap=0）；两层挑台为**U 形**——前缘在轴线上最深、
 # 沿两侧向台口方向包转（wrap = 侧翼前伸的半径量，theta_ref = 该前伸量对应的张角）。
 TIERS = [
-    {"key": "pit", "name": "池座", "r0": 38.5, "r1": 79.8,
-     "z0": 0.0, "slope": 0.075, "wrap": 0.0, "theta_ref": 0.5, "target": 4690},
-    {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 76.5,
-     "z0": 10.0, "slope": 0.38, "wrap": 0.0, "theta_ref": 0.5, "target": 3020},
-    {"key": "bal2", "name": "三层挑台", "r0": 77.0, "r1": 94.5,
-     "z0": 20.0, "slope": 0.48, "wrap": 0.0, "theta_ref": 0.5, "target": 2500},
+    # 2026-11-28 座席系统整改：加横向过道（mid/rear）、挑台向后铺开、削缓起坡，
+    # 让三层净空从 1.99 m 提到 2.3 m 以上，同时把座席总数补回约 1 万。
+    {"key": "pit", "name": "池座", "r0": 38.5, "r1": 88.0,
+     "z0": 0.0, "slope": 0.075, "wrap": 0.0, "theta_ref": 0.5, "target": 4690,
+     "aisles": {"mid": 1.8, "rear": 2.4}},
+    {"key": "bal1", "name": "二层挑台", "r0": 60.0, "r1": 84.0,
+     "z0": 10.0, "slope": 0.26, "wrap": 0.0, "theta_ref": 0.5, "target": 3020,
+     "aisles": {"mid": 1.8, "rear": 2.4}},
+    {"key": "bal2", "name": "三层挑台", "r0": 86.5, "r1": 102.5,
+     "z0": 20.9, "slope": 0.28, "wrap": 0.0, "theta_ref": 0.5, "target": 2500,
+     "aisles": {"mid": 1.8, "rear": 2.8}},
 ]
+# 【作者·2026-11-28】座席系统五条缺陷：①座椅不贴地 ②座椅朝向看不出 ③池座后区空场
+#   ④二三层净空不足 ⑤只有纵向过道、没有横向过道（被座椅卡死）
+#   本轮处理 ①②④⑤；③是厅的平面尺寸相对 1 万座偏大的规格问题，待作者裁决。
 
 STAGE_SEATS = 400        # 主席台（不计入万人席）
 
@@ -193,17 +201,28 @@ def row_blocks(r, tier):
 
 
 def tier_rows(tier):
-    """一层座席的逐排数据：[{r, z, blocks, seats}]。"""
+    """一层座席的逐排数据：[{r, z, blocks, seats}]。
+
+    横向过道（`aisles`）：中线一道 `mid` 宽、末排让出 `rear` 宽——只**跳过行**，
+    楼板由 `fan_surface` 按 (r, θ) 密铺到厅墙，不会因此破洞。
+    """
     rr = []
+    ais = tier.get("aisles") or {}
+    mid_w = float(ais.get("mid", 0.0) or 0.0)
+    rear_w = float(ais.get("rear", 0.0) or 0.0)
+    r_mid = 0.5 * (tier["r0"] + tier["r1"])
     r = tier["r0"]
     while r <= tier["r1"] + 1e-9:
-        blocks = row_blocks(r, tier)
-        rr.append({
-            "r": round(r, 3),
-            "z": round(tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"], 3),
-            "blocks": blocks,
-            "seats": sum(b[2] for b in blocks),
-        })
+        in_mid = mid_w > 0.0 and abs(r - r_mid) <= mid_w * 0.5
+        in_rear = rear_w > 0.0 and r > tier["r1"] - rear_w
+        if not (in_mid or in_rear):
+            blocks = row_blocks(r, tier)
+            rr.append({
+                "r": round(r, 3),
+                "z": round(tier["z0"] + max(0.0, r - tier["r0"]) * tier["slope"], 3),
+                "blocks": blocks,
+                "seats": sum(b[2] for b in blocks),
+            })
         r += SEAT["row"]
     # U 形挑台的侧翼自 r0 向前包转：把 r0 之前的行补出来
     if tier.get("wrap", 0.0) > 0.0:
