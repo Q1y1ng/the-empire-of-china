@@ -95,24 +95,38 @@ def seat_floor_gap(items):
 
 
 def balcony_headroom(items):
-    """② bal2.headroom：三层挑台最低点 − 二层可站楼板最高点（bbox 级保守下界）。
+    """② bal2.headroom：三层底面与二层楼板的最小净空（同一半径对同一半径）。
 
-    口径说明：不引入板厚常量（1.55 若写进来就是第 4 份重复），直接用 bal2 网格的
-    最低点作“底面”。二层楼板取 clamp 后的最高值——末排之外是平台，不是继续爬坡。
+    旧口径是「三层全局最低点 − 二层楼板最高点」，只在三层整体高于二层末排时成立。
+    2026-11-29 两层挑台径向重叠（二层 r 60—82、三层 r 64—82）后该口径会误报：
+    三层前端（r=64）最低、二层末排（r=82）最高，两个点根本不在同一半径上。改为逐排
+    比同一半径；板厚不写死，由「三层起点标高 − 其网格最低点」反推。
     """
     b2 = by_group(items, "bal2")
     if not b2:
         return False, "无 bal2 物体", []
-    soffit = min(i["min"][2] for i in b2)
     bal1 = [t for t in D.TIERS if t["key"] == "bal1"][0]
-    rows = D.tier_rows(bal1)
-    floor_max = max(D.tier_z(bal1, D.FOCUS["x"] + r, D.FOCUS["y"], clamp=True)
-                    for r in [x["r"] for x in rows])
-    h = round(soffit - floor_max, 3)
-    detail = [f"三层最低点 {soffit:.3f}（{min(b2, key=lambda i: i['min'][2])['name']}）",
-              f"二层楼板最高 {floor_max:.3f}（clamp 后）", f"净空 {h:.3f} m"]
+    bal2 = [t for t in D.TIERS if t["key"] == "bal2"][0]
+    soffit_front = min(i["min"][2] for i in b2)
+    slab = round(bal2["z0"] - soffit_front, 3)      # 板厚，从几何反推（不新增常量）
+    worst = None
+    for row in D.tier_rows(bal1):
+        r = row["r"]
+        if r < bal2["r0"] - 0.01:
+            continue
+        x, y = D.FOCUS["x"] + r, D.FOCUS["y"]
+        floor1 = D.tier_z(bal1, x, y, clamp=True)
+        soffit2 = D.tier_z(bal2, x, y, clamp=True) - slab
+        h = soffit2 - floor1
+        if worst is None or h < worst[0]:
+            worst = (h, r, floor1, soffit2)
+    if worst is None:
+        return False, "二三层没有径向重叠，无从比较", []
+    h, r, floor1, soffit2 = worst
+    h = round(h, 3)
+    detail = [f"板厚 {slab:.3f}（三层起点 {bal2['z0']:.2f} − 网格最低 {soffit_front:.3f}）",
+              f"最紧处 r={r:.1f}：三层底 {soffit2:.3f} − 二层板 {floor1:.3f} = {h:.3f} m"]
     return h >= HEADROOM_MIN, f"{h:.3f} m（门槛 {HEADROOM_MIN}）", detail
-
 
 def cross_aisles():
     """③ cross_aisle_count：每层横向过道处数（数据声明，不是从几何里找缺口）。
