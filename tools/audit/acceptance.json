@@ -1,0 +1,68 @@
+{
+ "_doc": "作者验收条目账本。作者每次走进模型说的话，逐条落在这里，并绑定一条断言或一个待裁项。目标是：作者提过的，第二次构建之前机器就能挡住，而不是再靠他走进去。",
+ "_schema": {
+  "id": "A-### 递增",
+  "date": "提出日期",
+  "quote": "作者原话（尽量原样）",
+  "kind": "关系 | 几何 | 规格 | 语义",
+  "assert": "绑定的断言名（asserts.py 里的），或 null",
+  "status": "open（未解决）| asserted（已有断言守住）| fixed（已修且断言通过）| spec（等作者裁决）",
+  "note": "口径/位置的补充"
+ },
+ "items": [
+  {
+   "id": "A-001",
+   "date": "2026-11-28",
+   "quote": "座椅跟地板没有贴合",
+   "kind": "几何",
+   "assert": "seat.floor_gap",
+   "status": "open",
+   "note": "断言实测 0.180 m：Mesh.box 是底锚（cz…cz+h），三处座席调用按中心锚写。上一轮 0.40 → 0.18，仍未落地。"
+  },
+  {
+   "id": "A-002",
+   "date": "2026-11-28",
+   "quote": "作者走进二层，被三层前缘顶住",
+   "kind": "关系",
+   "assert": "bal2.headroom",
+   "status": "asserted",
+   "note": "口径已统一为 clamp 后楼板：3.566 m ≥ 2.30。构建端原报 2.46 是未 clamp 外推。"
+  },
+  {
+   "id": "A-003",
+   "date": "2026-11-28",
+   "quote": "只有纵向过道、没有横向过道（被座椅卡死）",
+   "kind": "规格",
+   "assert": "cross_aisle",
+   "status": "asserted",
+   "note": "TIERS[i].aisles 每层 2 处：mid 1.8 / rear 2.4（三层 2.8），均 ≥1.5。"
+  },
+  {
+   "id": "A-004",
+   "date": "2026-11-28",
+   "quote": "主席团 9 椅背对观众",
+   "kind": "语义",
+   "assert": "seat.forward",
+   "status": "open",
+   "note": "断言器 SKIP：manifest 无朝向字段。要在构建端断言 chair_forward·(FOCUS−pos)>0，主席台 9 椅取 −1。"
+  },
+  {
+   "id": "A-005",
+   "date": "2026-11-28",
+   "quote": "池座后区 45 m 空场",
+   "kind": "规格",
+   "assert": "pit.rear_void",
+   "status": "spec",
+   "note": "当前 39.95 m（changes 后）。铺满 / 缩厅 / 后区改功能带，三条方案见 variants.py。"
+  },
+  {
+   "id": "A-006",
+   "date": "2026-11-28",
+   "quote": "（自查发现）观众厅 9,500 m² 放 10,340 席，密度 1.088 席/m²，人民大会堂约 2.2",
+   "kind": "规格",
+   "assert": "seat.density",
+   "status": "spec",
+   "note": "不是 bug，是口径。等作者在 variants.py 的三档里选。"
+  }
+ ]
+}

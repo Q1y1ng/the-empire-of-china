@@ -53,11 +53,68 @@ def affected(prev, cur):
     return stations_for(groups, new_items) if groups else []
 
 
+def acceptance_summary():
+    """验收账本里还没守住的条目数（A 路子的日常读数）。"""
+    path = os.path.join(HERE, "acceptance.json")
+    if not os.path.exists(path):
+        return
+    import json as _json
+    with open(path, encoding="utf-8") as fh:
+        doc = _json.load(fh)
+    open_n = sum(1 for i in doc["items"] if i.get("status") == "open")
+    spec = sum(1 for i in doc["items"] if i.get("status") == "spec")
+    if open_n or spec:
+        print(f"\n验收账本：{open_n} 条未守住、{spec} 条待裁"
+              f"（py -3 tools/audit/acceptance.py --open）")
+
+
+def run_geom(blend):
+    """Blender 侧几何自检，返回 0/1。"""
+    if not os.path.exists(blend):
+        print(f"找不到 .blend：{blend}", file=sys.stderr)
+        return 2
+    out = os.path.join(os.environ.get("TEMP", "."), "grandhall_geom.json")
+    blender = os.environ.get("BLENDER_EXE",
+                             r"E:\SteamLibrary\steamapps\common\Blender\blender.exe")
+    cmd = [blender, "-b", blend, "--factory-startup", "-P",
+           os.path.join(HERE, "geom.py"), "--", "--out", out]
+    proc = subprocess.run(cmd, timeout=1200, capture_output=True, text=True,
+                          encoding="utf-8", errors="replace")
+    for line in (proc.stdout or "").splitlines():
+        if line.startswith("GEOM"):
+            print(line, flush=True)
+    if "GEOM_DONE" not in (proc.stdout or ""):
+        print(proc.stderr[-2000:], file=sys.stderr)
+        print("几何自检没跑完（Blender 脚本报错也返回 0，这里按 GEOM_DONE 判定）",
+              file=sys.stderr)
+        return 1
+    import json as _json
+    try:
+        with open(out, encoding="utf-8") as fh:
+            doc = _json.load(fh)
+    except Exception:
+        return 1
+    fresh = doc.get("overlap_total", 0)
+    float_n = len(doc.get("floating", []))
+    inv = len(doc.get("inverted", []))
+    dup = len(doc.get("duplicate_bbox", []))
+    print(f"  未登记互穿 {fresh} 对（白名单另计 {doc.get('overlap_known', 0)}）、"
+          f"悬空 {float_n}、法线内翻 {inv}、重合 {dup}")
+    for p in doc.get("overlap", [])[:5]:
+        print(f"    · {p['a']} × {p['b']}（bbox 面 {p['bbox_faces']}）")
+    return 1 if (float_n or inv or dup) else 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", default=DEFAULT_MANIFEST)
     ap.add_argument("--no-shots", action="store_true")
     ap.add_argument("--diff", default="", help="上一个 manifest；只出有变化的机位")
+    ap.add_argument("--geom", action="store_true",
+                    help="另跑几何自检（互穿/悬空/法线/重合，需 Blender + .blend，约 3 s）")
+    ap.add_argument("--blend", default=os.path.join(os.environ.get("LOCALAPPDATA", ""),
+                                                    "Temp", "grandhall",
+                                                    "grandhall_precise.blend"))
     ap.add_argument("--fail-on-warn", action="store_true")
     ap.add_argument("--res", type=int, default=1280)
     args = ap.parse_args()
@@ -72,6 +129,13 @@ def main():
     rc = run("asserts.py", a[1:])
     if rc == 2:
         return 2
+
+    if args.geom:
+        print("\n" + "=" * 62)
+        print("①b 几何自检（Blender）")
+        print("=" * 62, flush=True)
+        rc_geom = run_geom(args.blend)
+        rc = rc or rc_geom
 
     if args.no_shots:
         print(f"\n（跳过出图，共 {time.time() - t0:.1f} s）")
