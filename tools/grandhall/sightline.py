@@ -12,6 +12,7 @@
 因此各层只需校核自己的栏板与（对池座后区而言）上一层挑台的底面。
 
     py -3 sightline.py            # 打印表格
+    py -3 sightline.py --summary  # 每层「几排看得见」汇总 + 挑台需要多陡
     py -3 sightline.py --json     # 供 build_draft.py 画视线图
 """
 
@@ -22,6 +23,9 @@ import math
 import sys
 
 import hall_data as D
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 FX, FY = D.FOCUS["x"], D.FOCUS["y"]
 EYE = 1.15          # 坐姿眼高
@@ -73,11 +77,69 @@ def tier_report(tier):
     return out
 
 
+def need_slope(tier, target, n_rows=None):
+    """末排要看见「目标高度」，本层坡度至少多少。
+
+    由 lim(rear) ≤ target 解出：
+        s ≥ (z0 + RAIL − target)/(r_front − r_t) − (EYE − RAIL)/(r_rear − r_front)
+    与进深几乎无关（最后一项很小），主导项是「栏板高出目标多少 ÷ 到台口的水平距离」。
+    """
+    rows = D.tier_rows(tier)
+    r_front = tier["r0"]
+    r_rear = rows[-1]["r"]
+    a = r_front - 36.06
+    d = max(r_rear - r_front, 1e-6)
+    if a <= 0:
+        return None
+    return (tier["z0"] + RAIL - target) / a - (EYE - RAIL) / d
+
+
+def z0_for_slope(tier, slope, target):
+    """保持给定坡度时，本层起点标高最多多少才能让末排看见目标（反函数）。"""
+    rows = D.tier_rows(tier)
+    a = tier["r0"] - 36.06
+    d = max(rows[-1]["r"] - tier["r0"], 1e-6)
+    return target - RAIL + a * (slope + (EYE - RAIL) / d)
+
+
+def print_summary(res):
+    step = D.SEAT["row"]
+    print("每层可见性（判据：越过本层挑台前缘栏板）")
+    for t in D.TIERS:
+        rep = res[t["key"]]
+        if not rep:
+            continue
+        n = len(rep)
+        deck = sum(1 for x in rep if x["deck"])
+        head = sum(1 for x in rep if x["head"])
+        top = sum(1 for x in rep if x["top"])
+        riser = t["slope"] * step * 100
+        print(f'  {t["name"]}: 见台面 {deck}/{n} 排、见头部 {head}/{n} 排、'
+              f'见台口上缘 {top}/{n} 排；坡度 {t["slope"]:.2f}（每排升 {riser:.0f} cm）')
+        for label, target in (("台面", TARGETS["deck"]), ("头部", TARGETS["head"])):
+            s = need_slope(t, target)
+            if s is None:
+                continue
+            z0 = z0_for_slope(t, t["slope"], target)
+            mark = "已满足" if s <= t["slope"] + 1e-9 else \
+                   f"需坡度 {s:.2f}（每排 {s * step * 100:.0f} cm），或 z0 ≤ {z0:.2f} m"
+            print(f'      末排看{label}: {mark}')
+    print(f'\n目标：台面 {TARGETS["deck"]:.2f} / 头部 {TARGETS["head"]:.2f} / '
+          f'台口上缘 {TARGETS["top"]:.2f} m')
+
+
 def main():
     D.tier_front_for_axis = lambda t: t["r0"]
     res = {}
     for t in D.TIERS:
         res[t["key"]] = tier_report(t)
+
+    if "--summary" in sys.argv:
+        print_summary(res)
+        if "--json" in sys.argv:
+            print(json.dumps(res, ensure_ascii=False))
+        return
+
     lines = []
     for t in D.TIERS:
         rep = res[t["key"]]

@@ -631,6 +631,31 @@ def build_balcony(tier, idx):
 #         ②改一处全座更新；③几何关系（靠背不插座箱、扶手不挤邻座、桌板不穿前排背）
 #         在样板里一次定死。
 #   样板 8 个盒 ≈ 96 三角/座 → 全场 1.0 M 三角（原来 0.75 M，多 25% 换清晰度）。
+def _chamfer_box(cx, cy, cz, w, d, h, c):
+    """顶面倒角盒（读作软垫/软包）：底 8 顶点 → 中环 → 顶面内收 c。
+
+    6 个面 + 4 个倒角面 = 10 个四边形（20 三角），比素盒多 8 个面，
+    但座垫与靠背在近景里立刻从“纸盒”变成“软垫”。c 取 0.012–0.02。
+    """
+    hw, hd, hh = w / 2.0, d / 2.0, h / 2.0
+    z0, z1 = cz - hh, cz + hh
+    zm = z1 - c
+    iw, id_ = hw - c, hd - c
+    pts = [
+        (cx - hw, cy - hd, z0), (cx + hw, cy - hd, z0),
+        (cx + hw, cy + hd, z0), (cx - hw, cy + hd, z0),
+        (cx - hw, cy - hd, zm), (cx + hw, cy - hd, zm),
+        (cx + hw, cy + hd, zm), (cx - hw, cy + hd, zm),
+        (cx - iw, cy - id_, z1), (cx + iw, cy - id_, z1),
+        (cx + iw, cy + id_, z1), (cx - iw, cy + id_, z1),
+    ]
+    faces = [(0, 3, 2, 1),
+             (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7),
+             (4, 5, 9, 8), (5, 6, 10, 9), (6, 7, 11, 10), (7, 4, 8, 11),
+             (8, 9, 10, 11)]
+    return pts, faces
+
+
 def _seat_boxes(Q):
     """单座样板：返回 (seat_boxes, back_boxes)，每盒 (cx, cy, cz, w, d, h)。
 
@@ -650,26 +675,26 @@ def _seat_boxes(Q):
     back_w = Q["pad_w"] - 2 * Q["back_w_inset"]     # 靠背比座垫窄，露出缝，不连成墙
 
     seat = [
-        # 座箱：落地
-        (0.0, 0.0, box_h / 2.0, Q["pad_w"], Q["pad_d"], box_h),
-        # 座垫：出唇，坐在座箱上
+        # 座箱：落地（素盒，看不见）
+        (0.0, 0.0, box_h / 2.0, Q["pad_w"], Q["pad_d"], box_h, 0.0),
+        # 座垫：出唇，顶面倒角 → 软垫感
         (0.0, 0.0, box_h + board_h / 2.0,
-         Q["pad_w"] + 2 * lip, Q["pad_d"] + 2 * lip, board_h),
+         Q["pad_w"] + 2 * lip, Q["pad_d"] + 2 * lip, board_h, 0.012),
     ]
     # 扶手：支腿 + 扶手面（左右各一，外缘 = 半座距 − 0.005）
     for sgn in (1, -1):
         ax = sgn * Q["arm_off"]
         leg_h = Q["arm_h"] - Q["arm_face_t"]
-        seat.append((ax, 0.02, leg_h / 2.0, 0.04, 0.04, leg_h))
+        seat.append((ax, 0.02, leg_h / 2.0, 0.04, 0.04, leg_h, 0.0))
         seat.append((ax, 0.04, Q["arm_h"] - Q["arm_face_t"] / 2.0,
-                     Q["arm_w"], Q["arm_len"], Q["arm_face_t"]))
+                     Q["arm_w"], Q["arm_len"], Q["arm_face_t"], 0.008))
     # 靠背：下宽上窄两段（收腰 0.04），顶端到座面 +0.54 ≈ 0.98 m 标准椅背高。
     # 旧版一块做到 1.16 m、宽满座距，整排连成隔断墙——这是「看着不像椅子」的主因。
     split = Q["back_h"] * 0.62
     back = [
-        (0.0, back_c, back_bot + split / 2.0, back_w, Q["back_t"], split),
+        (0.0, back_c, back_bot + split / 2.0, back_w, Q["back_t"], split, 0.0),
         (0.0, back_c + 0.02, back_bot + split + (Q["back_h"] - split) / 2.0,
-         back_w - 0.04, Q["back_t"], Q["back_h"] - split),
+         back_w - 0.04, Q["back_t"], Q["back_h"] - split, 0.015),
     ]
     return seat, back
 
@@ -679,7 +704,16 @@ def _stamp(mesh, boxes, x, y, z, th):
     a = th - math.pi / 2.0          # 局部 +Y → 径向 (cos th, sin th)
     c, s = math.cos(a), math.sin(a)
     verts, faces = [], []
-    for (cx, cy, cz, w, d, h) in boxes:
+    for spec in boxes:
+        cx, cy, cz, w, d, h = spec[:6]
+        cham = spec[6] if len(spec) > 6 else 0.0
+        if cham > 0:
+            pts0, ff = _chamfer_box(cx, cy, cz, w, d, h, cham)
+            base = len(verts)
+            for (vx, vy, vz) in pts0:
+                verts.append((x + vx * c - vy * s, y + vx * s + vy * c, z + vz))
+            faces += [tuple(base + i for i in f) for f in ff]
+            continue
         hw, hd, hh = w / 2.0, d / 2.0, h / 2.0
         pts = [(cx - hw, cy - hd, cz - hh), (cx + hw, cy - hd, cz - hh),
                (cx + hw, cy + hd, cz - hh), (cx - hw, cy + hd, cz - hh),
