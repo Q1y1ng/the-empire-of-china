@@ -626,11 +626,85 @@ def build_balcony(tier, idx):
 
 
 # ------------------------------------------------------------------ 4 座席
+# 【作者·2026-11-29】「精细做一个然后复制粘贴」——座椅按**单座样板**建，再逐座变换复制。
+#   好处：①精细度只在一个函数里调，不用在 1 万次循环里重复 8 遍尺寸；
+#         ②改一处全座更新；③几何关系（靠背不插座箱、扶手不挤邻座、桌板不穿前排背）
+#         在样板里一次定死。
+#   样板 8 个盒 ≈ 96 三角/座 → 全场 1.0 M 三角（原来 0.75 M，多 25% 换清晰度）。
+def _seat_boxes(Q):
+    """单座样板：返回 (seat_boxes, back_boxes)，每盒 (cx, cy, cz, w, d, h)。
+
+    局部坐标：原点 = 座心落地；+Y = 后排方向（靠背侧）；−Y = 朝舞台（桌板侧）。
+    样板本身已在 SEAT_DETAIL 里保证互不穿插，逐座复制不再做任何修正。
+    """
+    hw = Q["pad_w"] / 2.0
+    hd = Q["pad_d"] / 2.0
+    box_h, board_h = Q["box_h"], Q["board_h"]
+    lip = Q["board_lip"]
+    seat_h = box_h + board_h
+
+    back_front = hd + Q["back_gap"]
+    back_c = back_front + Q["back_t"] / 2.0
+    back_bot = seat_h
+    back_top = back_bot + Q["back_h"]
+    back_w = Q["pad_w"] - 2 * Q["back_w_inset"]     # 靠背比座垫窄，露出缝，不连成墙
+
+    seat = [
+        # 座箱：落地
+        (0.0, 0.0, box_h / 2.0, Q["pad_w"], Q["pad_d"], box_h),
+        # 座垫：出唇，坐在座箱上
+        (0.0, 0.0, box_h + board_h / 2.0,
+         Q["pad_w"] + 2 * lip, Q["pad_d"] + 2 * lip, board_h),
+    ]
+    # 扶手：支腿 + 扶手面（左右各一，外缘 = 半座距 − 0.005）
+    for sgn in (1, -1):
+        ax = sgn * Q["arm_off"]
+        leg_h = Q["arm_h"] - Q["arm_face_t"]
+        seat.append((ax, 0.02, leg_h / 2.0, 0.04, 0.04, leg_h))
+        seat.append((ax, 0.04, Q["arm_h"] - Q["arm_face_t"] / 2.0,
+                     Q["arm_w"], Q["arm_len"], Q["arm_face_t"]))
+    # 靠背：下宽上窄两段（收腰 0.04），顶端到座面 +0.54 ≈ 0.98 m 标准椅背高。
+    # 旧版一块做到 1.16 m、宽满座距，整排连成隔断墙——这是「看着不像椅子」的主因。
+    split = Q["back_h"] * 0.62
+    back = [
+        (0.0, back_c, back_bot + split / 2.0, back_w, Q["back_t"], split),
+        (0.0, back_c + 0.02, back_bot + split + (Q["back_h"] - split) / 2.0,
+         back_w - 0.04, Q["back_t"], Q["back_h"] - split),
+    ]
+    return seat, back
+
+
+def _stamp(mesh, boxes, x, y, z, th):
+    """把一个样板按 (x, y, z, th) 复制进网格。th 为径向角。"""
+    a = th - math.pi / 2.0          # 局部 +Y → 径向 (cos th, sin th)
+    c, s = math.cos(a), math.sin(a)
+    verts, faces = [], []
+    for (cx, cy, cz, w, d, h) in boxes:
+        hw, hd, hh = w / 2.0, d / 2.0, h / 2.0
+        pts = [(cx - hw, cy - hd, cz - hh), (cx + hw, cy - hd, cz - hh),
+               (cx + hw, cy + hd, cz - hh), (cx - hw, cy + hd, cz - hh),
+               (cx - hw, cy - hd, cz + hh), (cx + hw, cy - hd, cz + hh),
+               (cx + hw, cy + hd, cz + hh), (cx - hw, cy + hd, cz + hh)]
+        base = len(verts)
+        for (vx, vy, vz) in pts:
+            verts.append((x + vx * c - vy * s, y + vx * s + vy * c, z + vz))
+        faces += [(base + 0, base + 3, base + 2, base + 1),
+                  (base + 4, base + 5, base + 6, base + 7),
+                  (base + 0, base + 1, base + 5, base + 4),
+                  (base + 1, base + 2, base + 6, base + 5),
+                  (base + 2, base + 3, base + 7, base + 6),
+                  (base + 3, base + 0, base + 4, base + 7)]
+    mesh.add(verts, faces)
+
+
 def build_seats(tier, idx, desks=True):
+    Q = D.SEAT_DETAIL
     g = f"seat{idx}"
     S = Mesh(f"座席{idx}", MAT["seat"], g)
     BKD = Mesh(f"椅背{idx}", MAT["seat_dark"], g) if P else None
     DD = Mesh(f"桌板{idx}", MAT["stage"] if P else MAT["seat"], g) if desks else None
+    seat_t, back_t = _seat_boxes(Q)
+
     for row in D.tier_rows(tier):
         r, z = row["r"], row["z"]
         for (t0, t1, n) in row["blocks"]:
@@ -639,43 +713,30 @@ def build_seats(tier, idx, desks=True):
             step = (t1 - t0) / n
             for k in range(n):
                 th = t0 + step * (k + 0.5)
-                x = FX + (r + 0.12) * math.cos(th)
-                y = FY + (r + 0.12) * math.sin(th)
-                # 座箱（落地）：中心锚 0.18±0.18 → 地坪 0…0.36
-                S.boxc(x, y, z + 0.18, 0.46, 0.44, 0.36, rz=th + math.pi / 2)
-                # 座板：中心锚 0.40±0.04 → 0.36…0.44，正好坐在座箱顶上
-                S.boxc(x, y, z + 0.40, 0.52, 0.50, 0.08, rz=th + math.pi / 2)
-                # 靠背：在座席后方（+r 一侧），自座箱后沿立起、分两段近似后倾
-                BK = BKD if (P and BKD) else S
-                bxx = x + 0.21 * math.cos(th)
-                byy = y + 0.21 * math.sin(th)
-                BK.boxc(bxx, byy, z + 0.70, 0.52, 0.09, 0.56, rz=th + math.pi / 2)
-                BK.boxc(bxx + 0.05 * math.cos(th), byy + 0.05 * math.sin(th),
-                        z + 0.99, 0.52, 0.09, 0.16, rz=th + math.pi / 2)
-                if P:
-                    # 扶手：落地支腿 + 扶手面（原来支腿悬空、扶手像飘着的板）
-                    for sgn in (1, -1):
-                        ax = x + sgn * 0.27 * math.cos(th + math.pi / 2)
-                        ay = y + sgn * 0.27 * math.sin(th + math.pi / 2)
-                        S.boxc(ax, ay, z + 0.30, 0.05, 0.05, 0.60)
-                        S.boxc(ax, ay, z + 0.60, 0.08, 0.50, 0.05, rz=th + math.pi / 2)
-            if DD:
-                # 桌板按弧分段，避免大块用弦直连、中段凹进舞台
-                rr_out, rr_in = r - 0.28, r - 0.62
-                if rr_in > 36.4:
-                    seg = max(1, int((t1 - t0) * r / 1.2))
-                    for q in range(seg):
-                        a0 = t0 + (t1 - t0) * q / seg
-                        a1 = t0 + (t1 - t0) * (q + 1) / seg
-                        p0 = (FX + rr_out * math.cos(a0), FY + rr_out * math.sin(a0), z + 0.70)
-                        p1 = (FX + rr_out * math.cos(a1), FY + rr_out * math.sin(a1), z + 0.70)
-                        p2 = (FX + rr_in * math.cos(a1), FY + rr_in * math.sin(a1), z + 0.70)
-                        p3 = (FX + rr_in * math.cos(a0), FY + rr_in * math.sin(a0), z + 0.70)
-                        DD.add([p0, p1, p2, p3,
-                                (p0[0], p0[1], z + 0.62), (p1[0], p1[1], z + 0.62),
-                                (p2[0], p2[1], z + 0.62), (p3[0], p3[1], z + 0.62)],
-                               [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
-                                (2, 6, 7, 3), (3, 7, 4, 0)])
+                x = FX + (r + Q["seat_r_off"]) * math.cos(th)
+                y = FY + (r + Q["seat_r_off"]) * math.sin(th)
+                _stamp(S, seat_t, x, y, z, th)
+                _stamp(BKD if (P and BKD) else S, back_t, x, y, z, th)
+            if DD and r > 36.4:
+                # 桌板：本排座前 0.10 起、深 0.30；后端落在前排靠背之后（不穿模）
+                desk_d = Q["desk_d_tiers"].get(tier["key"], Q["desk_d_max"])
+                rr_out = r + Q["seat_r_off"] - Q["pad_d"] / 2.0 - Q["desk_front"]
+                rr_in = rr_out - desk_d
+                zt = z + Q["desk_z"]
+                zb = zt - Q["desk_t"]
+                seg = max(1, int((t1 - t0) * r / 1.2))
+                for q in range(seg):
+                    a0 = t0 + (t1 - t0) * q / seg
+                    a1 = t0 + (t1 - t0) * (q + 1) / seg
+                    p0 = (FX + rr_out * math.cos(a0), FY + rr_out * math.sin(a0), zt)
+                    p1 = (FX + rr_out * math.cos(a1), FY + rr_out * math.sin(a1), zt)
+                    p2 = (FX + rr_in * math.cos(a1), FY + rr_in * math.sin(a1), zt)
+                    p3 = (FX + rr_in * math.cos(a0), FY + rr_in * math.sin(a0), zt)
+                    DD.add([p0, p1, p2, p3,
+                            (p0[0], p0[1], zb), (p1[0], p1[1], zb),
+                            (p2[0], p2[1], zb), (p3[0], p3[1], zb)],
+                           [(0, 1, 2, 3), (7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2),
+                            (2, 6, 7, 3), (3, 7, 4, 0)])
     emit(S)
     if BKD:
         emit(BKD)

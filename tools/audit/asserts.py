@@ -166,6 +166,31 @@ def seat_forward():
         "本脚本不猜——猜出来的通过比不查更危险。"]
 
 
+def seat_module():
+    """⑥ seat.module：座椅模数不变式（尺寸全部来自 hall_data.SEAT_DETAIL，一处定死）。"""
+    Q, S = D.SEAT_DETAIL, D.SEAT
+    checks = [
+        ("座垫宽 + 2×边距 = 座距",
+         abs(Q["pad_w"] + 2 * Q["gap_side"] - S["pitch"]) < 1e-9,
+         f"{Q['pad_w']} + 2×{Q['gap_side']} = {S['pitch']}"),
+        ("座深 + 靠背厚 ≤ 排距 − 0.35（净腿）",
+         Q["pad_d"] + Q["back_t"] <= S["row"] - 0.35 + 1e-9,
+         f"{Q['pad_d']} + {Q['back_t']} ≤ {S['row']} − 0.35"),
+        ("扶手外缘 ≤ 半座距",
+         Q["arm_off"] + Q["arm_w"] / 2 <= S["pitch"] / 2 + 1e-9,
+         f"{Q['arm_off'] + Q['arm_w'] / 2:.3f} ≤ {S['pitch'] / 2:.3f}"),
+        ("桌板不超过上限（否则穿前排靠背）",
+         all(v <= Q["desk_d_max"] + 1e-9 for v in Q["desk_d_tiers"].values()),
+         f"{Q['desk_d_tiers']} ≤ {Q['desk_d_max']}"),
+        ("座面高 = 座箱 + 座板",
+         abs(Q["box_h"] + Q["board_h"] - 0.44) < 0.03,
+         f"{Q['box_h'] + Q['board_h']:.2f} m"),
+    ]
+    bad = [n for n, ok, _ in checks if not ok]
+    return not bad, ("全部成立" if not bad else f"{len(bad)} 条不成立"), \
+        [f"{'✓' if ok else '✗'} {n}（{d}）" for n, ok, d in checks]
+
+
 def origin_stack(items):
     """附赠①：物体堆在原点（palace 的 90 根屋脊就是这么来的）。"""
     bad = []
@@ -216,6 +241,7 @@ def main():
         ("pit.rear_void", "池座末排 → 后墙", *rear_void()),
         ("seat.density", "席数 ÷ 观众厅平面", *seat_density(totals["seats"])),
         ("seat.forward", "椅面法向 · 指向扇心", *seat_forward()),
+        ("seat.module", "座椅族模数不变式", *seat_module()),
         ("origin_stack", "物体中心离原点 <5 m", *origin_stack(items)),
         ("out_of_shell", "越出中厅体块", *out_of_shell(items)),
     ]
