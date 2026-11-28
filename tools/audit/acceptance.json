@@ -16,7 +16,7 @@
    "quote": "座椅跟地板没有贴合",
    "kind": "几何",
    "assert": "seat.floor_gap",
-   "status": "open",
+   "status": "fixed",
    "note": "断言实测 0.180 m：Mesh.box 是底锚（cz…cz+h），三处座席调用按中心锚写。上一轮 0.40 → 0.18，仍未落地。"
   },
   {
@@ -43,7 +43,7 @@
    "quote": "主席团 9 椅背对观众",
    "kind": "语义",
    "assert": "seat.forward",
-   "status": "open",
+   "status": "fixed",
    "note": "断言器 SKIP：manifest 无朝向字段。要在构建端断言 chair_forward·(FOCUS−pos)>0，主席台 9 椅取 −1。"
   },
   {

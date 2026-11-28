@@ -58,6 +58,11 @@ FX, FY = D.FOCUS["x"], D.FOCUS["y"]
 HX0, HX1 = D.HALL["x_front"], D.HALL["x_rear"]
 AX = D.AXIS_Y
 
+# 朝向账本：各组座席在构建时算出的朝向统计 + 抽样原始向量，落进 manifest 供体检重算
+FACING = []
+FACE_SAMPLES = 12             # 每组抽样座数（含首末座）
+
+
 # ------------------------------------------------------------------ 场景
 bpy.ops.wm.read_factory_settings(use_empty=True)
 sc = bpy.context.scene
@@ -160,9 +165,10 @@ class Mesh:
         if rz:
             c, s = math.cos(rz), math.sin(rz)
             pts = [(x * c - y * s, x * s + y * c, z) for (x, y, z) in pts]
-        self.add([(x + cx, y + cy, z + cz) for (x, y, z) in pts],
-                 [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
-                  (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)])
+        w = [(x + cx, y + cy, z + cz) for (x, y, z) in pts]
+        self.add(w, [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4),
+                     (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)])
+        return _centroid(w)          # 朝向断言要用"真正落进网格的"质心
 
     def boxc(self, cx, cy, cz, w, d, h, rz=0.0):
         """中心锚盒体：cz 是盒子中心（`box()` 是底锚，占 cz…cz+h）。
@@ -529,10 +535,23 @@ def build_stage():
         GLD.box(bx + 5.0, AX, 2.04, 0.06, 22.2, 0.24)
         # 主席团座椅：9 把（靠背在 -x 一侧＝靠后墙那一侧，人是面朝观众席 +x 坐的；
         # 原来靠背放在 pad 的 +x 边，等于九把椅子全部背对观众——作者 2026-11-28 指出）
+        # 朝向不再靠注释保证：从实到顶点质心反推，写进 manifest，由 seat.forward 校验。
+        CH = {"group": "主席团座椅", "role": "chairman", "aim": "audience", "n": 0,
+              "lo": 9.9, "hi": -9.9, "sum": 0.0, "samples": []}
+        aud = _audience_dir()
         for k in range(9):
             yy = AX - 9.6 + k * 2.4
-            FUR.box(bx + 6.8, yy, 2.26, 0.62, 0.56, 0.12)
-            FUR.box(bx + 6.49, yy, 2.30, 0.12, 0.56, 0.72)
+            pc = FUR.box(bx + 6.8, yy, 2.26, 0.62, 0.56, 0.12)
+            bc = FUR.box(bx + 6.49, yy, 2.30, 0.12, 0.56, 0.72)
+            fwd = _facing(pc, bc)
+            cs = fwd[0] * aud[0] + fwd[1] * aud[1]
+            CH["n"] += 1
+            CH["sum"] += cs
+            CH["lo"] = min(CH["lo"], cs)
+            CH["hi"] = max(CH["hi"], cs)
+            CH["samples"].append([round(pc[0], 2), round(pc[1], 2),
+                                  round(fwd[0], 5), round(fwd[1], 5), round(cs, 5)])
+        FACING.append(_face_entry(CH))
         # 台唇与踏步
         FUR.box(D.PROSCENIUM["x"] + 0.35, AX, 1.34, 0.70, D.PROSCENIUM["w"], 0.20)
         for i in range(3):
@@ -729,6 +748,70 @@ def _stamp(mesh, boxes, x, y, z, th):
                   (base + 2, base + 3, base + 7, base + 6),
                   (base + 3, base + 0, base + 4, base + 7)]
     mesh.add(verts, faces)
+    return _centroid(verts)          # 同上：实到顶点质心，不是参数
+
+
+def _centroid(pts):
+    """一圈顶点的算术质心（朝向断言用它反推靠背在哪一侧）。"""
+    n = len(pts) or 1
+    return (sum(p[0] for p in pts) / n, sum(p[1] for p in pts) / n,
+            sum(p[2] for p in pts) / n)
+
+
+def _facing(pad_c, back_c):
+    """座心 − 靠背心 → 2D 单位朝向。
+
+    观众席：靠背在半径外侧 → 朝向 = 指向扇心；
+    主席团：靠背在 −x 侧 → 朝向 = +x（面向观众）。
+    同一把尺子量两种椅子，谁反了一目了然。
+    """
+    dx, dy = pad_c[0] - back_c[0], pad_c[1] - back_c[1]
+    d = math.hypot(dx, dy) or 1.0
+    return dx / d, dy / d
+
+
+def _cos_to_focus(x, y, fwd):
+    """朝向 · 指向扇心（单位化）。观众席 ≈ +1，主席团 ≈ −1。"""
+    ux, uy = D.FOCUS["x"] - x, D.FOCUS["y"] - y
+    ul = math.hypot(ux, uy) or 1.0
+    return (fwd[0] * ux + fwd[1] * uy) / ul
+
+
+def _audience_dir():
+    """观众厅在台口的哪一侧（+x / −x）。由 hall_data 的台口与后墙位置判定。
+
+    主席团坐在台上、面向观众，所以它的朝向基准是这束方向，不是扇心：
+    九把椅子是**一排平行朝前**的，用逐座扇心方向量只有正中间那把是 −1（曾误判为错）。
+    """
+    dx = D.HALL["x_rear"] - D.PROSCENIUM["x"]
+    return (1.0 if dx > 0 else -1.0, 0.0)
+
+
+def _record(acc, sid, total, stride, x, y, pad_c, back_c):
+    """记一座椅的朝向：全量算 dot（阈值用），按步长抽样存原始 (pos, fwd)（体检重算用）。
+
+    存样本而不是只存结论，是为了让体检端能从 manifest 里**独立重算**，
+    而不是相信构建端报上来的一个 cos。样本含首末两座。
+    """
+    fwd = _facing(pad_c, back_c)
+    cs = _cos_to_focus(x, y, fwd)
+    acc["n"] += 1
+    acc["sum"] += cs
+    acc["lo"] = min(acc["lo"], cs)
+    acc["hi"] = max(acc["hi"], cs)
+    if (sid == 0 or sid == total - 1
+            or (sid % stride == 0 and len(acc["samples"]) < FACE_SAMPLES)):
+        acc["samples"].append([round(x, 2), round(y, 2),
+                               round(fwd[0], 5), round(fwd[1], 5), round(cs, 5)])
+
+
+def _face_entry(acc):
+    n = acc["n"]
+    return {"group": acc["group"], "role": acc["role"], "aim": acc["aim"], "n": n,
+            "cos_min": round(acc["lo"], 5) if n else 0.0,
+            "cos_max": round(acc["hi"], 5) if n else 0.0,
+            "cos_mean": round(acc["sum"] / n, 5) if n else 0.0,
+            "samples": acc["samples"]}
 
 
 def build_seats(tier, idx, desks=True):
@@ -739,7 +822,14 @@ def build_seats(tier, idx, desks=True):
     DD = Mesh(f"桌板{idx}", MAT["stage"] if P else MAT["seat"], g) if desks else None
     seat_t, back_t = _seat_boxes(Q)
 
-    for row in D.tier_rows(tier):
+    rows = D.tier_rows(tier)
+    total = sum(n for row in rows for (_a, _b, n) in row["blocks"] if n > 0)
+    stride = max(1, total // FACE_SAMPLES)
+    acc = {"group": S.name, "role": "audience", "aim": "focus", "n": 0,
+           "lo": 9.9, "hi": -9.9, "sum": 0.0, "samples": []}
+    sid = 0
+
+    for row in rows:
         r, z = row["r"], row["z"]
         for (t0, t1, n) in row["blocks"]:
             if n <= 0:
@@ -749,8 +839,10 @@ def build_seats(tier, idx, desks=True):
                 th = t0 + step * (k + 0.5)
                 x = FX + (r + Q["seat_r_off"]) * math.cos(th)
                 y = FY + (r + Q["seat_r_off"]) * math.sin(th)
-                _stamp(S, seat_t, x, y, z, th)
-                _stamp(BKD if (P and BKD) else S, back_t, x, y, z, th)
+                pc = _stamp(S, seat_t, x, y, z, th)
+                bc = _stamp(BKD if (P and BKD) else S, back_t, x, y, z, th)
+                _record(acc, sid, total, stride, x, y, pc, bc)
+                sid += 1
             if DD and r > 36.4:
                 # 桌板：本排座前 0.10 起、深 0.30；后端落在前排靠背之后（不穿模）
                 desk_d = Q["desk_d_tiers"].get(tier["key"], Q["desk_d_max"])
@@ -776,6 +868,7 @@ def build_seats(tier, idx, desks=True):
         emit(BKD)
     if DD:
         emit(DD)
+    FACING.append(_face_entry(acc))
 
 
 # ------------------------------------------------------------------ 5 穹顶
@@ -1268,10 +1361,12 @@ def dump_manifest(path):
     doc = {"mode": "precise" if P else "massing", "objects": len(items),
            "triangles": sum(x["tris"] for x in items),
            "seats": sum(sum(r["seats"] for r in D.tier_rows(t)) for t in D.TIERS),
+           "seat_facing": {"focus": [FX, FY], "groups": FACING},
            "items": sorted(items, key=lambda x: x["name"])}
     with open(path, "w", encoding="utf-8") as f:
         json.dump(doc, f, ensure_ascii=False, indent=1)
-    print("MANIFEST", path, doc["objects"], doc["triangles"], doc["seats"], flush=True)
+    print("MANIFEST", path, doc["objects"], doc["triangles"], doc["seats"],
+          "朝向组", len(FACING), flush=True)
 
 
 if args.manifest:

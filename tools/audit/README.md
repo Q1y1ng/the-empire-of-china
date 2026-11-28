@@ -37,7 +37,8 @@ py -3 tools/audit/check.py --diff "$TEMP/gm/prev.json"
 分开调用也可以：
 
 ```bash
-py -3 tools/audit/asserts.py                    # 8 条窄断言，只读 hall_data + manifest
+py -3 tools/audit/asserts.py                    # 10 条窄断言，只读 hall_data + manifest
+py -3 tools/audit/selftest.py                   # 断言自检：篡改 manifest，确认断言真会红
 py -3 tools/audit/run_shots.py                  # 16 站位接触表
 py -3 tools/audit/run_shots.py --only 座椅落地,二层净空
 py -3 tools/audit/run_shots.py --manifest "$TEMP/gm/m.json"
@@ -49,7 +50,8 @@ py -3 tools/audit/manifest.py --old prev.json --new m.json   # 差分 + 受影�
 | 手段 | 耗时 |
 | --- | --- |
 | 16 站位 Workbench 1280×720 + manifest + 拼图 | **11–13 s**（单张 0.22–1.52 s） |
-| 断言 8 条（纯 py） | **0.2 s** |
+| 断言 10 条（纯 py） | **0.2 s** |
+| 断言自检 7 例（`selftest.py`，6 次子进程） | **4 s** |
 | 断言 + 只出受影响 7 站位（`--diff`） | **6.6 s** |
 | 对照：13 张 Cycles 1920×1080 / 96 spp | 3 min 20 s |
 | 对照：Unity 换 glb + 打包 235 MB + autoshot | 6 min |
@@ -64,7 +66,8 @@ py -3 tools/audit/manifest.py --old prev.json --new m.json   # 差分 + 受影�
 | `run_shots.py` | 一条命令：复制 `.blend` → 调 Blender → 拼图。**Blender 脚本报错也返回 0**，这里靠 `RESULT` 行判定成功，并先清旧 PNG 防“拿旧图当新图” |
 | `manifest.py` | 两份 manifest 差分；受影响机位 = 分组可见 ∩ **视锥命中**（座椅是整厅合并网格，只按分组会 16/16 全中，加视锥后 7/16） |
 | `manifest_io.py` | manifest 读写与 schema 归一：`build_hall.py` 与 `shots.py` 两个生产者必须是同一种格式，否则 diff 对不上 |
-| `asserts.py` | 8 条窄断言，只 import `hall_data` + 读 manifest；口径写死在代码里，见下节 |
+| `asserts.py` | 10 条窄断言，只 import `hall_data` + 读 manifest；口径写死在代码里，见下节 |
+| `selftest.py` | **断言自检**：把缺陷注入 manifest 副本，要求目标断言 FAIL、原样 PASS。跑不通说明判据写虚了 |
 | `check.py` | 编排：断言 → （可选）只出受影响机位。**日常只用这一条** |
 
 ## 三之二、断言清单（口径钉死，不靠人推）
@@ -72,11 +75,13 @@ py -3 tools/audit/manifest.py --old prev.json --new m.json   # 差分 + 受影�
 | 断言 | 口径 | 门槛 |
 | --- | --- | --- |
 | `seat.floor_gap` | 座席组最低点 − 该层最前一排的 `tier_row_z` | ±0.02 m |
-| `bal2.headroom` | 三层挑台最低点 − 二层楼板（**clamp 后**）最高点 | ≥ 2.30 m |
+| `bal2.headroom` | 三层挑台最低点 − **同半径处**二层楼板（clamp 后） | ≥ 2.30 m |
+| `tier.overhang` | 二层各排视线被三层挑台切掉的顶棚高度 | 只报数（切的是装饰带还是人） |
 | `cross_aisle` | `TIERS[i]["aisles"]` 里宽度 ≥1.5 m 的处数 | 每层 ≥2 处 |
-| `pit.rear_void` | `hall_radius(0)` − 池座末排 r | 只报数（规格待裁） |
-| `seat.density` | 席数 ÷ `hall_plan()` 鞋带面积 | 参考 0.9–2.4 |
-| `seat.forward` | 椅面法向 · 指向扇心 | **SKIP**：manifest 无朝向字段 |
+| `pit.rear_void` | `hall_radius(0)` − 池座末排 r | 0.5–2.0 m（作者：末排贴墙） |
+| `seat.density` | 席数 ÷ `hall_plan()` 鞋带面积 | 1.6–2.6（实物 2.13） |
+| `seat.forward` | 「座心 − 靠背心」→ 朝向；观众席对扇心、主席团对观众厅 | 对齐 ≥ 0.99 |
+| `seat.module` | 座椅族 5 条模数不变式（尺寸只在 `SEAT_DETAIL` 一处） | 全部成立 |
 | `origin_stack` | 物体中心离原点 <5 m | 应为 0 |
 | `out_of_shell` | 越出中厅体块（±1 m 容差） | 应为 0 |
 
@@ -85,8 +90,13 @@ py -3 tools/audit/manifest.py --old prev.json --new m.json   # 差分 + 受影�
 - **`bal2.headroom` 用 clamp 口径**，所以是 3.566 m，不是构建端报的 2.46 m。
   2.46 是把二层楼板按 **未 clamp** 的公式外推到 r=86.5 算的；实际楼板过了末排就是平台（`tier_z(clamp=True)`）。
   两个数都 ≥2.30，门槛过，但口径必须只留一个——**真实几何是 3.566**。
-- **`seat.forward` 明着 SKIP**。manifest 里没有朝向，从 bbox 猜“椅背朝哪”只能靠瞎猜；
-  猜出来的 PASS 比不查更危险。要查就在构建端断言，或让 manifest 带上 `forward`。
+- **`seat.forward` 从 SKIP 转正**（2026-11-29）。以前 manifest 里没有朝向，从 bbox 猜“椅背朝哪”只能靠瞎猜，
+  所以宁可明着 SKIP。现在构建端在**落进网格的顶点**上取「座心 − 靠背心」→ 单位朝向，
+  记对齐度的全量 min/max/mean，并按步长抽样（含首末座）存原始 `(座心, 朝向)`；
+  这里不采信它报的数，逐样本自己重算，且基准方向各自从 `hall_data` 现推。
+  能抓住的真缺陷（作者 2026-11-28 抓到的“九把主席团椅背对观众”就是这一类）：
+  模板翻半圈、靠背与座垫两串盒子写反、零向量、两端口径不同源。
+  `selftest.py` 把这 6 种注入跑一遍，全部必须 FAIL，原样必须 PASS。
 
 ## 四、接线约定（与作品会话商定 2026-11-28）
 

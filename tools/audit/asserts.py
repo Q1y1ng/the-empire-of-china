@@ -209,12 +209,106 @@ def seat_density(seats):
     return ok, f"{dens} 席/m²", detail
 
 
-def seat_forward():
-    """⑥ seat.forward：朝向。manifest 里没有朝向字段 → 明确 SKIP，不假装通过。"""
-    return None, "SKIP：manifest 无朝向字段", [
-        "要查这条，需要 build_hall 在 manifest 里给每个座席组加 forward 向量，",
-        "或在构建端断言：chair_forward · (FOCUS − pos) > 0，主席台 9 椅取 −1。",
-        "本脚本不猜——猜出来的通过比不查更危险。"]
+FWD_AIM = 0.99            # 朝向 · 规定方向
+FWD_UNIT_TOL = 2e-3       # 朝向必须是单位向量
+FWD_REPORT_TOL = 0.02     # 样本重算值 vs 构建端记录值
+
+
+def audience_dir():
+    """观众厅在台口的哪一侧（+x / −x）。与 build_hall 同源，各自从 hall_data 推。"""
+    dx = D.HALL["x_rear"] - D.PROSCENIUM["x"]
+    return (1.0 if dx > 0 else -1.0, 0.0)
+
+
+def seat_forward(facing):
+    """⑥ seat.forward：每一组椅子到底朝哪一侧。
+
+    本项前三轮都是 SKIP，理由是「manifest 没有朝向字段」——那时确实没有，
+    而**猜出来的通过比不查更危险**。现在构建端给了：在落进网格的顶点上取
+    「座心 − 靠背心」→ 单位朝向，再记对齐度的全量 min/max/mean，
+    并按步长抽样（含首末座）存原始 (座心, 朝向)。
+
+    这里不采信它报的数，逐样本自己重算：
+      1. |fwd| 必须为单位向量（挡住零向量/退化朝向）；
+      2. 观众席（aim=focus）朝向 · 指向扇心 ≥ 0.99——正对舞台；
+         主席团（aim=audience）朝向 · 观众厅方向 ≥ 0.99——坐在台上、面向观众。
+         两个基准方向都由本脚本从 hall_data 现推，不用 manifest 的说法；
+      3. 重算值与构建端记录值差 ≤ 0.02，且落在它报的 [min,max] 内——
+         否则两端口径不同源，样本代表不了全量。
+
+    能抓住的真实缺陷：模板旋转错半圈、靠背与座垫两串盒子写反、
+    主席团椅背落到 +x 侧（作者 2026-11-28 抓到的那个）。
+    注：主席团九椅是**一排平行朝前**的，用逐座扇心方向量只有正中间＝−1，
+    其余 −0.68…——所以基准必须按角色分，否则会拿错尺子冤枉对的模型。
+    """
+    if not isinstance(facing, dict) or not facing.get("groups"):
+        return None, "SKIP：manifest 无 seat_facing（旧 manifest，重建即可）", [
+            "构建端已写 seat_facing；当前 manifest 落后于代码。",
+            "重新出一次：build_hall.py --no-render --manifest build/hall_manifest.json"]
+
+    focus = facing.get("focus") or []
+    if len(focus) != 2:
+        return False, "seat_facing 缺扇心坐标", ["重算 cos 需要 FOCUS(x,y)"]
+    fx0, fy0 = focus
+    aud = audience_dir()
+
+    bad, rows, margin = [], [], 9.9
+    for g in facing["groups"]:
+        name = g.get("group", "?")
+        role, aim = g.get("role"), g.get("aim")
+        n = int(g.get("n") or 0)
+        samples = g.get("samples") or []
+        want_aim = {"audience": "focus", "chairman": "audience"}.get(role)
+        if want_aim is None:
+            bad.append(f"{name}：未知 role={role!r}")
+            continue
+        if aim != want_aim:
+            bad.append(f"{name}：role={role} 应当用 aim={want_aim}，manifest 写 {aim!r}")
+            continue
+        if n <= 0 or not samples:
+            bad.append(f"{name}：n={n} 样本={len(samples)}（无样本可重算）")
+            continue
+        cs = []
+        for sp in samples:
+            if len(sp) != 5:
+                bad.append(f"{name}：样本格式 {sp!r}")
+                continue
+            x, y, ux, uy, rep = sp
+            ln = math.hypot(ux, uy)
+            if abs(ln - 1.0) > FWD_UNIT_TOL:
+                bad.append(f"{name} @({x:.0f},{y:.0f})：朝向非单位向量 |f|={ln:.4f}")
+                continue
+            if aim == "focus":
+                dx, dy = fx0 - x, fy0 - y
+            else:
+                dx, dy = aud
+            dl = math.hypot(dx, dy) or 1.0
+            c = (ux * dx + uy * dy) / dl
+            cs.append(c)
+            margin = min(margin, c - FWD_AIM)
+            if c < FWD_AIM:
+                bad.append(f"{name} @({x:.0f},{y:.0f})：对齐 {c:+.3f} < {FWD_AIM}")
+            if abs(c - rep) > FWD_REPORT_TOL:
+                bad.append(f"{name} @({x:.0f},{y:.0f})：重算 {c:+.3f} ≠ 记录 {rep:+.3f}")
+        if not cs:
+            continue
+        lo, hi = min(cs), max(cs)
+        if lo < (g.get("cos_min") or -9) - FWD_REPORT_TOL \
+                or hi > (g.get("cos_max") or 9) + FWD_REPORT_TOL:
+            bad.append(f"{name}：样本 {lo:+.3f}…{hi:+.3f} 落在构建端报告"
+                       f" {g.get('cos_min'):+.3f}…{g.get('cos_max'):+.3f} 之外")
+        rows.append(f"{name}（{role}／基准 {aim}）n={n} 样本{len(samples)}："
+                    f"对齐 {lo:+.3f}…{hi:+.3f}，要求 ≥ {FWD_AIM}")
+
+    if bad:
+        return False, f"{len(bad)} 处朝向不符", bad[:8] + rows
+    aud_n = sum(int(g.get("n") or 0) for g in facing["groups"]
+                if g.get("role") == "audience")
+    ch_n = sum(int(g.get("n") or 0) for g in facing["groups"]
+               if g.get("role") == "chairman")
+    return True, (f"{len(rows)} 组朝向成立：观众席 {aud_n:,} + 主席团 {ch_n} 把"
+                  f"（最差余量 {margin:+.3f}）"), rows
+
 
 
 def seat_module():
@@ -292,7 +386,8 @@ def main():
         ("cross_aisle", "每层横向过道 ≥1.5 m 的处数", *cross_aisles()),
         ("pit.rear_void", "池座末排 → 后墙", *rear_void()),
         ("seat.density", "席数 ÷ 观众厅平面", *seat_density(totals["seats"])),
-        ("seat.forward", "椅面法向 · 指向扇心", *seat_forward()),
+        ("seat.forward", "靠背在座心之后 · 观众席指扇心／主席团指观众厅",
+         *seat_forward(doc.get("seat_facing"))),
         ("seat.module", "座椅族模数不变式", *seat_module()),
         ("origin_stack", "物体中心离原点 <5 m", *origin_stack(items)),
         ("out_of_shell", "越出中厅体块", *out_of_shell(items)),
