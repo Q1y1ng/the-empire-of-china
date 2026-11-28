@@ -31,23 +31,24 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 from shots_table import load_shots  # noqa: E402
+import manifest_io  # noqa: E402
 
 EPS = 0.002          # 2 mm：小于它的 bbox 变化是浮点噪音，不算改动
 TRI_EPS = 0
 
 
 def load(path):
-    with open(path, encoding="utf-8") as fh:
-        doc = json.load(fh)
-    objs = {o["name"]: o for o in doc.get("objects", [])}
-    return doc, objs
+    """→ (doc, {name: item})，解析口径统一在 manifest_io，两种 schema 都认。"""
+    doc, items, totals = manifest_io.load(path)
+    doc["_totals"] = totals
+    return doc, {o["name"]: o for o in items}
 
 
 def same(a, b):
     if a["tris"] != b["tris"] and abs(a["tris"] - b["tris"]) > TRI_EPS:
         return False
     for key in ("min", "max"):
-        for x, y in zip(a["bbox"][key], b["bbox"][key]):
+        for x, y in zip(a[key], b[key]):
             if abs(x - y) > EPS:
                 return False
     return True
@@ -78,7 +79,7 @@ def _dot(a, b):
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 
 
-def in_view(spec, bbox, ar=16 / 9):
+def in_view(spec, item, ar=16 / 9):
     """粗视锥判定：bbox 任一角点在相机视野内即算可见。
 
     比“分组可见”细一档——座席是整厅合并网格，只按分组判会把 16 个机位全标成
@@ -97,9 +98,9 @@ def in_view(spec, bbox, ar=16 / 9):
     if spec.get("ortho"):
         half_w = spec["ortho"] / 2.0
         half_h = half_w / spec.get("ar", ar)
-        for cx in (bbox["min"][0], bbox["max"][0]):
-            for cy in (bbox["min"][1], bbox["max"][1]):
-                for cz in (bbox["min"][2], bbox["max"][2]):
+        for cx in (item["min"][0], item["max"][0]):
+            for cy in (item["min"][1], item["max"][1]):
+                for cz in (item["min"][2], item["max"][2]):
                     v = (cx - loc[0], cy - loc[1], cz - loc[2])
                     if _dot(v, fwd) <= 0:
                         continue
@@ -111,9 +112,9 @@ def in_view(spec, bbox, ar=16 / 9):
     vfov = 2.0 * math.atan(((SENSOR / spec.get("ar", ar)) / 2.0)
                            / max(spec.get("lens", 35), 1e-3))
     th, tv = math.tan(hfov / 2.0), math.tan(vfov / 2.0)
-    for cx in (bbox["min"][0], bbox["max"][0]):
-        for cy in (bbox["min"][1], bbox["max"][1]):
-            for cz in (bbox["min"][2], bbox["max"][2]):
+    for cx in (item["min"][0], item["max"][0]):
+        for cy in (item["min"][1], item["max"][1]):
+            for cz in (item["min"][2], item["max"][2]):
                 v = (cx - loc[0], cy - loc[1], cz - loc[2])
                 z = _dot(v, fwd)
                 if z <= 0.01:
@@ -134,7 +135,7 @@ def stations_for(groups, objects, frustum=True):
         if not frustum:
             hits.append(name)
             continue
-        if any(in_view(spec, o["bbox"]) for o in objects
+        if any(in_view(spec, o) for o in objects
                if (o.get("group") or "hall") in groups
                and (o.get("group") or "hall") in visible):
             hits.append(name)
@@ -156,11 +157,11 @@ def main():
             return 2
 
     new_doc, new = load(args.new)
-    print(f"新 manifest：{new_doc['totals']['objects']} 物体 / "
-          f"{new_doc['totals']['tris']:,} 三角面"
-          f"（{new_doc.get('blender')}，{new_doc.get('generated')}）")
+    meta = "，".join(x for x in (new_doc.get("blender"), new_doc.get("generated")) if x)
+    print(f"新 manifest：{new_doc['_totals']['objects']} 物体 / "
+          f"{new_doc['_totals']['tris']:,} 三角面" + (f"（{meta}）" if meta else ""))
 
-    result = {"new_totals": new_doc["totals"], "added": [], "removed": [],
+    result = {"new_totals": new_doc["_totals"], "added": [], "removed": [],
               "changed": [], "groups": {}, "stations": []}
 
     if not args.old:
@@ -176,8 +177,8 @@ def main():
 
     old_doc, old = load(args.old)
     added, removed, changed = diff(old, new)
-    d_obj = new_doc["totals"]["objects"] - old_doc["totals"]["objects"]
-    d_tri = new_doc["totals"]["tris"] - old_doc["totals"]["tris"]
+    d_obj = new_doc["_totals"]["objects"] - old_doc["_totals"]["objects"]
+    d_tri = new_doc["_totals"]["tris"] - old_doc["_totals"]["tris"]
     print(f"对比旧 manifest：+{len(added)} 新增 / -{len(removed)} 删除 / "
           f"~{len(changed)} 改动；共 {d_obj:+d} 物体、{d_tri:+,} 三角面")
 

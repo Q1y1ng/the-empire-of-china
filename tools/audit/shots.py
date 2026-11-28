@@ -187,14 +187,16 @@ def hide_groups(spec):
 
 # ------------------------------------------------------------------ manifest
 def dump_manifest(path):
-    """{name, group, bbox{min,max}, tris}；供 manifest.py 纯 py 做 diff。"""
+    """与 build_hall.py --manifest 同一 schema（manifest_io.save）。
+
+    shots.py 不认识座席数，seats 留 null；模式从 .blend 文件名推断。
+    """
+    import manifest_io
     t0 = time.time()
-    objs = []
+    items = []
     for o in bpy.data.objects:
         if o.type != "MESH":
             continue
-        if o.hide_viewport or o.hide_get():
-            pass
         mw = o.matrix_world
         lo = [1e18] * 3
         hi = [-1e18] * 3
@@ -205,24 +207,19 @@ def dump_manifest(path):
                 hi[i] = max(hi[i], w[i])
         me = o.data
         me.calc_loop_triangles()
-        objs.append({
+        items.append({
             "name": o.name,
             "group": o.get("group") or "hall",
-            "bbox": {"min": [round(v, 4) for v in lo],
-                     "max": [round(v, 4) for v in hi]},
             "tris": len(me.loop_triangles),
+            "min": [round(v, 3) for v in lo],
+            "max": [round(v, 3) for v in hi],
         })
-    objs.sort(key=lambda d: d["name"])
-    doc = {
-        "blender": bpy.app.version_string,
-        "blend": bpy.data.filepath,
-        "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "objects": objs,
-        "totals": {"objects": len(objs), "tris": sum(o["tris"] for o in objs)},
-    }
-    with open(path, "w", encoding="utf-8") as fh:
-        json.dump(doc, fh, ensure_ascii=False, indent=1)
-    print("MANIFEST", path, len(objs), "objs",
+    mode = "precise" if "precise" in os.path.basename(bpy.data.filepath) else "massing"
+    doc = manifest_io.save(path, mode, items, seats=None,
+                           extra={"blend": bpy.data.filepath,
+                                  "blender": bpy.app.version_string,
+                                  "generated": time.strftime("%Y-%m-%dT%H:%M:%S")})
+    print("MANIFEST", path, doc["objects"], doc["triangles"],
           round(time.time() - t0, 1), "s", flush=True)
 
 

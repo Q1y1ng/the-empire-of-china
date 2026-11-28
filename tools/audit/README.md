@@ -24,17 +24,24 @@ Workbench 用**分组色**（不是材质色）：同组一色，目的是分得
 ## 二、跑起来
 
 ```bash
-# ① 全部 16 站位 + 一张接触表（默认读 %LOCALAPPDATA%\Temp\grandhall\grandhall_precise.blend）
-py -3 tools/audit/run_shots.py
+# 一条命令：断言 + 接触表（~13 s）
+py -3 tools/audit/check.py
 
-# 只出几个站位（调试用）
+# 只算数，不出图（0.2 s，改一次就跑一次）
+py -3 tools/audit/check.py --no-shots
+
+# 只出“相对上一份 manifest 有变化”的机位（改一处 → 6 s）
+py -3 tools/audit/check.py --diff "$TEMP/gm/prev.json"
+```
+
+分开调用也可以：
+
+```bash
+py -3 tools/audit/asserts.py                    # 8 条窄断言，只读 hall_data + manifest
+py -3 tools/audit/run_shots.py                  # 16 站位接触表
 py -3 tools/audit/run_shots.py --only 座椅落地,二层净空
-
-# 连带落一份 manifest
-py -3 tools/audit/run_shots.py --manifest "$TEMP/gm/manifest.json"
-
-# ② 差分：改了这几处，13 张图里哪几张必须重出
-py -3 tools/audit/manifest.py --old "$TEMP/gm/manifest_prev.json" --new "$TEMP/gm/manifest.json"
+py -3 tools/audit/run_shots.py --manifest "$TEMP/gm/m.json"
+py -3 tools/audit/manifest.py --old prev.json --new m.json   # 差分 + 受影响机位
 ```
 
 实测（2026-11-28，RTX 3060 Laptop，精模 63 物体 / 1,176,188 面）：
@@ -42,8 +49,10 @@ py -3 tools/audit/manifest.py --old "$TEMP/gm/manifest_prev.json" --new "$TEMP/g
 | 手段 | 耗时 |
 | --- | --- |
 | 16 站位 Workbench 1280×720 + manifest + 拼图 | **11–13 s**（单张 0.22–1.52 s） |
+| 断言 8 条（纯 py） | **0.2 s** |
+| 断言 + 只出受影响 7 站位（`--diff`） | **6.6 s** |
 | 对照：13 张 Cycles 1920×1080 / 96 spp | 3 min 20 s |
-| manifest 差分（纯 py，不开 Blender） | < 0.2 s |
+| 对照：Unity 换 glb + 打包 235 MB + autoshot | 6 min |
 
 ## 三、文件
 
@@ -54,6 +63,30 @@ py -3 tools/audit/manifest.py --old "$TEMP/gm/manifest_prev.json" --new "$TEMP/g
 | `sheet.py` | Pillow 拼 3 列接触表，标签自动跟 `SHOTS`（焦距/正交/hide 列表） |
 | `run_shots.py` | 一条命令：复制 `.blend` → 调 Blender → 拼图。**Blender 脚本报错也返回 0**，这里靠 `RESULT` 行判定成功，并先清旧 PNG 防“拿旧图当新图” |
 | `manifest.py` | 两份 manifest 差分；受影响机位 = 分组可见 ∩ **视锥命中**（座椅是整厅合并网格，只按分组会 16/16 全中，加视锥后 7/16） |
+| `manifest_io.py` | manifest 读写与 schema 归一：`build_hall.py` 与 `shots.py` 两个生产者必须是同一种格式，否则 diff 对不上 |
+| `asserts.py` | 8 条窄断言，只 import `hall_data` + 读 manifest；口径写死在代码里，见下节 |
+| `check.py` | 编排：断言 → （可选）只出受影响机位。**日常只用这一条** |
+
+## 三之二、断言清单（口径钉死，不靠人推）
+
+| 断言 | 口径 | 门槛 |
+| --- | --- | --- |
+| `seat.floor_gap` | 座席组最低点 − 该层最前一排的 `tier_row_z` | ±0.02 m |
+| `bal2.headroom` | 三层挑台最低点 − 二层楼板（**clamp 后**）最高点 | ≥ 2.30 m |
+| `cross_aisle` | `TIERS[i]["aisles"]` 里宽度 ≥1.5 m 的处数 | 每层 ≥2 处 |
+| `pit.rear_void` | `hall_radius(0)` − 池座末排 r | 只报数（规格待裁） |
+| `seat.density` | 席数 ÷ `hall_plan()` 鞋带面积 | 参考 0.9–2.4 |
+| `seat.forward` | 椅面法向 · 指向扇心 | **SKIP**：manifest 无朝向字段 |
+| `origin_stack` | 物体中心离原点 <5 m | 应为 0 |
+| `out_of_shell` | 越出中厅体块（±1 m 容差） | 应为 0 |
+
+两条要说明白的：
+
+- **`bal2.headroom` 用 clamp 口径**，所以是 3.566 m，不是构建端报的 2.46 m。
+  2.46 是把二层楼板按 **未 clamp** 的公式外推到 r=86.5 算的；实际楼板过了末排就是平台（`tier_z(clamp=True)`）。
+  两个数都 ≥2.30，门槛过，但口径必须只留一个——**真实几何是 3.566**。
+- **`seat.forward` 明着 SKIP**。manifest 里没有朝向，从 bbox 猜“椅背朝哪”只能靠瞎猜；
+  猜出来的 PASS 比不查更危险。要查就在构建端断言，或让 manifest 带上 `forward`。
 
 ## 四、接线约定（与作品会话商定 2026-11-28）
 
